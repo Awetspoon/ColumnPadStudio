@@ -1,0 +1,203 @@
+<UserControl x:Class="ColumnPadStudio.Controls.ColumnEditorControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
+             MinWidth="220"
+             Foreground="{DynamicResource ControlForegroundBrush}">
+    <Border>
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderBrush" Value="#22000000"/>
+                <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsActive}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                        <Setter Property="BorderThickness" Value="2"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <DockPanel>
+            <Border x:Name="HeaderGrip"
+                    DockPanel.Dock="Top"
+                    Padding="6,5">
+                <Border.Style>
+                    <Style TargetType="Border">
+                            <Setter Property="Background" Value="{DynamicResource ColumnHeaderBackgroundBrush}"/>
+                            <Setter Property="BorderBrush" Value="#22000000"/>
+                            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource ColumnSelectedHeaderBackgroundBrush}"/>
+                                    <Setter Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                                    <Setter Property="BorderThickness" Value="0,0,0,2"/>
+                                </DataTrigger>
+
+                            </Style.Triggers>
+                        </Style>
+                </Border.Style>
+                <Border.ContextMenu>
+                    <ContextMenu Opened="ColumnContextMenu_Opened">
+                        <MenuItem Header="Rename Column" Click="ColumnMenuRename_Click"/>
+                        <MenuItem Header="Delete Column" Click="ColumnMenuDelete_Click"/>
+                        <MenuItem Header="Swap with Column on Left"
+                                  Click="ColumnMenuMoveLeft_Click"
+                                  InputGestureText="Alt+Shift+Left"
+                                  IsEnabled="{Binding PlacementTarget.DataContext.CanMoveLeft, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <MenuItem Header="Swap with Column on Right"
+                                  Click="ColumnMenuMoveRight_Click"
+                                  InputGestureText="Alt+Shift+Right"
+                                  IsEnabled="{Binding PlacementTarget.DataContext.CanMoveRight, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                        <Separator/>
+                        <MenuItem Header="Reset Column Size" Click="ColumnMenuResetWidth_Click"/>
+                        <MenuItem Header="Reset All Column Sizes" Click="ColumnMenuResetAllWidths_Click"/>
+                        <MenuItem Header="Resize Column..." Click="ColumnMenuResize_Click"/>
+                        <MenuItem Header="{Binding PlacementTarget.DataContext.WidthLockActionLabel, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  ToolTip="{Binding PlacementTarget.DataContext.WidthLockActionToolTip, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                  Click="ColumnMenuToggleWidthLock_Click"/>
+                        <Separator/>
+                        <MenuItem Header="Column Font Settings">
+                            <MenuItem Header="Set Font Family..." Click="ColumnFontSetFamily_Click"/>
+                            <MenuItem Header="Increase Font Size" Click="ColumnFontIncrease_Click"/>
+                            <MenuItem Header="Decrease Font Size" Click="ColumnFontDecrease_Click"/>
+                            <MenuItem x:Name="ColumnFontBoldMenuItem"
+                                      Header="Bold"
+                                      IsCheckable="True"
+                                      Click="ColumnFontBold_Click"/>
+                            <MenuItem x:Name="ColumnFontItalicMenuItem"
+                                      Header="Italic"
+                                      IsCheckable="True"
+                                      Click="ColumnFontItalic_Click"/>
+                            <Separator/>
+                            <MenuItem Header="Reset Font to Default" Click="ColumnFontReset_Click"/>
+                        </MenuItem>
+                    </ContextMenu>
+                </Border.ContextMenu>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Orientation="Vertical">
+                        <controls:InlineRenameText Text="{Binding Title, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                   IsEditing="{Binding IsRenaming, Mode=TwoWay}"
+                                                   Margin="2,0,0,0"/>
+                        <TextBlock Text="{Binding MetricsText}"
+                                   Margin="2,3,0,0"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource LineNumberForegroundBrush}"/>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Border Margin="0,0,6,0"
+                                Padding="6,2"
+                                Background="{DynamicResource ControlFocusBorderBrush}"
+                                CornerRadius="2">
+                            <Border.Style>
+                                <Style TargetType="Border">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Border.Style>
+                            <TextBlock Text="Selected"
+                                       FontSize="10"
+                                       FontWeight="SemiBold"
+                                       Foreground="#FFFFFFFF"
+                                       VerticalAlignment="Center"/>
+                        </Border>
+                        <Button Padding="8,2"
+                                Margin="0,0,4,0"
+                                Click="ColumnMenuMoveLeft_Click"
+                                Content="Swap Left"
+                                ToolTip="Swap this column with the column on the left."
+                                IsEnabled="{Binding CanMoveLeft}"/>
+                        <Button Padding="8,2"
+                                Click="ColumnMenuMoveRight_Click"
+                                Content="Swap Right"
+                                ToolTip="Swap this column with the column on the right."
+                                IsEnabled="{Binding CanMoveRight}"/>
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="56"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Background="{DynamicResource LineNumberBackgroundBrush}"
+                        BorderBrush="#22000000"
+                        BorderThickness="0,0,1,0">
+                    <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
+                        <TextBlock x:Name="LineNumbers"
+                                   FontFamily="{Binding EditorFontFamily}"
+                                   FontSize="{Binding LineNumberFontSize}"
+                                   Foreground="{DynamicResource LineNumberForegroundBrush}"
+                                   Padding="8,8,6,8"
+                                   Text="{Binding LineNumbersText}"
+                                   Visibility="{Binding ShowLineNumbersVisibility}"/>
+                    </ScrollViewer>
+                </Border>
+
+                <TextBox x:Name="Editor"
+                         Grid.Column="1"
+                         Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                         FontFamily="{Binding EditorFontFamily}"
+                         FontSize="{Binding EditorFontSize}"
+                         FontStyle="{Binding EditorFontStyle}"
+                         FontWeight="{Binding EditorFontWeight}"
+                         Background="{DynamicResource EditorBackgroundBrush}"
+                         Foreground="{DynamicResource EditorForegroundBrush}"
+                         TextWrapping="{Binding TextWrappingMode}"
+                         HorizontalScrollBarVisibility="{Binding HorizontalScrollBarMode}"
+                         GotFocus="Editor_GotFocus"
+                         CommandManager.PreviewExecuted="Editor_PreviewExecuted"
+                         PreviewKeyDown="Editor_PreviewKeyDown"
+                         PreviewMouseLeftButtonDown="Editor_PreviewMouseLeftButtonDown">
+                    <TextBox.ContextMenu>
+                        <ContextMenu Opened="EditorContextMenu_Opened">
+                            <MenuItem Header="Undo"
+                                      Command="ApplicationCommands.Undo"
+                                      CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <Separator/>
+                            <MenuItem Header="Cut"
+                                      Command="ApplicationCommands.Cut"
+                                      CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <MenuItem Header="Copy"
+                                      Command="ApplicationCommands.Copy"
+                                      CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <MenuItem Header="Paste"
+                                      Command="ApplicationCommands.Paste"
+                                      CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <MenuItem Header="Delete"
+                                      Command="ApplicationCommands.Delete"
+                                      CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <Separator/>
+                            <MenuItem Header="Select All"
+                                      Command="ApplicationCommands.SelectAll"
+                                      CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <MenuItem Header="Done Selecting" Click="ClearSelection_Click" InputGestureText="Esc"/>
+                            <Separator/>
+                            <MenuItem Header="Paste Preset" Tag="PastePresetMenu">
+                                <MenuItem Header="None" Tag="None" IsCheckable="True" Click="PastePresetNone_Click"/>
+                                <MenuItem Header="Bullets" Tag="Bullets" IsCheckable="True" Click="PastePresetBullets_Click"/>
+                                <MenuItem Header="Checklist" Tag="Checklist" IsCheckable="True" Click="PastePresetChecklist_Click"/>
+                            </MenuItem>
+                            <Separator/>
+                            <MenuItem Header="List -> Bullets" Click="ToggleBullets_Click"/>
+                            <MenuItem Header="List -> Checklist" Click="ToggleChecklist_Click"/>
+                            <MenuItem Header="Checklist -> Toggle Check" Click="ToggleCheckMarks_Click"/>
+                        </ContextMenu>
+                    </TextBox.ContextMenu>
+                </TextBox>
+            </Grid>
+        </DockPanel>
+    </Border>
+</UserControl>

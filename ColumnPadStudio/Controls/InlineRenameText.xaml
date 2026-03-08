@@ -1,0 +1,19 @@
+<UserControl x:Class="ColumnPadStudio.Controls.InlineRenameText"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             MinWidth="40">
+    <Grid>
+        <TextBlock x:Name="DisplayTextBlock"
+                   Text="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                   VerticalAlignment="Center"
+                   TextTrimming="CharacterEllipsis"
+                   MouseLeftButtonDown="DisplayTextBlock_MouseLeftButtonDown"/>
+
+        <TextBox x:Name="EditorTextBox"
+                 Text="{Binding Text, RelativeSource={RelativeSource AncestorType=UserControl}, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                 VerticalContentAlignment="Center"
+                 Visibility="Collapsed"
+                 KeyDown="EditorTextBox_KeyDown"
+                 LostKeyboardFocus="EditorTextBox_LostKeyboardFocus"/>
+    </Grid>
+</UserControl>

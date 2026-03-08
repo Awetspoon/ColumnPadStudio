@@ -1,0 +1,26 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# IDE/session files
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+*.vsidx
+
+# Local Codex/session files
+.codex/
+.dotnet-cli/
+_tmp_ui_check/
+
+# Temp build/project artifacts
+*wpftmp*
+*.cache
+*.tmp
+
+# Publish output directories used by this repo
+ColumnPadStudio/publish/
+ColumnPadStudio/publish-validation/
+ColumnPadStudio_Publish/

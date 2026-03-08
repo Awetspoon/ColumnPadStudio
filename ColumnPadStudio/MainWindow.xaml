@@ -1,0 +1,447 @@
+<Window x:Class="ColumnPadStudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
+        Title="ColumnPad"
+        Width="1240"
+        Height="780"
+        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
+        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource ControlForegroundBrush}">
+    <Window.Resources>
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFEFEFEF"/>
+        <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#FFF5F5F5"/>
+        <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#FFE8EEF6"/>
+        <SolidColorBrush x:Key="ControlForegroundBrush" Color="#FF111111"/>
+        <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#FFF4F4F4"/>
+        <SolidColorBrush x:Key="ControlBorderBrush" Color="#FFB8B8B8"/>
+        <SolidColorBrush x:Key="ControlHoverBackgroundBrush" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="ControlPressedBackgroundBrush" Color="#FFDCE7F7"/>
+        <SolidColorBrush x:Key="ControlFocusBorderBrush" Color="#FF2B579A"/>
+        <SolidColorBrush x:Key="ControlPopupBackgroundBrush" Color="#FFF4F4F4"/>
+        <SolidColorBrush x:Key="ControlPopupForegroundBrush" Color="#FF111111"/>
+        <SolidColorBrush x:Key="ControlPopupHighlightBrush" Color="#FF2B579A"/>
+        <SolidColorBrush x:Key="ColumnHostBackgroundBrush" Color="#FFF2F2F2"/>
+        <SolidColorBrush x:Key="ColumnHeaderBackgroundBrush" Color="#FFE4E4E4"/>
+        <SolidColorBrush x:Key="ColumnSelectedHeaderBackgroundBrush" Color="#FFE8EEF6"/>
+        <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="EditorForegroundBrush" Color="#FF111111"/>
+
+        <SolidColorBrush x:Key="LineNumberBackgroundBrush" Color="#FFF7F7F7"/>
+        <SolidColorBrush x:Key="LineNumberForegroundBrush" Color="#FF7A7A7A"/>
+        <SolidColorBrush x:Key="StatusBackgroundBrush" Color="#FFF3F3F3"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FF2B579A"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FFFFFFFF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FFD2DEEF"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#FF111111"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FFF4F4F4"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#FF111111"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#FF7A7A7A"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#FF111111"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#FFF4F4F4"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#FF111111"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFF4F4F4"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InfoBrushKey}" Color="#FFF4F4F4"/>
+        <SolidColorBrush x:Key="{x:Static SystemColors.InfoTextBrushKey}" Color="#FF111111"/>
+
+        <Style TargetType="Button">
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,2"/>
+            <Setter Property="MinHeight" Value="24"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonBorder"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="2"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="Center"
+                                              VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource ControlHoverBackgroundBrush}"/>
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="{DynamicResource ControlPressedBackgroundBrush}"/>
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.55"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="Padding" Value="7,1"/>
+            <Setter Property="MinHeight" Value="22"/>
+            <Setter Property="MinWidth" Value="30"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+
+
+        <Style TargetType="ComboBox">
+            <EventSetter Event="PreviewKeyDown" Handler="ToolbarComboBox_PreviewKeyDown"/>
+            <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="8,0,6,0"/>
+            <Setter Property="MinHeight" Value="22"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto"/>
+            <Setter Property="ScrollViewer.CanContentScroll" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBox">
+                        <Grid>
+                            <ToggleButton x:Name="ToggleButton"
+                                          Focusable="False"
+                                          ClickMode="Press"
+                                          IsChecked="{Binding IsDropDownOpen, Mode=TwoWay, RelativeSource={RelativeSource TemplatedParent}}"
+                                          Background="Transparent"
+                                          BorderThickness="0">
+                                <Border x:Name="ComboBorder"
+                                        Background="{TemplateBinding Background}"
+                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                        CornerRadius="2"
+                                        SnapsToDevicePixels="True">
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="26"/>
+                                        </Grid.ColumnDefinitions>
+                                        <TextBlock Margin="{TemplateBinding Padding}"
+                                                   VerticalAlignment="Center"
+                                                   HorizontalAlignment="Left"
+                                                   IsHitTestVisible="False"
+                                                   Text="{Binding SelectionBoxItem, RelativeSource={RelativeSource TemplatedParent}}"
+                                                   Foreground="{TemplateBinding Foreground}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                        <Border x:Name="ArrowHost"
+                                                Grid.Column="1"
+                                                Background="{DynamicResource ControlBackgroundBrush}"
+                                                BorderBrush="{DynamicResource ControlBorderBrush}"
+                                                BorderThickness="1,0,0,0">
+                                            <Path Width="10"
+                                                  Height="6"
+                                                  HorizontalAlignment="Center"
+                                                  VerticalAlignment="Center"
+                                                  Fill="{DynamicResource ControlForegroundBrush}"
+                                                  Data="M 0 0 L 5 5 L 10 0 Z"/>
+                                        </Border>
+                                    </Grid>
+                                </Border>
+                            </ToggleButton>
+
+                            <Popup x:Name="Popup"
+                                   Placement="Bottom"
+                                   AllowsTransparency="True"
+                                   Focusable="False"
+                                   PopupAnimation="Slide"
+                                   IsOpen="{TemplateBinding IsDropDownOpen}">
+                                <Border x:Name="PopupBorder"
+                                        MinWidth="{Binding ActualWidth, RelativeSource={RelativeSource TemplatedParent}}"
+                                        Margin="0,2,0,0"
+                                        Padding="1"
+                                        Background="{DynamicResource ControlPopupBackgroundBrush}"
+                                        BorderBrush="{DynamicResource ControlBorderBrush}"
+                                        BorderThickness="1"
+                                        SnapsToDevicePixels="True"
+                                        TextElement.Foreground="{DynamicResource ControlPopupForegroundBrush}">
+                                    <ScrollViewer MaxHeight="{TemplateBinding MaxDropDownHeight}"
+                                                  SnapsToDevicePixels="True">
+                                        <ItemsPresenter KeyboardNavigation.DirectionalNavigation="Contained"/>
+                                    </ScrollViewer>
+                                </Border>
+                            </Popup>
+                        </Grid>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                                <Setter TargetName="ArrowHost" Property="Background" Value="{DynamicResource ControlHoverBackgroundBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsDropDownOpen" Value="True">
+                                <Setter TargetName="ComboBorder" Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                                <Setter TargetName="ArrowHost" Property="Background" Value="{DynamicResource ControlPressedBackgroundBrush}"/>
+                            </Trigger>
+                            <Trigger Property="HasItems" Value="False">
+                                <Setter TargetName="PopupBorder" Property="MinHeight" Value="22"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ComboBorder" Property="Opacity" Value="0.55"/>
+                                <Setter Property="Foreground" Value="{DynamicResource LineNumberForegroundBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="{DynamicResource ControlPopupForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}"/>
+            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ComboBoxItem">
+                        <Border x:Name="ItemBorder"
+                                Background="{TemplateBinding Background}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter Margin="{TemplateBinding Padding}"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsHighlighted" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ControlPopupHighlightBrush}"/>
+                                <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsSelected" Value="True">
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{DynamicResource ControlPopupHighlightBrush}"/>
+                                <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Foreground" Value="{DynamicResource LineNumberForegroundBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style TargetType="ContextMenu">
+            <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ControlPopupForegroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+        </Style>
+
+        <Style TargetType="MenuItem">
+            <Setter Property="Foreground" Value="{DynamicResource ControlPopupForegroundBrush}"/>
+            <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+            <Style.Triggers>
+                <Trigger Property="Role" Value="TopLevelHeader">
+                    <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                </Trigger>
+                <Trigger Property="Role" Value="TopLevelItem">
+                    <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}"/>
+                    <Setter Property="Background" Value="Transparent"/>
+                </Trigger>
+                <Trigger Property="IsHighlighted" Value="True">
+                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                    <Setter Property="Background" Value="{DynamicResource ControlPopupHighlightBrush}"/>
+                </Trigger>
+                <Trigger Property="IsSubmenuOpen" Value="True">
+                    <Setter Property="Foreground" Value="#FFFFFFFF"/>
+                    <Setter Property="Background" Value="{DynamicResource ControlPopupHighlightBrush}"/>
+                </Trigger>
+                <Trigger Property="IsEnabled" Value="False">
+                    <Setter Property="Foreground" Value="{DynamicResource LineNumberForegroundBrush}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top"
+              Background="{DynamicResource MenuBackgroundBrush}"
+              Foreground="{DynamicResource ControlForegroundBrush}">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Layout" Click="NewLayout_Click" InputGestureText="Ctrl+N"/>
+                <Separator/>
+                <MenuItem Header="New _Workspace Tab" Click="NewWorkspaceTab_Click" InputGestureText="Ctrl+Shift+N"/>
+                <MenuItem Header="_Close Workspace Tab" Click="CloseWorkspaceTab_Click" InputGestureText="Ctrl+Shift+W"/>
+                <Separator/>
+                <MenuItem Header="_Open..." Click="OpenLayout_Click" InputGestureText="Ctrl+O"/>
+                <MenuItem Header="Import ColumnPad ._txt..." Click="ImportExportText_Click"/>
+                <MenuItem Header="Import ColumnPad ._md..." Click="ImportExportMarkdown_Click"/>
+                <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save _As..." Click="SaveAs_Click" InputGestureText="Ctrl+Shift+S"/>
+                <Separator/>
+                <MenuItem Header="E_xport Workspace as .txt" Click="ExportTxt_Click" InputGestureText="Ctrl+E"/>
+                <MenuItem Header="Export Workspace as ._md" Click="ExportMarkdown_Click" InputGestureText="Ctrl+Shift+E"/>
+                <MenuItem Header="_Print..." Click="Print_Click" InputGestureText="Ctrl+P"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="Exit_Click"/>
+            </MenuItem>
+
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Find..." Click="Find_Click" InputGestureText="Ctrl+F"/>
+                <MenuItem Header="Find _Next" Click="FindNext_Click" InputGestureText="F3"/>
+                <MenuItem Header="_Replace All..." Click="ReplaceAll_Click" InputGestureText="Ctrl+H"/>
+                <Separator/>
+                <MenuItem Header="Selection to _Bullets" Click="SelectionBullets_Click" InputGestureText="Ctrl+Shift+8"/>
+                <MenuItem Header="Selection to _Checklist" Click="SelectionChecklist_Click" InputGestureText="Ctrl+Shift+7"/>
+                <MenuItem Header="_Toggle Checklist Check" Click="SelectionToggleChecks_Click" InputGestureText="Ctrl+Enter"/>
+                <MenuItem Header="C_lear Selection" Click="ClearSelection_Click" InputGestureText="Esc"/>
+                <Separator/>
+                <MenuItem Header="_Clear All Columns" Click="ClearAll_Click" InputGestureText="Ctrl+Shift+X"/>
+                <MenuItem Header="_Duplicate Selected Column" Click="DuplicateActive_Click" InputGestureText="Ctrl+D"/>
+            </MenuItem>
+
+            <MenuItem Header="_View">
+                <MenuItem Header="_Word Wrap"
+                          IsCheckable="True"
+                          IsChecked="{Binding ActiveVm.WordWrap, Mode=TwoWay}"
+                          InputGestureText="Alt+Z"/>
+                <MenuItem Header="_Line Numbers"
+                          IsCheckable="True"
+                          IsChecked="{Binding ActiveVm.ShowLineNumbers, Mode=TwoWay}"
+                          InputGestureText="Alt+L"/>
+                <Separator/>
+                <MenuItem Header="_Light Mode" Click="ThemeClassic_Click"/>
+                <MenuItem Header="_Dark Mode" Click="ThemeHighContrast_Click"/>
+                <MenuItem Header="_Default Mode" Click="ThemeCompact_Click"/>
+            </MenuItem>
+
+            <MenuItem Header="_Columns">
+                <MenuItem Header="_Add Column" Click="AddColumn_Click" InputGestureText="Ctrl+Shift++"/>
+                <MenuItem Header="_Remove Selected Column" Click="RemoveActive_Click" InputGestureText="Ctrl+Shift+-"/>
+                <MenuItem Header="Swap Selected Column with Column on _Left"
+                          Click="MoveActiveLeft_Click"
+                          InputGestureText="Alt+Shift+Left"
+                          IsEnabled="{Binding ActiveVm.CanMoveActiveColumnLeft}"/>
+                <MenuItem Header="Swap Selected Column with Column on _Right"
+                          Click="MoveActiveRight_Click"
+                          InputGestureText="Alt+Shift+Right"
+                          IsEnabled="{Binding ActiveVm.CanMoveActiveColumnRight}"/>
+                <Separator/>
+                <MenuItem Header="Reset _Column Size" Click="ResetActiveWidth_Click"/>
+                <MenuItem Header="_Reset All Column Sizes" Click="ResetWidths_Click" InputGestureText="Ctrl+R"/>
+                <Separator/>
+                <MenuItem Header="{Binding ActiveVm.LockActiveWidthActionLabel}"
+                          ToolTip="{Binding ActiveVm.LockActiveWidthActionToolTip}"
+                          Click="LockActiveWidth_Click"
+                          InputGestureText="Ctrl+Shift+L"/>
+            </MenuItem>
+        </Menu>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource ToolbarBackgroundBrush}"
+                BorderBrush="{DynamicResource ControlBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          Focusable="False">
+                <StackPanel Orientation="Horizontal" Margin="8,3">
+                    <Button Content="+ Tab"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Click="NewWorkspaceTab_Click"
+                            ToolTip="New workspace tab"/>
+                    <Button Content="- Tab"
+                            Style="{StaticResource ToolbarButtonStyle}"
+                            Margin="0,0,0,0"
+                            Click="CloseWorkspaceTab_Click"
+                            ToolTip="Close current workspace tab"/>
+
+                    <Border Width="1" Height="22" Margin="10,0" Background="{DynamicResource ControlBorderBrush}"/>
+                    <TextBlock Text="Font:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <ComboBox Width="160"
+                              Margin="0,0,6,0"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              IsTextSearchEnabled="True"
+                              ItemsSource="{Binding ActiveVm.EditorFontFamilies}"
+                              SelectedItem="{Binding ActiveVm.EditorFontFamily, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Style:" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                    <ComboBox Width="128"
+                              Margin="0,0,6,0"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              IsTextSearchEnabled="True"
+                              ItemsSource="{Binding ActiveVm.EditorFontStyles}"
+                              SelectedItem="{Binding ActiveVm.EditorFontStyleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Size:" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                    <ComboBox Width="60"
+                              Margin="0,0,8,0"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              ItemsSource="{Binding ActiveVm.EditorFontSizes}"
+                              ItemStringFormat="F0"
+                              SelectedItem="{Binding ActiveVm.EditorFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <Border Width="1" Height="22" Margin="10,0" Background="{DynamicResource ControlBorderBrush}"/>
+                    <TextBlock Text="Theme:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <ComboBox Width="145"
+                              VerticalAlignment="Center"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              ItemsSource="{Binding ActiveVm.ThemePresets}"
+                              SelectedItem="{Binding ActiveVm.ThemePreset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <TabControl x:Name="WorkspaceTabs"
+                    DockPanel.Dock="Top"
+                    Height="33"
+                    Margin="0,0,0,1"
+                    ItemsSource="{Binding Workspaces}"
+                    SelectedItem="{Binding ActiveWorkspace, Mode=TwoWay}"
+                    SelectionChanged="WorkspaceTabs_SelectionChanged"
+                    Background="{DynamicResource WindowBackgroundBrush}"
+                    Foreground="{DynamicResource ControlForegroundBrush}">
+            <TabControl.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="WorkspaceRenameMenuItem" Header="Rename Workspace"/>
+                </ContextMenu>
+            </TabControl.ContextMenu>
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <controls:InlineRenameText Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                               IsEditing="{Binding IsRenaming, Mode=TwoWay}"
+                                               Margin="2,0"/>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <Grid Height="0"/>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+
+        <StatusBar DockPanel.Dock="Bottom"
+                   Background="{DynamicResource StatusBackgroundBrush}"
+                   Foreground="{DynamicResource ControlForegroundBrush}">
+            <StatusBarItem Content="{Binding ActiveVm.StatusText}" />
+        </StatusBar>
+
+        <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
+            <Grid x:Name="ColumnsHost" Background="{DynamicResource ColumnHostBackgroundBrush}" />
+        </ScrollViewer>
+    </DockPanel>
+</Window>
