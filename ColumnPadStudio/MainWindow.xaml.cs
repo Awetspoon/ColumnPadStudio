@@ -1048,14 +1048,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetBrush("ColumnSelectedHeaderBackgroundBrush", "#FF34404D");
             SetBrush("EditorBackgroundBrush", "#FF171717");
             SetBrush("EditorForegroundBrush", "#FFF2F2F2");
+            SetBrush("EditorSelectionBrush", "#FF4A88CC");
+            SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
+            SetBrush("EditorInactiveSelectionBrush", "#FF385E8A");
+            SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
 
             SetBrush("LineNumberBackgroundBrush", "#FF222222");
             SetBrush("LineNumberForegroundBrush", "#FFB8B8B8");
             SetBrush("StatusBackgroundBrush", "#FF2A2A2A");
-            SetBrush(SystemColors.HighlightBrushKey, "#FF3B6EA8");
+            SetBrush(SystemColors.HighlightBrushKey, "#FF4A88CC");
             SetBrush(SystemColors.HighlightTextBrushKey, "#FFFFFFFF");
-            SetBrush(SystemColors.InactiveSelectionHighlightBrushKey, "#FF384452");
-            SetBrush(SystemColors.InactiveSelectionHighlightTextBrushKey, "#FFF2F2F2");
+            SetBrush(SystemColors.InactiveSelectionHighlightBrushKey, "#FF385E8A");
+            SetBrush(SystemColors.InactiveSelectionHighlightTextBrushKey, "#FFFFFFFF");
             SetBrush(SystemColors.MenuBrushKey, "#FF2F2F2F");
             SetBrush(SystemColors.MenuTextBrushKey, "#FFF2F2F2");
             SetBrush(SystemColors.GrayTextBrushKey, "#FF9EA7B3");
@@ -1087,14 +1091,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetBrush("ColumnSelectedHeaderBackgroundBrush", "#FFE8DEC8");
             SetBrush("EditorBackgroundBrush", "#FFFFFCF4");
             SetBrush("EditorForegroundBrush", "#FF1C1C1C");
+            SetBrush("EditorSelectionBrush", "#FF2F5E94");
+            SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
+            SetBrush("EditorInactiveSelectionBrush", "#FF6D86AA");
+            SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
 
             SetBrush("LineNumberBackgroundBrush", "#FFEEE7D8");
             SetBrush("LineNumberForegroundBrush", "#FF7B7469");
             SetBrush("StatusBackgroundBrush", "#FFE8E2D5");
             SetBrush(SystemColors.HighlightBrushKey, "#FF2F5E94");
             SetBrush(SystemColors.HighlightTextBrushKey, "#FFFFFFFF");
-            SetBrush(SystemColors.InactiveSelectionHighlightBrushKey, "#FFE0D9CC");
-            SetBrush(SystemColors.InactiveSelectionHighlightTextBrushKey, "#FF1C1C1C");
+            SetBrush(SystemColors.InactiveSelectionHighlightBrushKey, "#FF6D86AA");
+            SetBrush(SystemColors.InactiveSelectionHighlightTextBrushKey, "#FFFFFFFF");
             SetBrush(SystemColors.MenuBrushKey, "#FFF8F3E8");
             SetBrush(SystemColors.MenuTextBrushKey, "#FF1C1C1C");
             SetBrush(SystemColors.GrayTextBrushKey, "#FF7B7469");
@@ -1124,14 +1132,18 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         SetBrush("ColumnSelectedHeaderBackgroundBrush", "#FFE8EEF6");
         SetBrush("EditorBackgroundBrush", "#FFFFFFFF");
         SetBrush("EditorForegroundBrush", "#FF111111");
+        SetBrush("EditorSelectionBrush", "#FF2B579A");
+        SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
+        SetBrush("EditorInactiveSelectionBrush", "#FF6A88B8");
+        SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
 
         SetBrush("LineNumberBackgroundBrush", "#FFF7F7F7");
         SetBrush("LineNumberForegroundBrush", "#FF7A7A7A");
         SetBrush("StatusBackgroundBrush", "#FFF3F3F3");
         SetBrush(SystemColors.HighlightBrushKey, "#FF2B579A");
         SetBrush(SystemColors.HighlightTextBrushKey, "#FFFFFFFF");
-        SetBrush(SystemColors.InactiveSelectionHighlightBrushKey, "#FFD2DEEF");
-        SetBrush(SystemColors.InactiveSelectionHighlightTextBrushKey, "#FF111111");
+        SetBrush(SystemColors.InactiveSelectionHighlightBrushKey, "#FF6A88B8");
+        SetBrush(SystemColors.InactiveSelectionHighlightTextBrushKey, "#FFFFFFFF");
         SetBrush(SystemColors.MenuBrushKey, "#FFF4F4F4");
         SetBrush(SystemColors.MenuTextBrushKey, "#FF111111");
         SetBrush(SystemColors.GrayTextBrushKey, "#FF7A7A7A");
