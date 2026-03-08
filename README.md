@@ -6,6 +6,10 @@
 
 ColumnPad is a Windows WPF text editor built for side-by-side writing. It combines normal file editing with multi-column workspaces, workspace tabs, and a cleaner writing-focused layout than a standard notepad app.
 
+## Screenshot
+
+![ColumnPad application screenshot](docs/columnpad-screenshot.png)
+
 ## Highlights
 - Open and save real `.txt` and `.md` files.
 - Save and reopen full multi-column workspaces as JSON layouts.
@@ -19,7 +23,7 @@ ColumnPad is a Windows WPF text editor built for side-by-side writing. It combin
 Get the latest Windows build from the [Releases page](https://github.com/Awetspoon/ColumnPad/releases).
 
 Current published release:
-- `ColumnPad v1.0.0`
+- `ColumnPad v1.1.0`
 - single-file Windows executable
 
 ## How It Works
