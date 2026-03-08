@@ -1092,9 +1092,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetBrush("EditorBackgroundBrush", "#FFFFFCF4");
             SetBrush("EditorForegroundBrush", "#FF1C1C1C");
             SetBrush("EditorSelectionBrush", "#FF2F5E94");
-            SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
+            SetBrush("EditorSelectionTextBrush", "#FF1C1C1C");
             SetBrush("EditorInactiveSelectionBrush", "#FF6D86AA");
-            SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
+            SetBrush("EditorInactiveSelectionTextBrush", "#FF1C1C1C");
 
             SetBrush("LineNumberBackgroundBrush", "#FFEEE7D8");
             SetBrush("LineNumberForegroundBrush", "#FF7B7469");
@@ -1133,9 +1133,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         SetBrush("EditorBackgroundBrush", "#FFFFFFFF");
         SetBrush("EditorForegroundBrush", "#FF111111");
         SetBrush("EditorSelectionBrush", "#FF2B579A");
-        SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
+        SetBrush("EditorSelectionTextBrush", "#FF111111");
         SetBrush("EditorInactiveSelectionBrush", "#FF6A88B8");
-        SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
+        SetBrush("EditorInactiveSelectionTextBrush", "#FF111111");
 
         SetBrush("LineNumberBackgroundBrush", "#FFF7F7F7");
         SetBrush("LineNumberForegroundBrush", "#FF7A7A7A");

@@ -4,6 +4,16 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.1.1] - 2026-03-08
+
+### Changed
+- Improved the GitHub landing page with a cleaner README layout and an in-app screenshot.
+
+### Fixed
+- Fixed editor text selection visibility so selected text remains readable instead of becoming a solid block.
+- Applied editor-level selection and caret styling directly to the writing surface for more reliable theme behavior.
+- Adjusted light and default theme selection text colors so highlighted text stays legible.
+
 ## [v1.1.0] - 2026-03-08
 
 ### Added
