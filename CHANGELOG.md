@@ -4,6 +4,13 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.1.3] - 2026-03-09
+
+### Fixed
+- Fixed text selection in the editor so highlighted words stay readable instead of turning into solid blue blocks while dragging.
+- Adjusted light and default theme selection colors to use lighter highlight fills with dark selected text.
+- Reduced selection opacity so highlighted text remains visible during click-and-drag selection.
+
 ## [v1.1.2] - 2026-03-09
 
 ### Changed

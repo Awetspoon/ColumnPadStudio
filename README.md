@@ -23,7 +23,7 @@ ColumnPad is a Windows WPF text editor built for side-by-side writing. It combin
 Get the latest Windows build from the [Releases page](https://github.com/Awetspoon/ColumnPad/releases).
 
 Current published release:
-- `ColumnPad v1.1.2`
+- `ColumnPad v1.1.3`
 - single-file Windows executable
 
 ## How It Works
