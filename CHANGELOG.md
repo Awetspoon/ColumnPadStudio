@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.1.2] - 2026-03-09
+
+### Changed
+- Refreshed the GitHub screenshot with a clean blank-layout capture.
+- Strengthened editor text selection contrast so selections stay clearly visible in every theme.
+- Added version metadata to the Windows build and updated release docs for v1.1.2.
+
+### Fixed
+- Fixed imported text and markdown workspace exports so they open in a clean state instead of appearing dirty immediately.
+- Fixed active-column status updates so renames and checklist progress refresh the status bar correctly.
+- Fixed column focus and autosave width persistence so they do not overwrite transient action messages.
+- Fixed open/save/import/export actions to report file I/O errors instead of failing abruptly.
+- Fixed bullet and checklist formatting over mixed content so blank separator lines stay untouched.
+
 ## [v1.1.1] - 2026-03-08
 
 ### Changed
