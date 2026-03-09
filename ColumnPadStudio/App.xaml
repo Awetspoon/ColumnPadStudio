@@ -15,7 +15,7 @@
             <Setter Property="SelectionBrush" Value="{DynamicResource EditorSelectionBrush}"/>
             <Setter Property="SelectionTextBrush" Value="{DynamicResource EditorSelectionTextBrush}"/>
             <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}"/>
-            <Setter Property="SelectionOpacity" Value="1.0"/>
+            <Setter Property="SelectionOpacity" Value="0.65"/>
             <Setter Property="IsInactiveSelectionHighlightEnabled" Value="True"/>
         </Style>
     </Application.Resources>

@@ -157,7 +157,7 @@
                          Foreground="{DynamicResource EditorForegroundBrush}"
                          SelectionBrush="{DynamicResource EditorSelectionBrush}"
                          SelectionTextBrush="{DynamicResource EditorSelectionTextBrush}"
-                         SelectionOpacity="1.0"
+                         SelectionOpacity="0.65"
                          CaretBrush="{DynamicResource EditorForegroundBrush}"
                          TextWrapping="{Binding TextWrappingMode}"
                          HorizontalScrollBarVisibility="{Binding HorizontalScrollBarMode}"
