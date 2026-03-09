@@ -1,5 +1,7 @@
 using ColumnPadStudio.ViewModels;
 using ColumnPadStudio.Services;
+using ColumnPadStudio.Controls;
+using System.Reflection;
 using System.IO;
 using System.Windows;
 
@@ -108,6 +110,12 @@ var metrics = new ColumnViewModel
 Check(metrics.ChecklistTotal == 4, "ChecklistTotal should count symbol and markdown checklist items.");
 Check(metrics.ChecklistDone == 2, "ChecklistDone should count checked symbol and markdown items.");
 
+var liveStatusVm = new MainViewModel();
+liveStatusVm.Columns[0].Title = "Inbox";
+Check(liveStatusVm.StatusText.Contains("Selected: Inbox"), "Status text should refresh when the active column is renamed.");
+liveStatusVm.Columns[0].Text = "\u2610 one\n\u2611 two";
+Check(liveStatusVm.StatusText.Contains("Done: 1/2"), "Status text should refresh when active-column checklist progress changes.");
+
 var exportedText = "===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
 var importedFromText = new MainViewModel();
 importedFromText.LoadFromExportText(exportedText, "export.txt");
@@ -116,6 +124,7 @@ Check(importedFromText.Columns[0].Title == "Alpha", "Text import should preserve
 Check(importedFromText.Columns[0].Text == "one", "Text import should preserve first column body.");
 Check(importedFromText.Columns[1].Title == "Beta", "Text import should preserve second column title.");
 Check(importedFromText.Columns[1].Text == ".", "Text import should preserve second column body.");
+Check(!importedFromText.IsDirty, "Imported text exports should start clean.");
 
 var tempRoot = Path.Combine(Path.GetTempPath(), $"ColumnPadStudioSmoke-{Guid.NewGuid():N}");
 Directory.CreateDirectory(tempRoot);
@@ -177,6 +186,19 @@ Check(importedFromMarkdown.Columns[0].Title == "Red", "Markdown import should pr
 Check(importedFromMarkdown.Columns[0].Text == "left", "Markdown import should preserve first heading body.");
 Check(importedFromMarkdown.Columns[1].Title == "Blue", "Markdown import should preserve second heading title.");
 Check(importedFromMarkdown.Columns[1].Text == "right", "Markdown import should preserve second heading body.");
+Check(!importedFromMarkdown.IsDirty, "Imported markdown exports should start clean.");
+
+var transformBullets = typeof(ColumnEditorControl).GetMethod("TransformBullets", BindingFlags.Static | BindingFlags.NonPublic)
+    ?? throw new InvalidOperationException("Could not find bullet transform helper.");
+var bulletFormatting = (List<string>?)transformBullets.Invoke(null, [new List<string> { "alpha", "", "beta" }])
+    ?? throw new InvalidOperationException("Bullet transform returned null.");
+Check(string.Join("\n", bulletFormatting) == "\u2022 alpha\n\n\u2022 beta", "Applying bullets to mixed content should leave blank separator lines blank.");
+
+var transformChecklist = typeof(ColumnEditorControl).GetMethod("TransformChecklist", BindingFlags.Static | BindingFlags.NonPublic)
+    ?? throw new InvalidOperationException("Could not find checklist transform helper.");
+var checklistFormatting = (List<string>?)transformChecklist.Invoke(null, [new List<string> { "- [ ] one", "", "- [x] two" }])
+    ?? throw new InvalidOperationException("Checklist transform returned null.");
+Check(string.Join("\n", checklistFormatting) == "one\n\ntwo", "Toggling checklist formatting off should leave blank separator lines untouched.");
 
 if (failures.Count > 0)
 {

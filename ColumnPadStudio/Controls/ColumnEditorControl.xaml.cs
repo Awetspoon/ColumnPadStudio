@@ -288,79 +288,95 @@ public partial class ColumnEditorControl : UserControl
 
     private void ToggleBullets()
     {
-        ApplyLineTransform(lines =>
-        {
-            if (lines.Count == 0)
-                return lines;
-
-            var allBulleted = lines.All(line => ParseLineMarker(line).Kind == MarkerKind.Bullet);
-
-            for (var i = 0; i < lines.Count; i++)
-            {
-                var marker = ParseLineMarker(lines[i]);
-                if (allBulleted)
-                {
-                    if (marker.Kind == MarkerKind.Bullet)
-                        lines[i] = RemoveMarker(lines[i], marker);
-                    continue;
-                }
-
-                if (marker.Kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked)
-                    continue;
-
-                lines[i] = UpsertMarker(lines[i], BulletPrefix);
-            }
-
-            return lines;
-        });
+        ApplyLineTransform(TransformBullets);
     }
 
     private void ToggleChecklist()
     {
-        ApplyLineTransform(lines =>
-        {
-            if (lines.Count == 0)
-                return lines;
+        ApplyLineTransform(TransformChecklist);
+    }
 
-            var allChecklist = lines.All(line =>
+    private static List<string> TransformBullets(List<string> lines)
+    {
+        if (lines.Count == 0)
+            return lines;
+
+        var hasContentLines = lines.Any(line => !string.IsNullOrWhiteSpace(line));
+        var allBulleted = hasContentLines && lines
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .All(line => ParseLineMarker(line).Kind == MarkerKind.Bullet);
+
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (hasContentLines && string.IsNullOrWhiteSpace(lines[i]))
+                continue;
+
+            var marker = ParseLineMarker(lines[i]);
+            if (allBulleted)
+            {
+                if (marker.Kind == MarkerKind.Bullet)
+                    lines[i] = RemoveMarker(lines[i], marker);
+                continue;
+            }
+
+            if (marker.Kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked)
+                continue;
+
+            lines[i] = UpsertMarker(lines[i], BulletPrefix);
+        }
+
+        return lines;
+    }
+
+    private static List<string> TransformChecklist(List<string> lines)
+    {
+        if (lines.Count == 0)
+            return lines;
+
+        var hasContentLines = lines.Any(line => !string.IsNullOrWhiteSpace(line));
+        var allChecklist = hasContentLines && lines
+            .Where(line => !string.IsNullOrWhiteSpace(line))
+            .All(line =>
             {
                 var kind = ParseLineMarker(line).Kind;
                 return kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked;
             });
 
-            for (var i = 0; i < lines.Count; i++)
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (hasContentLines && string.IsNullOrWhiteSpace(lines[i]))
+                continue;
+
+            var marker = ParseLineMarker(lines[i]);
+            if (allChecklist)
             {
-                var marker = ParseLineMarker(lines[i]);
-                if (allChecklist)
-                {
-                    if (marker.Kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked)
-                        lines[i] = RemoveMarker(lines[i], marker);
-                    continue;
-                }
-
-                if (marker.Kind == MarkerKind.ChecklistChecked)
-                {
-                    lines[i] = UpsertMarker(lines[i], ChecklistCheckedPrefix);
-                    continue;
-                }
-
-                if (marker.Kind == MarkerKind.ChecklistUnchecked)
-                {
-                    lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
-                    continue;
-                }
-
-                if (marker.Kind == MarkerKind.Bullet)
-                {
-                    lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
-                    continue;
-                }
-
-                lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
+                if (marker.Kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked)
+                    lines[i] = RemoveMarker(lines[i], marker);
+                continue;
             }
 
-            return lines;
-        });
+            if (marker.Kind == MarkerKind.ChecklistChecked)
+            {
+                lines[i] = UpsertMarker(lines[i], ChecklistCheckedPrefix);
+                continue;
+            }
+
+            if (marker.Kind == MarkerKind.ChecklistUnchecked)
+            {
+                lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
+                continue;
+            }
+
+            if (marker.Kind == MarkerKind.Bullet)
+            {
+                lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
+                continue;
+            }
+
+            lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
+        }
+
+        return lines;
     }
 
     private void ToggleCheckMarks()

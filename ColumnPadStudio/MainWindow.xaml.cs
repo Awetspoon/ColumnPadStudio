@@ -174,8 +174,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             editor.EditorFocused += (_, __) =>
             {
+                var selectionChanged = !string.Equals(vm.ActiveColumnId, colVm.Id, StringComparison.Ordinal);
                 vm.ActiveColumnId = colVm.Id;
-                vm.RefreshStatus();
+                if (selectionChanged)
+                    vm.RefreshStatus();
             };
 
 
@@ -298,8 +300,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 gridCol++;
             }
         }
-
-        vm.RefreshStatus();
     }
 
     private void PersistWidthsFromGrid()
@@ -319,8 +319,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             editorIndex++;
         }
-
-        vm.RefreshStatus();
     }
 
     private bool TryOfferAutoRecovery()
@@ -445,7 +443,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var editedColumns = workspace.Vm.Columns.Where(HasEditedColumnData).ToList();
         if (editedColumns.Count == 0)
-            return true;
+        {
+            if (!workspace.Vm.IsDirty)
+                return true;
+
+            var genericMessage = $"{actionText} will permanently discard unsaved changes in {workspace.Name}.";
+            return ConfirmDestructiveAction(dialogTitle, genericMessage + "\n\nAre you sure you want to continue?");
+        }
 
         var message = editedColumns.Count == 1
             ? $"{actionText} will permanently discard the edited contents of \"{editedColumns[0].Title}\"."
@@ -465,6 +469,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             MessageBoxResult.No) == MessageBoxResult.Yes;
     }
 
+    private bool TryRunFileAction(string dialogTitle, string actionText, Action action)
+    {
+        try
+        {
+            action();
+            return true;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            MessageBox.Show(
+                this,
+                $"Could not {actionText}.\n\n{ex.Message}",
+                dialogTitle,
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+            return false;
+        }
+    }
+
     private void OpenLayout_Click(object sender, RoutedEventArgs e)
     {
         var dlg = new OpenFileDialog
@@ -481,22 +504,27 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         var extension = Path.GetExtension(dlg.FileName).ToLowerInvariant();
         var fileName = Path.GetFileName(dlg.FileName);
-        var content = File.ReadAllText(dlg.FileName);
+        if (!TryRunFileAction("Open Failed", $"open {fileName}", () =>
+        {
+            var content = File.ReadAllText(dlg.FileName);
+            if (extension == ".txt")
+            {
+                ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.TextDocument);
+            }
+            else if (extension == ".md")
+            {
+                ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.MarkdownDocument);
+            }
+            else
+            {
+                ActiveVm.LoadFromJson(content, fileName, dlg.FileName, preserveCurrentTheme: true);
+            }
 
-        if (extension == ".txt")
+            ResetFindCursor();
+        }))
         {
-            ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.TextDocument);
+            return;
         }
-        else if (extension == ".md")
-        {
-            ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.MarkdownDocument);
-        }
-        else
-        {
-            ActiveVm.LoadFromFile(dlg.FileName, preserveCurrentTheme: true);
-        }
-
-        ResetFindCursor();
     }
 
     private void ImportExportText_Click(object sender, RoutedEventArgs e)
@@ -513,8 +541,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (!ConfirmWorkspaceDestructiveAction(ActiveWorkspace, "Import ColumnPad Text", "Importing a ColumnPad text export"))
             return;
 
-        ActiveVm.LoadFromExportText(File.ReadAllText(dlg.FileName), Path.GetFileName(dlg.FileName), dlg.FileName);
-        ResetFindCursor();
+        var fileName = Path.GetFileName(dlg.FileName);
+        if (!TryRunFileAction("Import Failed", $"import {fileName}", () =>
+        {
+            ActiveVm.LoadFromExportText(File.ReadAllText(dlg.FileName), fileName, dlg.FileName);
+            ResetFindCursor();
+        }))
+        {
+            return;
+        }
     }
 
     private void ImportExportMarkdown_Click(object sender, RoutedEventArgs e)
@@ -531,15 +566,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (!ConfirmWorkspaceDestructiveAction(ActiveWorkspace, "Import ColumnPad Markdown", "Importing a ColumnPad markdown export"))
             return;
 
-        ActiveVm.LoadFromExportMarkdown(File.ReadAllText(dlg.FileName), Path.GetFileName(dlg.FileName), dlg.FileName);
-        ResetFindCursor();
+        var fileName = Path.GetFileName(dlg.FileName);
+        if (!TryRunFileAction("Import Failed", $"import {fileName}", () =>
+        {
+            ActiveVm.LoadFromExportMarkdown(File.ReadAllText(dlg.FileName), fileName, dlg.FileName);
+            ResetFindCursor();
+        }))
+        {
+            return;
+        }
     }
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         PersistWidthsFromGrid();
-        if (ActiveVm.SaveCurrentFile())
+        if (!string.IsNullOrWhiteSpace(ActiveVm.CurrentFilePath))
+        {
+            TryRunFileAction("Save Failed", $"save {Path.GetFileName(ActiveVm.CurrentFilePath)}", () => ActiveVm.SaveCurrentFile());
             return;
+        }
 
         SaveAs_Click(sender, e);
     }
@@ -551,7 +596,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (dlg.ShowDialog() != true)
             return;
 
-        ActiveVm.SaveToPath(dlg.FileName, ActiveVm.CurrentFileKind);
+        TryRunFileAction("Save Failed", $"save {Path.GetFileName(dlg.FileName)}", () => ActiveVm.SaveToPath(dlg.FileName, ActiveVm.CurrentFileKind));
     }
 
     private static SaveFileDialog CreateSaveDialog(MainViewModel vm)
@@ -681,8 +726,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (dlg.ShowDialog() != true)
             return;
 
-        File.WriteAllText(dlg.FileName, ActiveVm.BuildExportText(), Encoding.UTF8);
-        ActiveVm.StatusText = $"Exported: {Path.GetFileName(dlg.FileName)}";
+        TryRunFileAction("Export Failed", $"export {Path.GetFileName(dlg.FileName)}", () =>
+        {
+            File.WriteAllText(dlg.FileName, ActiveVm.BuildExportText(), Encoding.UTF8);
+            ActiveVm.StatusText = $"Exported: {Path.GetFileName(dlg.FileName)}";
+        });
     }
 
     private void ExportMarkdown_Click(object sender, RoutedEventArgs e)
@@ -696,8 +744,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (dlg.ShowDialog() != true)
             return;
 
-        File.WriteAllText(dlg.FileName, ActiveVm.BuildExportMarkdown(), Encoding.UTF8);
-        ActiveVm.StatusText = $"Exported: {Path.GetFileName(dlg.FileName)}";
+        TryRunFileAction("Export Failed", $"export {Path.GetFileName(dlg.FileName)}", () =>
+        {
+            File.WriteAllText(dlg.FileName, ActiveVm.BuildExportMarkdown(), Encoding.UTF8);
+            ActiveVm.StatusText = $"Exported: {Path.GetFileName(dlg.FileName)}";
+        });
     }
 
     private void Print_Click(object sender, RoutedEventArgs e)
@@ -1092,9 +1143,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetBrush("EditorBackgroundBrush", "#FFFFFCF4");
             SetBrush("EditorForegroundBrush", "#FF1C1C1C");
             SetBrush("EditorSelectionBrush", "#FF2F5E94");
-            SetBrush("EditorSelectionTextBrush", "#FF1C1C1C");
+            SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
             SetBrush("EditorInactiveSelectionBrush", "#FF6D86AA");
-            SetBrush("EditorInactiveSelectionTextBrush", "#FF1C1C1C");
+            SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
 
             SetBrush("LineNumberBackgroundBrush", "#FFEEE7D8");
             SetBrush("LineNumberForegroundBrush", "#FF7B7469");
@@ -1133,9 +1184,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         SetBrush("EditorBackgroundBrush", "#FFFFFFFF");
         SetBrush("EditorForegroundBrush", "#FF111111");
         SetBrush("EditorSelectionBrush", "#FF2B579A");
-        SetBrush("EditorSelectionTextBrush", "#FF111111");
+        SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
         SetBrush("EditorInactiveSelectionBrush", "#FF6A88B8");
-        SetBrush("EditorInactiveSelectionTextBrush", "#FF111111");
+        SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
 
         SetBrush("LineNumberBackgroundBrush", "#FFF7F7F7");
         SetBrush("LineNumberForegroundBrush", "#FF7A7A7A");

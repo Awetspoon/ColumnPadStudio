@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Text;
 using System.Text.Json;
@@ -204,7 +205,20 @@ public sealed class MainViewModel : NotifyBase
             EditorFontWeight = _editorFontWeight,
             UseDefaultFont = true
         };
+        c.PropertyChanged += Column_PropertyChanged;
         return c;
+    }
+
+    private void Column_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (sender is not ColumnViewModel column)
+            return;
+
+        if (!ReferenceEquals(column, GetActive()))
+            return;
+
+        if (e.PropertyName is nameof(ColumnViewModel.Title) or nameof(ColumnViewModel.ChecklistTotal) or nameof(ColumnViewModel.ChecklistDone))
+            RefreshStatus();
     }
 
     private void ApplyEditorFontToColumns()
@@ -835,6 +849,7 @@ public sealed class MainViewModel : NotifyBase
         RequestRebuildColumns?.Invoke(this, EventArgs.Empty);
         RefreshStatus();
         StatusText = sourceLabel is null ? fallbackStatus : $"Opened: {sourceLabel}";
+        MarkClean();
     }
 
     private static List<(string Title, string Text)> ParseTextExportColumns(string text)

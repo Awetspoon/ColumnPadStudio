@@ -29,9 +29,9 @@
         <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="EditorForegroundBrush" Color="#FF111111"/>
         <SolidColorBrush x:Key="EditorSelectionBrush" Color="#FF2B579A"/>
-        <SolidColorBrush x:Key="EditorSelectionTextBrush" Color="#FF111111"/>
+        <SolidColorBrush x:Key="EditorSelectionTextBrush" Color="#FFFFFFFF"/>
         <SolidColorBrush x:Key="EditorInactiveSelectionBrush" Color="#FF6A88B8"/>
-        <SolidColorBrush x:Key="EditorInactiveSelectionTextBrush" Color="#FF111111"/>
+        <SolidColorBrush x:Key="EditorInactiveSelectionTextBrush" Color="#FFFFFFFF"/>
 
         <SolidColorBrush x:Key="LineNumberBackgroundBrush" Color="#FFF7F7F7"/>
         <SolidColorBrush x:Key="LineNumberForegroundBrush" Color="#FF7A7A7A"/>
