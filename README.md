@@ -4,72 +4,64 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Awetspoon/ColumnPad)
 
-ColumnPad is a Windows WPF text editor built for side-by-side writing. It combines normal file editing with multi-column workspaces, workspace tabs, and a cleaner writing-focused layout than a standard notepad app.
+ColumnPad is a Windows WPF text editor focused on side-by-side writing, fast workspace switching, and clean text workflows.
 
-## Screenshot
+## Features
+- Multi-column writing layout with drag-resize splitters.
+- Workspace tabs for parallel notes and drafts.
+- Open/save `.txt` and `.md` documents directly.
+- Save/reopen full workspaces as `.columnpad.json` layouts.
+- Auto-recovery snapshots for crash/session restore.
+- Theme presets, line numbers, word wrap, and per-column font controls.
+- List helpers: bullets, checklist conversion, and check toggling.
+- Workflow Builder scaffold for saved workflow definitions.
 
-![ColumnPad application screenshot](docs/columnpad-screenshot.png)
+## Requirements
+- Windows 10/11
+- .NET 8 SDK
+- Optional: Visual Studio with .NET Desktop Development workload
 
-## Highlights
-- Open and save real `.txt` and `.md` files.
-- Save and reopen full multi-column workspaces as JSON layouts.
-- Work across multiple workspace tabs in one window.
-- Recover workspaces after crashes with auto-recovery.
-- Use dark, light, or default theme modes.
-- Format selected text as bullets or checklists.
-- Download a single-file Windows `.exe` from Releases.
-
-## Download
-Get the latest Windows build from the [Releases page](https://github.com/Awetspoon/ColumnPad/releases).
-
-Current published release:
-- `ColumnPad v1.1.3`
-- single-file Windows executable
-
-## How It Works
-ColumnPad supports two main ways of working:
-
-1. File mode: open a normal `.txt` or `.md` file and save directly back to that file.
-2. Workspace mode: build a multi-column layout, then save it as a layout file so column text, widths, and workspace state are preserved.
-
-## Core Features
-- Side-by-side writing columns with resize splitters.
-- Workspace tabs for separate layouts and notes.
-- Selected-column actions for swap, delete, width reset, and formatting.
-- Clear confirmation before removing a filled column.
-- Toolbar controls for font family, style, size, and theme.
-- `Esc` clears text selection and exits toolbar dropdowns back to the editor.
-- Checklist marker click-to-toggle behavior.
-- Single-file publish profile for shipping the app as one executable.
-
-## Build From Source
-Requirements:
-- Windows
-- .NET 8 SDK or Visual Studio 2022/2026 with the .NET Desktop Development workload
-
-Build and run:
-
+## Setup
 ```powershell
-dotnet build .\ColumnPadStudio.sln -c Release
+git clone https://github.com/Awetspoon/ColumnPad.git
+cd ColumnPad
+```
+
+## Run
+```powershell
 dotnet run --project .\ColumnPadStudio\ColumnPadStudio.csproj -c Release
 ```
 
-## Smoke Tests
+## Build
+```powershell
+dotnet build .\ColumnPadStudio.sln -c Release
+```
 
+## Smoke Tests
 ```powershell
 dotnet run --project .\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
 ```
 
 ## Publish
-
 ```powershell
 dotnet publish .\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=FolderProfile
 ```
 
-Publish output:
-`.\ColumnPadStudio\publish\`
+Publish output: `ColumnPadStudio\publish\`
 
-## Repo Notes
-- Release validation steps are in `RELEASE_CHECKLIST.md`.
-- Change history lives in `CHANGELOG.md`.
-- The project is licensed under the MIT License. See `LICENSE`.
+## Project Structure
+- `ColumnPadStudio/` - WPF desktop app (UI, viewmodels, services, controls)
+- `ColumnPadStudio.SmokeTests/` - lightweight behavior smoke tests
+- `docs/` - screenshots and repo documentation assets
+- `tools/` - helper scripts (branding/assets)
+- `RELEASE_CHECKLIST.md` - release process checklist
+- `CHANGELOG.md` - change history
+
+## Screenshots
+![ColumnPad application screenshot](docs/columnpad-screenshot.png)
+
+## Configuration
+No `.env` variables are required for local run/build.
+
+## License
+MIT. See [LICENSE](LICENSE).

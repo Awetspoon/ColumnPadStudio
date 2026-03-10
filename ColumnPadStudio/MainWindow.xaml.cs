@@ -28,6 +28,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private string _lastReplaceText = string.Empty;
     private int _lastFoundColumnIndex = -1;
     private int _lastFoundCharIndex = -1;
+    private WorkflowBuilderWindow? _workflowBuilderWindow;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -65,7 +66,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    public MainViewModel ActiveVm => ActiveWorkspace?.Vm ?? Workspaces[0].Vm;
+    public MainViewModel ActiveVm
+    {
+        get
+        {
+            if (ActiveWorkspace?.Vm is { } activeVm)
+                return activeVm;
+
+            if (Workspaces.Count > 0)
+                return Workspaces[0].Vm;
+
+            throw new InvalidOperationException("No workspaces are available.");
+        }
+    }
 
     public MainWindow()
     {
@@ -73,10 +86,10 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         WorkspaceRenameMenuItem.Click += WorkspaceRename_Click;
         WorkspaceTabs.PreviewMouseRightButtonDown += WorkspaceTabs_PreviewMouseRightButtonDown;
 
-        DataContext = this;
-
         if (!TryOfferAutoRecovery())
             InitializeDefaultWorkspace();
+
+        DataContext = this;
 
         _autoSaveTimer.Tick += AutoSaveTimer_Tick;
         _autoSaveTimer.Start();
@@ -146,6 +159,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var vm = ActiveVm;
         SyncActiveColumnVisualState(vm);
 
+        if (ActiveWorkspace is { } workspace && vm.Columns.Count > 1)
+            workspace.LastMultiColumnCount = vm.Columns.Count;
+
         ColumnsHost.ColumnDefinitions.Clear();
         ColumnsHost.Children.Clear();
         _editorsById.Clear();
@@ -158,11 +174,14 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             colVm.CanMoveLeft = i > 0;
             colVm.CanMoveRight = i < vm.Columns.Count - 1;
 
+            var useFillWidth = vm.Columns.Count == 1 && (!colVm.WidthPx.HasValue || colVm.WidthPx.Value <= 0);
             ColumnsHost.ColumnDefinitions.Add(new ColumnDefinition
             {
-                Width = (colVm.WidthPx.HasValue && colVm.WidthPx.Value > 0)
-                    ? new GridLength(colVm.WidthPx.Value, GridUnitType.Pixel)
-                    : new GridLength(DefaultColumnWidthPx, GridUnitType.Pixel),
+                Width = useFillWidth
+                    ? new GridLength(1, GridUnitType.Star)
+                    : (colVm.WidthPx.HasValue && colVm.WidthPx.Value > 0)
+                        ? new GridLength(colVm.WidthPx.Value, GridUnitType.Pixel)
+                        : new GridLength(DefaultColumnWidthPx, GridUnitType.Pixel),
                 MinWidth = 220
             });
 
@@ -305,6 +324,13 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void PersistWidthsFromGrid()
     {
         var vm = ActiveVm;
+
+        if (vm.Columns.Count == 1 && !vm.Columns[0].IsWidthLocked)
+        {
+            vm.Columns[0].WidthPx = null;
+            return;
+        }
+
         var editorIndex = 0;
 
         for (var gridCol = 0; gridCol < ColumnsHost.ColumnDefinitions.Count; gridCol += 2)
@@ -527,55 +553,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         }
     }
 
-    private void ImportExportText_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new OpenFileDialog
-        {
-            Filter = "ColumnPad Text Export (*.txt)|*.txt|All files (*.*)|*.*",
-            FilterIndex = 1
-        };
-
-        if (dlg.ShowDialog() != true)
-            return;
-
-        if (!ConfirmWorkspaceDestructiveAction(ActiveWorkspace, "Import ColumnPad Text", "Importing a ColumnPad text export"))
-            return;
-
-        var fileName = Path.GetFileName(dlg.FileName);
-        if (!TryRunFileAction("Import Failed", $"import {fileName}", () =>
-        {
-            ActiveVm.LoadFromExportText(File.ReadAllText(dlg.FileName), fileName, dlg.FileName);
-            ResetFindCursor();
-        }))
-        {
-            return;
-        }
-    }
-
-    private void ImportExportMarkdown_Click(object sender, RoutedEventArgs e)
-    {
-        var dlg = new OpenFileDialog
-        {
-            Filter = "ColumnPad Markdown Export (*.md)|*.md|All files (*.*)|*.*",
-            FilterIndex = 1
-        };
-
-        if (dlg.ShowDialog() != true)
-            return;
-
-        if (!ConfirmWorkspaceDestructiveAction(ActiveWorkspace, "Import ColumnPad Markdown", "Importing a ColumnPad markdown export"))
-            return;
-
-        var fileName = Path.GetFileName(dlg.FileName);
-        if (!TryRunFileAction("Import Failed", $"import {fileName}", () =>
-        {
-            ActiveVm.LoadFromExportMarkdown(File.ReadAllText(dlg.FileName), fileName, dlg.FileName);
-            ResetFindCursor();
-        }))
-        {
-            return;
-        }
-    }
 
     private void Save_Click(object sender, RoutedEventArgs e)
     {
@@ -1078,6 +1055,92 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ActiveVm.ThemePreset = preset;
     }
 
+    private void SingleTextMode_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = ActiveVm;
+        if (vm.Columns.Count <= 1)
+        {
+            vm.StatusText = "Already in single text mode.";
+            return;
+        }
+
+        var selected = vm.GetActive();
+        if (selected is null)
+            return;
+
+        var removedCount = vm.Columns.Count - 1;
+        var removedLabel = removedCount == 1 ? "column" : "columns";
+        var prompt = $"Single Text Mode keeps only \"{selected.Title}\" in this workspace and removes {removedCount} other {removedLabel}.\n\nContinue?";
+        if (!ConfirmDestructiveAction("Single Text Mode", prompt))
+            return;
+
+        if (ActiveWorkspace is { } workspace)
+            workspace.LastMultiColumnCount = Math.Max(2, vm.Columns.Count);
+
+        var preservedTitle = selected.Title;
+        var preservedText = selected.Text ?? string.Empty;
+        var preservedPastePreset = selected.PastePreset;
+        var preservedFontFamily = selected.EditorFontFamily;
+        var preservedFontSize = selected.EditorFontSize;
+        var preservedFontStyle = selected.EditorFontStyle;
+        var preservedFontWeight = selected.EditorFontWeight;
+        var preservedUseDefaultFont = selected.UseDefaultFont;
+
+        vm.SetColumnCount(1);
+
+        var single = vm.Columns[0];
+        single.Title = string.IsNullOrWhiteSpace(preservedTitle) ? "Document" : preservedTitle;
+        single.Text = preservedText;
+        single.WidthPx = null;
+        single.IsWidthLocked = false;
+        single.PastePreset = preservedPastePreset;
+        single.EditorFontFamily = preservedFontFamily;
+        single.EditorFontSize = preservedFontSize;
+        single.EditorFontStyle = preservedFontStyle;
+        single.EditorFontWeight = preservedFontWeight;
+        single.UseDefaultFont = preservedUseDefaultFont;
+
+        vm.ActiveColumnId = single.Id;
+        RebuildColumns();
+        vm.RefreshStatus();
+        vm.StatusText = "Single text mode enabled.";
+    }
+
+    private void ColumnMode_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = ActiveVm;
+        if (vm.Columns.Count > 1)
+        {
+            vm.StatusText = "Already in column mode.";
+            return;
+        }
+
+        var targetColumns = Math.Max(2, ActiveWorkspace?.LastMultiColumnCount ?? 3);
+        vm.SetColumnCount(targetColumns);
+        RebuildColumns();
+        vm.RefreshStatus();
+        vm.StatusText = $"Column mode restored ({targetColumns} columns).";
+    }
+
+    private void OpenWorkflowBuilder_Click(object sender, RoutedEventArgs e)
+    {
+        if (_workflowBuilderWindow is not null)
+        {
+            _workflowBuilderWindow.Activate();
+            _workflowBuilderWindow.Focus();
+            return;
+        }
+
+        var window = new WorkflowBuilderWindow
+        {
+            Owner = this
+        };
+
+        window.Closed += (_, __) => _workflowBuilderWindow = null;
+        _workflowBuilderWindow = window;
+        window.Show();
+    }
+
     private void ApplyTheme(string preset)
     {
         if (string.Equals(preset, "Dark Mode", StringComparison.Ordinal))
@@ -1395,7 +1458,25 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 return;
             }
 
+            if (e.Key is Key.D1 or Key.NumPad1)
+            {
+                SingleTextMode_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
+            if (e.Key is Key.D2 or Key.NumPad2)
+            {
+                ColumnMode_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
 
+            if (e.Key == Key.B)
+            {
+                OpenWorkflowBuilder_Click(this, new RoutedEventArgs());
+                e.Handled = true;
+                return;
+            }
 
             if (e.Key == Key.L)
             {
@@ -1707,5 +1788,15 @@ public sealed class WorkspaceSession : NotifyBase
         set => Set(ref _isRenaming, value);
     }
 
+    public int LastMultiColumnCount { get; set; } = 3;
+
     public MainViewModel Vm { get; }
 }
+
+
+
+
+
+
+
+

@@ -90,26 +90,6 @@
                     </StackPanel>
 
                     <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <Border Margin="0,0,6,0"
-                                Padding="6,2"
-                                Background="{DynamicResource ControlFocusBorderBrush}"
-                                CornerRadius="2">
-                            <Border.Style>
-                                <Style TargetType="Border">
-                                    <Setter Property="Visibility" Value="Collapsed"/>
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsActive}" Value="True">
-                                            <Setter Property="Visibility" Value="Visible"/>
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </Border.Style>
-                            <TextBlock Text="Selected"
-                                       FontSize="10"
-                                       FontWeight="SemiBold"
-                                       Foreground="#FFFFFFFF"
-                                       VerticalAlignment="Center"/>
-                        </Border>
                         <Button Padding="8,2"
                                 Margin="0,0,4,0"
                                 Click="ColumnMenuMoveLeft_Click"
@@ -157,7 +137,7 @@
                          Foreground="{DynamicResource EditorForegroundBrush}"
                          SelectionBrush="{DynamicResource EditorSelectionBrush}"
                          SelectionTextBrush="{DynamicResource EditorSelectionTextBrush}"
-                         SelectionOpacity="0.65"
+                         SelectionOpacity="0.45"
                          CaretBrush="{DynamicResource EditorForegroundBrush}"
                          TextWrapping="{Binding TextWrappingMode}"
                          HorizontalScrollBarVisibility="{Binding HorizontalScrollBarMode}"

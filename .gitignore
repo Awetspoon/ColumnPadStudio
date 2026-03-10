@@ -1,9 +1,17 @@
 # Build outputs
 **/bin/
 **/obj/
+**/publish/
+**/TestResults/
+
+# .NET / NuGet
+*.nupkg
+*.snupkg
 
 # IDE/session files
 .vs/
+.vscode/
+.idea/
 *.suo
 *.user
 *.userosscache
@@ -15,10 +23,16 @@
 .dotnet-cli/
 _tmp_ui_check/
 
-# Temp build/project artifacts
+# Temp/cache/logs
 *wpftmp*
 *.cache
 *.tmp
+*.log
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
 
 # Publish output directories used by this repo
 ColumnPadStudio/publish/

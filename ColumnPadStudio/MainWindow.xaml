@@ -9,7 +9,7 @@
         MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource WindowBackgroundBrush}"
-        Foreground="{DynamicResource ControlForegroundBrush}">
+        Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
     <Window.Resources>
         <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFEFEFEF"/>
         <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#FFF5F5F5"/>
@@ -108,7 +108,7 @@
             <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
             <Setter Property="BorderThickness" Value="1"/>
-            <Setter Property="Padding" Value="8,0,6,0"/>
+            <Setter Property="Padding" Value="5,0,3,0"/>
             <Setter Property="MinHeight" Value="22"/>
             <Setter Property="SnapsToDevicePixels" Value="True"/>
             <Setter Property="ScrollViewer.HorizontalScrollBarVisibility" Value="Auto"/>
@@ -135,13 +135,16 @@
                                             <ColumnDefinition Width="*"/>
                                             <ColumnDefinition Width="26"/>
                                         </Grid.ColumnDefinitions>
-                                        <TextBlock Margin="{TemplateBinding Padding}"
-                                                   VerticalAlignment="Center"
-                                                   HorizontalAlignment="Left"
-                                                   IsHitTestVisible="False"
-                                                   Text="{Binding SelectionBoxItem, RelativeSource={RelativeSource TemplatedParent}}"
-                                                   Foreground="{TemplateBinding Foreground}"
-                                                   TextTrimming="CharacterEllipsis"/>
+                                        <ContentPresenter Margin="{TemplateBinding Padding}"
+                                                          VerticalAlignment="Center"
+                                                          HorizontalAlignment="Left"
+                                                          IsHitTestVisible="False"
+                                                          Content="{TemplateBinding SelectionBoxItem}"
+                                                          ContentTemplate="{TemplateBinding SelectionBoxItemTemplate}"
+                                                          ContentTemplateSelector="{TemplateBinding ItemTemplateSelector}"
+                                                          RecognizesAccessKey="True"
+                                                          TextElement.Foreground="{TemplateBinding Foreground}"
+                                                          TextOptions.TextFormattingMode="Display"/>
                                         <Border x:Name="ArrowHost"
                                                 Grid.Column="1"
                                                 Background="{DynamicResource ControlBackgroundBrush}"
@@ -208,7 +211,7 @@
         <Style TargetType="ComboBoxItem">
             <Setter Property="Foreground" Value="{DynamicResource ControlPopupForegroundBrush}"/>
             <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}"/>
-            <Setter Property="Padding" Value="8,4"/>
+            <Setter Property="Padding" Value="5,2"/>
             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
             <Setter Property="Template">
@@ -219,7 +222,8 @@
                                 SnapsToDevicePixels="True">
                             <ContentPresenter Margin="{TemplateBinding Padding}"
                                               HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                              TextOptions.TextFormattingMode="Display"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsHighlighted" Value="True">
@@ -245,18 +249,38 @@
             <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
         </Style>
 
+        <Style x:Key="{x:Static MenuItem.SeparatorStyleKey}" TargetType="{x:Type Separator}">
+            <Setter Property="Background" Value="{DynamicResource ControlBorderBrush}"/>
+            <Setter Property="Margin" Value="30,2,6,2"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="{x:Type Separator}">
+                        <Border Height="1"
+                                Background="{TemplateBinding Background}"
+                                Margin="{TemplateBinding Margin}"
+                                SnapsToDevicePixels="True"/>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
         <Style TargetType="MenuItem">
             <Setter Property="Foreground" Value="{DynamicResource ControlPopupForegroundBrush}"/>
             <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}"/>
             <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Margin" Value="0"/>
+            <Setter Property="Padding" Value="8,4,28,4"/>
             <Style.Triggers>
                 <Trigger Property="Role" Value="TopLevelHeader">
                     <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}"/>
                     <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Padding" Value="8,2"/>
                 </Trigger>
                 <Trigger Property="Role" Value="TopLevelItem">
                     <Setter Property="Foreground" Value="{DynamicResource ControlForegroundBrush}"/>
                     <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="Padding" Value="8,2"/>
                 </Trigger>
                 <Trigger Property="IsHighlighted" Value="True">
                     <Setter Property="Foreground" Value="#FFFFFFFF"/>
@@ -276,7 +300,7 @@
     <DockPanel>
         <Menu DockPanel.Dock="Top"
               Background="{DynamicResource MenuBackgroundBrush}"
-              Foreground="{DynamicResource ControlForegroundBrush}">
+              Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
             <MenuItem Header="_File">
                 <MenuItem Header="_New Layout" Click="NewLayout_Click" InputGestureText="Ctrl+N"/>
                 <Separator/>
@@ -284,8 +308,6 @@
                 <MenuItem Header="_Close Workspace Tab" Click="CloseWorkspaceTab_Click" InputGestureText="Ctrl+Shift+W"/>
                 <Separator/>
                 <MenuItem Header="_Open..." Click="OpenLayout_Click" InputGestureText="Ctrl+O"/>
-                <MenuItem Header="Import ColumnPad ._txt..." Click="ImportExportText_Click"/>
-                <MenuItem Header="Import ColumnPad ._md..." Click="ImportExportMarkdown_Click"/>
                 <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S"/>
                 <MenuItem Header="Save _As..." Click="SaveAs_Click" InputGestureText="Ctrl+Shift+S"/>
                 <Separator/>
@@ -319,10 +341,16 @@
                           IsCheckable="True"
                           IsChecked="{Binding ActiveVm.ShowLineNumbers, Mode=TwoWay}"
                           InputGestureText="Alt+L"/>
+                <MenuItem Header="_Single Text Mode" Click="SingleTextMode_Click" InputGestureText="Ctrl+Shift+1"/>
+                <MenuItem Header="_Column Mode" Click="ColumnMode_Click" InputGestureText="Ctrl+Shift+2"/>
                 <Separator/>
                 <MenuItem Header="_Light Mode" Click="ThemeClassic_Click"/>
                 <MenuItem Header="_Dark Mode" Click="ThemeHighContrast_Click"/>
                 <MenuItem Header="_Default Mode" Click="ThemeCompact_Click"/>
+            </MenuItem>
+
+            <MenuItem Header="_Workflows">
+                <MenuItem Header="_Workflow Builder..." Click="OpenWorkflowBuilder_Click" InputGestureText="Ctrl+Shift+B"/>
             </MenuItem>
 
             <MenuItem Header="_Columns">
@@ -418,7 +446,7 @@
                     SelectedItem="{Binding ActiveWorkspace, Mode=TwoWay}"
                     SelectionChanged="WorkspaceTabs_SelectionChanged"
                     Background="{DynamicResource WindowBackgroundBrush}"
-                    Foreground="{DynamicResource ControlForegroundBrush}">
+                    Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
             <TabControl.ContextMenu>
                 <ContextMenu>
                     <MenuItem x:Name="WorkspaceRenameMenuItem" Header="Rename Workspace"/>
@@ -440,7 +468,7 @@
 
         <StatusBar DockPanel.Dock="Bottom"
                    Background="{DynamicResource StatusBackgroundBrush}"
-                   Foreground="{DynamicResource ControlForegroundBrush}">
+                   Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
             <StatusBarItem Content="{Binding ActiveVm.StatusText}" />
         </StatusBar>
 
@@ -449,3 +477,8 @@
         </ScrollViewer>
     </DockPanel>
 </Window>
+
+
+
+
+
