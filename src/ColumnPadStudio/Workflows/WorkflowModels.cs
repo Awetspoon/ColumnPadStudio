@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
 using ColumnPadStudio.ViewModels;
 
@@ -18,7 +18,11 @@ public enum WorkflowStepKind
     SetTheme,
     ToggleWordWrap,
     ToggleLineNumbers,
-    SaveCurrentFile
+    SaveCurrentFile,
+    SetColumnCount,
+    SetSpellCheck,
+    SetEditorLanguage,
+    SetLinedPaper
 }
 
 public sealed class WorkflowStepDefinition : NotifyBase
@@ -61,11 +65,19 @@ public sealed class WorkflowStepDefinition : NotifyBase
 
 public sealed class WorkflowDefinition : NotifyBase
 {
+    private int _schemaVersion = 1;
     private string _id = Guid.NewGuid().ToString("N");
     private string _name = "New Workflow";
+    private string _category = "Custom";
     private string _description = string.Empty;
     private WorkflowTriggerType _trigger = WorkflowTriggerType.Manual;
     private ObservableCollection<WorkflowStepDefinition> _steps = new();
+
+    public int SchemaVersion
+    {
+        get => _schemaVersion;
+        set => Set(ref _schemaVersion, Math.Max(1, value));
+    }
 
     public string Id
     {
@@ -77,6 +89,12 @@ public sealed class WorkflowDefinition : NotifyBase
     {
         get => _name;
         set => Set(ref _name, string.IsNullOrWhiteSpace(value) ? "New Workflow" : value.Trim());
+    }
+
+    public string Category
+    {
+        get => _category;
+        set => Set(ref _category, string.IsNullOrWhiteSpace(value) ? "Custom" : value.Trim());
     }
 
     public string Description
@@ -100,3 +118,4 @@ public sealed class WorkflowDefinition : NotifyBase
     [JsonIgnore]
     public string? FilePath { get; set; }
 }
+

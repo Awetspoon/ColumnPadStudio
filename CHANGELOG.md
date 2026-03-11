@@ -1,8 +1,23 @@
-# Changelog
+﻿# Changelog
 
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+
+## [v1.2.0] - 2026-03-11
+
+### Added
+- Added built-in workflow template catalog entries and JSON import/export actions in the Workflow Builder.
+- Added lined-paper writing mode controls in both the View menu and top toolbar.
+
+### Changed
+- Reorganized repository layout into `src/` and `tests/` roots for clearer Visual Studio solution structure and scaling.
+- Updated solution file grouping, project references, run/test/publish paths, and maintenance docs to match the new layout.
+- Extended workflow schema support with category/version metadata and new step kinds for column count, spell check, language, and lined-paper settings.
+
+### Fixed
+- Fixed layout JSON parsing for new language/lined-paper fields and removed a merge artifact that broke compilation.
+- Fixed Workflow Builder dialog imports/exports by wiring the required file-dialog namespace.
 
 ## [v1.1.4] - 2026-03-11
 
@@ -19,6 +34,7 @@ All notable changes to this project are documented in this file.
 ### Fixed
 - Fixed startup safety around active workspace binding by hardening `ActiveVm` resolution and initialization ordering.
 - Improved selection readability by reducing selection fill opacity while keeping highlighted text visible.
+
 ## [v1.1.3] - 2026-03-09
 
 ### Fixed

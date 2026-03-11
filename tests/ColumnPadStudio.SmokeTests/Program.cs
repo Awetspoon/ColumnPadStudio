@@ -1,4 +1,4 @@
-using ColumnPadStudio.ViewModels;
+﻿using ColumnPadStudio.ViewModels;
 using ColumnPadStudio.Services;
 using ColumnPadStudio.Controls;
 using System.Reflection;
@@ -64,6 +64,8 @@ vm.Columns[0].EditorFontSize = 17;
 vm.Columns[0].EditorFontStyle = FontStyles.Italic;
 vm.Columns[0].EditorFontWeight = FontWeights.Bold;
 vm.Columns[0].UseDefaultFont = false;
+vm.SpellCheckEnabled = false;
+vm.EditorLanguageTag = "fr-FR";
 vm.ActiveColumnId = vm.Columns[1].Id;
 Check(vm.IsDirty, "Changing the layout should mark the workspace dirty.");
 
@@ -81,6 +83,8 @@ Check(Math.Abs(loaded.Columns[0].EditorFontSize - 17) < 0.001, "JSON round-trip 
 Check(loaded.Columns[0].EditorFontStyle == FontStyles.Italic, "JSON round-trip should preserve per-column font style.");
 Check(loaded.Columns[0].EditorFontWeight == FontWeights.Bold, "JSON round-trip should preserve per-column font weight.");
 Check(loaded.ActiveColumnId == loaded.Columns[1].Id, "JSON round-trip should restore the active column.");
+Check(!loaded.SpellCheckEnabled, "JSON round-trip should preserve spellcheck setting.");
+Check(loaded.EditorLanguageTag == "fr-FR", "JSON round-trip should preserve editor language setting.");
 Check(loaded.GetActive()?.Title == vm.Columns[1].Title, "Restored active column should match the saved column.");
 Check(!loaded.IsDirty, "Loaded layout should start clean.");
 
@@ -94,9 +98,12 @@ rawDocument.LoadTextDocument("alpha\n beta", "notes.txt", "C:\\temp\\notes.txt",
 Check(rawDocument.Columns.Count == 1, "Raw text open should create a single column.");
 Check(rawDocument.Columns[0].Text == "alpha\n beta", "Raw text open should preserve text exactly.");
 Check(rawDocument.CurrentFileKind == SaveFileKind.TextDocument, "Raw text open should track the file as a text document.");
+Check(rawDocument.RequiresSaveAsBeforeOverwrite, "Opened source files should require Save As before direct overwrite.");
+Check(!rawDocument.CanSaveCurrentFileDirectly, "Opened source files should not allow direct Save before Save As.");
 rawDocument.AddColumn();
 Check(rawDocument.CurrentFileKind == SaveFileKind.Layout, "Adding a column to a raw text document should promote it to a layout.");
 Check(string.IsNullOrWhiteSpace(rawDocument.CurrentFilePath), "Promoting a raw text document should detach it from the original file path.");
+Check(!rawDocument.RequiresSaveAsBeforeOverwrite, "Promoted layouts should no longer require Save As once detached.");
 
 var beforeInvalidLoadCount = loaded.Columns.Count;
 loaded.LoadFromJson("{ not valid json", "smoke");
@@ -138,15 +145,21 @@ try
     saveLoadedText.Columns[0].Text = "changed again";
 
     Check(saveLoadedText.IsDirty, "Editing a loaded text document should mark it dirty.");
-    Check(saveLoadedText.SaveCurrentFile(), "SaveCurrentFile should save back to the loaded text path.");
+    Check(!saveLoadedText.SaveCurrentFile(), "SaveCurrentFile should require Save As on first save after opening a source file.");
+    Check(File.ReadAllText(tempTextPath) == exportedText, "Requiring Save As should prevent overwriting the original opened source file.");
+
+    var savedCopyPath = Path.Combine(tempRoot, "loaded-copy.txt");
+    saveLoadedText.SaveToPath(savedCopyPath, SaveFileKind.TextDocument);
+    Check(!saveLoadedText.RequiresSaveAsBeforeOverwrite, "Save As should clear the Save As requirement.");
+    Check(saveLoadedText.SaveCurrentFile(), "SaveCurrentFile should work after a Save As path is chosen.");
     Check(!saveLoadedText.IsDirty, "Saving should clear the dirty flag.");
-    Check(File.ReadAllText(tempTextPath) == "changed again", "Saving a loaded text document should preserve the raw file contents.");
+    Check(File.ReadAllText(savedCopyPath) == "changed again", "Saving after Save As should write to the new file path.");
 
     var recoveryRoot = Path.Combine(tempRoot, "recovery");
     var recoveryWorkspaces = new[]
     {
-        new WorkspaceRecoveryWorkspace("Workspace A", vm.ToLayoutJson(), tempTextPath, SaveFileKind.TextDocument, true),
-        new WorkspaceRecoveryWorkspace("Workspace B", loaded.ToLayoutJson(), null, SaveFileKind.Layout, false)
+        new WorkspaceRecoveryWorkspace("Workspace A", vm.ToLayoutJson(), tempTextPath, SaveFileKind.TextDocument, true, true),
+        new WorkspaceRecoveryWorkspace("Workspace B", loaded.ToLayoutJson(), null, SaveFileKind.Layout, false, false)
     };
 
     WorkspaceRecoveryStore.Save(recoveryWorkspaces, 1, recoveryRoot);
@@ -156,11 +169,13 @@ try
     Check(recoverySnapshot.Workspaces[0].CurrentFileKind == SaveFileKind.TextDocument, "Recovery store should preserve file kinds per workspace.");
     Check(recoverySnapshot.Workspaces[0].CurrentFilePath == tempTextPath, "Recovery store should preserve file paths per workspace.");
     Check(recoverySnapshot.Workspaces[0].IsDirty, "Recovery store should preserve dirty state per workspace.");
+    Check(recoverySnapshot.Workspaces[0].RequiresSaveAsBeforeOverwrite, "Recovery store should preserve Save As requirements per workspace.");
 
     var recoveredWorkspaceVm = new MainViewModel();
     Check(recoveredWorkspaceVm.LoadRecoverySnapshot(recoverySnapshot.Workspaces[0]), "Recovery load should accept a saved workspace snapshot.");
     Check(recoveredWorkspaceVm.CurrentFileKind == SaveFileKind.TextDocument, "Recovered workspace should restore its file kind.");
     Check(recoveredWorkspaceVm.CurrentFilePath == tempTextPath, "Recovered workspace should restore its file path.");
+    Check(recoveredWorkspaceVm.RequiresSaveAsBeforeOverwrite, "Recovered workspace should restore Save As requirements.");
     Check(recoveredWorkspaceVm.IsDirty, "Recovered dirty workspace should still be dirty.");
     Check(recoveredWorkspaceVm.Columns.Count == vm.Columns.Count, "Recovered workspace should restore its layout content.");
 
@@ -210,3 +225,6 @@ if (failures.Count > 0)
 
 Console.WriteLine($"Smoke tests passed ({checks} checks).");
 return 0;
+
+
+

@@ -1,4 +1,4 @@
-# Release Checklist
+﻿# Release Checklist
 
 Use this checklist before creating a GitHub release.
 
@@ -19,7 +19,7 @@ Expected result: `0 Error(s)`.
 ## 3. Run smoke tests
 
 ```powershell
-dotnet run --project .\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
+dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
 ```
 
 Expected result: `Smoke tests passed`.
@@ -27,11 +27,11 @@ Expected result: `Smoke tests passed`.
 ## 4. Publish release executable
 
 ```powershell
-dotnet publish .\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=FolderProfile
+dotnet publish .\src\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=FolderProfile
 ```
 
 Expected output location:
-- `.\ColumnPadStudio\publish\ColumnPadStudio.exe`
+- `.\src\ColumnPadStudio\publish\ColumnPadStudio.exe`
 
 ## 5. Manual UI sanity checks
 
@@ -45,4 +45,5 @@ Expected output location:
 
 1. Update `CHANGELOG.md` for the version being released.
 2. Tag the release version.
-3. Attach `ColumnPadStudio.exe` from `.\ColumnPadStudio\publish\`.
+3. Attach `ColumnPadStudio.exe` from `.\src\ColumnPadStudio\publish\`.
+

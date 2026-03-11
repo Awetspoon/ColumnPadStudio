@@ -1,4 +1,4 @@
-using ColumnPadStudio.Controls;
+﻿using ColumnPadStudio.Controls;
 using ColumnPadStudio.ViewModels;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
@@ -446,7 +446,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 workspace.Vm.ToLayoutJson(),
                 workspace.Vm.CurrentFilePath,
                 workspace.Vm.CurrentFileKind,
-                workspace.Vm.IsDirty))
+                workspace.Vm.IsDirty,
+                workspace.Vm.RequiresSaveAsBeforeOverwrite))
             .ToList();
 
         var activeIndex = ActiveWorkspace is null ? 0 : Math.Max(0, Workspaces.IndexOf(ActiveWorkspace));
@@ -557,7 +558,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         PersistWidthsFromGrid();
-        if (!string.IsNullOrWhiteSpace(ActiveVm.CurrentFilePath))
+        if (ActiveVm.CanSaveCurrentFileDirectly)
         {
             TryRunFileAction("Save Failed", $"save {Path.GetFileName(ActiveVm.CurrentFilePath)}", () => ActiveVm.SaveCurrentFile());
             return;
@@ -578,48 +579,74 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     private static SaveFileDialog CreateSaveDialog(MainViewModel vm)
     {
-        var currentFileName = string.IsNullOrWhiteSpace(vm.CurrentFilePath)
-            ? null
-            : Path.GetFileName(vm.CurrentFilePath);
-
         return vm.CurrentFileKind switch
         {
             SaveFileKind.TextDocument => new SaveFileDialog
             {
-                FileName = string.IsNullOrWhiteSpace(currentFileName) ? "document.txt" : currentFileName,
+                FileName = BuildSuggestedSaveFileName(vm, "document.txt"),
                 Filter = "Text (*.txt)|*.txt|All files (*.*)|*.*",
                 DefaultExt = ".txt",
                 AddExtension = true
             },
             SaveFileKind.MarkdownDocument => new SaveFileDialog
             {
-                FileName = string.IsNullOrWhiteSpace(currentFileName) ? "document.md" : currentFileName,
+                FileName = BuildSuggestedSaveFileName(vm, "document.md"),
                 Filter = "Markdown (*.md)|*.md|All files (*.*)|*.*",
                 DefaultExt = ".md",
                 AddExtension = true
             },
             SaveFileKind.TextExport => new SaveFileDialog
             {
-                FileName = string.IsNullOrWhiteSpace(currentFileName) ? "ColumnPad_export.txt" : currentFileName,
+                FileName = BuildSuggestedSaveFileName(vm, "ColumnPad_export.txt"),
                 Filter = "Text (*.txt)|*.txt|All files (*.*)|*.*",
                 DefaultExt = ".txt",
                 AddExtension = true
             },
             SaveFileKind.MarkdownExport => new SaveFileDialog
             {
-                FileName = string.IsNullOrWhiteSpace(currentFileName) ? "ColumnPad_export.md" : currentFileName,
+                FileName = BuildSuggestedSaveFileName(vm, "ColumnPad_export.md"),
                 Filter = "Markdown (*.md)|*.md|All files (*.*)|*.*",
                 DefaultExt = ".md",
                 AddExtension = true
             },
             _ => new SaveFileDialog
             {
-                FileName = string.IsNullOrWhiteSpace(currentFileName) ? "layout.columnpad.json" : currentFileName,
+                FileName = BuildSuggestedSaveFileName(vm, "layout.columnpad.json"),
                 Filter = "ColumnPad Layout (*.columnpad.json)|*.columnpad.json|JSON (*.json)|*.json|All files (*.*)|*.*",
                 DefaultExt = ".columnpad.json",
                 AddExtension = true
             }
         };
+    }
+
+    private static string BuildSuggestedSaveFileName(MainViewModel vm, string fallbackName)
+    {
+        var currentFileName = string.IsNullOrWhiteSpace(vm.CurrentFilePath)
+            ? null
+            : Path.GetFileName(vm.CurrentFilePath);
+
+        if (string.IsNullOrWhiteSpace(currentFileName))
+            return fallbackName;
+
+        if (!vm.RequiresSaveAsBeforeOverwrite)
+            return currentFileName;
+
+        return AppendCopySuffix(currentFileName);
+    }
+
+    private static string AppendCopySuffix(string fileName)
+    {
+        var extension = Path.GetExtension(fileName);
+        var baseName = string.IsNullOrWhiteSpace(extension)
+            ? fileName
+            : Path.GetFileNameWithoutExtension(fileName);
+
+        if (string.IsNullOrWhiteSpace(baseName))
+            return fileName;
+
+        return string.IsNullOrWhiteSpace(extension)
+            ? $"{baseName}-copy"
+            : $"{baseName}-copy{extension}";
     }
 
     private bool TryConfirmSaveBeforeExit()
@@ -1166,6 +1193,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetBrush("EditorSelectionTextBrush", "#FFFFFFFF");
             SetBrush("EditorInactiveSelectionBrush", "#FF385E8A");
             SetBrush("EditorInactiveSelectionTextBrush", "#FFFFFFFF");
+            SetBrush("LinedPaperLineBrush", "#FF2B3440");
 
             SetBrush("LineNumberBackgroundBrush", "#FF222222");
             SetBrush("LineNumberForegroundBrush", "#FFB8B8B8");
@@ -1209,6 +1237,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             SetBrush("EditorSelectionTextBrush", "#FF1C1C1C");
             SetBrush("EditorInactiveSelectionBrush", "#FFD9E3EE");
             SetBrush("EditorInactiveSelectionTextBrush", "#FF1C1C1C");
+            SetBrush("LinedPaperLineBrush", "#FFD6CBB9");
 
             SetBrush("LineNumberBackgroundBrush", "#FFEEE7D8");
             SetBrush("LineNumberForegroundBrush", "#FF7B7469");
@@ -1250,6 +1279,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         SetBrush("EditorSelectionTextBrush", "#FF111111");
         SetBrush("EditorInactiveSelectionBrush", "#FFD5E3F4");
         SetBrush("EditorInactiveSelectionTextBrush", "#FF111111");
+        SetBrush("LinedPaperLineBrush", "#FFE1E6ED");
 
         SetBrush("LineNumberBackgroundBrush", "#FFF7F7F7");
         SetBrush("LineNumberForegroundBrush", "#FF7A7A7A");
@@ -1792,6 +1822,8 @@ public sealed class WorkspaceSession : NotifyBase
 
     public MainViewModel Vm { get; }
 }
+
+
 
 
 

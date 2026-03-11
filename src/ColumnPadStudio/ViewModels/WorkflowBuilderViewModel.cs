@@ -10,9 +10,11 @@ public sealed class WorkflowBuilderViewModel : NotifyBase
     private readonly WorkflowService _workflowService;
     private WorkflowDefinition? _selectedWorkflow;
     private WorkflowStepDefinition? _selectedStep;
+    private WorkflowTemplateDefinition? _selectedTemplate;
     private string _statusText = "Ready.";
 
     public ObservableCollection<WorkflowDefinition> Workflows { get; } = new();
+    public ObservableCollection<WorkflowTemplateDefinition> Templates { get; } = new();
 
     public IReadOnlyList<WorkflowTriggerType> TriggerTypes { get; } = Enum.GetValues<WorkflowTriggerType>();
     public IReadOnlyList<WorkflowStepKind> StepKinds { get; } = Enum.GetValues<WorkflowStepKind>();
@@ -48,8 +50,23 @@ public sealed class WorkflowBuilderViewModel : NotifyBase
         }
     }
 
+    public WorkflowTemplateDefinition? SelectedTemplate
+    {
+        get => _selectedTemplate;
+        set
+        {
+            if (ReferenceEquals(_selectedTemplate, value))
+                return;
+
+            _selectedTemplate = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasSelectedTemplate));
+        }
+    }
+
     public bool HasSelectedWorkflow => SelectedWorkflow is not null;
     public bool HasSelectedStep => SelectedStep is not null;
+    public bool HasSelectedTemplate => SelectedTemplate is not null;
 
     public string SelectedWorkflowFileLabel
     {
@@ -75,6 +92,12 @@ public sealed class WorkflowBuilderViewModel : NotifyBase
 
     public void Load()
     {
+        Templates.Clear();
+        foreach (var template in WorkflowTemplateCatalog.Templates)
+            Templates.Add(template);
+
+        SelectedTemplate = Templates.FirstOrDefault();
+
         Workflows.Clear();
         foreach (var workflow in _workflowService.LoadAll())
             Workflows.Add(workflow);
@@ -95,6 +118,7 @@ public sealed class WorkflowBuilderViewModel : NotifyBase
         var workflow = new WorkflowDefinition
         {
             Name = NextWorkflowName(),
+            Category = "Custom",
             Trigger = WorkflowTriggerType.Manual
         };
 
@@ -107,6 +131,46 @@ public sealed class WorkflowBuilderViewModel : NotifyBase
         Workflows.Add(workflow);
         SelectedWorkflow = workflow;
         StatusText = $"Created {workflow.Name}.";
+    }
+
+    public bool CreateWorkflowFromSelectedTemplate()
+    {
+        var template = SelectedTemplate;
+        if (template is null)
+            return false;
+
+        var workflow = template.CreateWorkflowInstance(GetUniqueWorkflowName(template.Name));
+        Workflows.Add(workflow);
+        SelectedWorkflow = workflow;
+        StatusText = $"Created workflow from template: {template.Name}.";
+        return true;
+    }
+
+    public bool ImportWorkflowFromFile(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath))
+            return false;
+
+        if (!_workflowService.TryLoad(filePath, out var imported))
+            return false;
+
+        var draft = _workflowService.CreateDraftFromImportedWorkflow(imported, filePath);
+        draft.Name = GetUniqueWorkflowName(draft.Name);
+
+        Workflows.Add(draft);
+        SelectedWorkflow = draft;
+        StatusText = $"Imported workflow from {Path.GetFileName(filePath)}.";
+        return true;
+    }
+
+    public bool ExportSelectedWorkflowToFile(string filePath)
+    {
+        if (SelectedWorkflow is null || string.IsNullOrWhiteSpace(filePath))
+            return false;
+
+        _workflowService.ExportToPath(SelectedWorkflow, filePath);
+        StatusText = $"Exported workflow JSON to {Path.GetFileName(filePath)}.";
+        return true;
     }
 
     public void SaveSelectedWorkflow()
@@ -212,10 +276,22 @@ public sealed class WorkflowBuilderViewModel : NotifyBase
 
     private string NextWorkflowName()
     {
-        var index = 1;
+        return GetUniqueWorkflowName("Workflow");
+    }
+
+    private string GetUniqueWorkflowName(string baseName)
+    {
+        var normalizedBase = string.IsNullOrWhiteSpace(baseName)
+            ? "Workflow"
+            : baseName.Trim();
+
+        if (!Workflows.Any(w => string.Equals(w.Name, normalizedBase, StringComparison.OrdinalIgnoreCase)))
+            return normalizedBase;
+
+        var index = 2;
         while (true)
         {
-            var candidate = $"Workflow {index}";
+            var candidate = $"{normalizedBase} {index}";
             if (!Workflows.Any(w => string.Equals(w.Name, candidate, StringComparison.OrdinalIgnoreCase)))
                 return candidate;
             index++;

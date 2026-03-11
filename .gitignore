@@ -1,4 +1,4 @@
-# Build outputs
+﻿# Build outputs
 **/bin/
 **/obj/
 **/publish/
@@ -35,6 +35,6 @@ Desktop.ini
 .DS_Store
 
 # Publish output directories used by this repo
-ColumnPadStudio/publish/
-ColumnPadStudio/publish-validation/
+src/ColumnPadStudio/publish/
+src/ColumnPadStudio/publish-validation/
 ColumnPadStudio_Publish/

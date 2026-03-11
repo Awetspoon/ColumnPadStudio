@@ -1,4 +1,4 @@
-# ColumnPad
+﻿# ColumnPad
 
 [![Release](https://img.shields.io/github/v/release/Awetspoon/ColumnPad?display_name=tag)](https://github.com/Awetspoon/ColumnPad/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -12,9 +12,9 @@ ColumnPad is a Windows WPF text editor focused on side-by-side writing, fast wor
 - Open/save `.txt` and `.md` documents directly.
 - Save/reopen full workspaces as `.columnpad.json` layouts.
 - Auto-recovery snapshots for crash/session restore.
-- Theme presets, line numbers, word wrap, and per-column font controls.
+- Theme presets, line numbers, word wrap, lined-paper mode, and per-column font controls.
 - List helpers: bullets, checklist conversion, and check toggling.
-- Workflow Builder scaffold for saved workflow definitions.
+- Workflow Builder with built-in templates plus workflow JSON import/export.
 
 ## Requirements
 - Windows 10/11
@@ -29,7 +29,7 @@ cd ColumnPad
 
 ## Run
 ```powershell
-dotnet run --project .\ColumnPadStudio\ColumnPadStudio.csproj -c Release
+dotnet run --project .\src\ColumnPadStudio\ColumnPadStudio.csproj -c Release
 ```
 
 ## Build
@@ -39,20 +39,21 @@ dotnet build .\ColumnPadStudio.sln -c Release
 
 ## Smoke Tests
 ```powershell
-dotnet run --project .\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
+dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
 ```
 
 ## Publish
 ```powershell
-dotnet publish .\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=FolderProfile
+dotnet publish .\src\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=FolderProfile
 ```
 
-Publish output: `ColumnPadStudio\publish\`
+Publish output: `src\ColumnPadStudio\publish\`
 
 ## Project Structure
-- `ColumnPadStudio/` - WPF desktop app (UI, viewmodels, services, controls)
-- `ColumnPadStudio.SmokeTests/` - lightweight behavior smoke tests
+- `src/ColumnPadStudio/` - WPF desktop app (UI, viewmodels, services, controls)
+- `tests/ColumnPadStudio.SmokeTests/` - lightweight behavior smoke tests
 - `docs/` - screenshots and repo documentation assets
+- `docs/REPOSITORY_STRUCTURE.md` - repository layout and conventions
 - `tools/` - helper scripts (branding/assets)
 - `RELEASE_CHECKLIST.md` - release process checklist
 - `CHANGELOG.md` - change history
@@ -65,3 +66,6 @@ No `.env` variables are required for local run/build.
 
 ## License
 MIT. See [LICENSE](LICENSE).
+
+
+

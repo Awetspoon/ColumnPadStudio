@@ -1,8 +1,8 @@
-Add-Type -AssemblyName System.Drawing
+﻿Add-Type -AssemblyName System.Drawing
 
 $ErrorActionPreference = "Stop"
 
-$assetsRoot = Join-Path $PSScriptRoot "..\ColumnPadStudio\Assets"
+$assetsRoot = Join-Path $PSScriptRoot "..\src\ColumnPadStudio\Assets"
 $assetsRoot = [IO.Path]::GetFullPath($assetsRoot)
 
 function New-Color([string]$Hex, [int]$Alpha = 255) {

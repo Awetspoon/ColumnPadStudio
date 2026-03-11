@@ -104,6 +104,36 @@ public sealed class WorkflowService
         workflow.FilePath = null;
     }
 
+    public void ExportToPath(WorkflowDefinition workflow, string filePath)
+    {
+        ArgumentNullException.ThrowIfNull(workflow);
+        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
+
+        Normalize(workflow, fallbackName: null);
+        var serializableCopy = Snapshot(workflow);
+        var json = JsonSerializer.Serialize(serializableCopy, JsonOptions);
+        WriteTextAtomically(filePath, json);
+    }
+
+    public WorkflowDefinition CreateDraftFromImportedWorkflow(WorkflowDefinition imported, string? sourceLabel = null)
+    {
+        ArgumentNullException.ThrowIfNull(imported);
+
+        var draft = Snapshot(imported);
+        draft.Id = Guid.NewGuid().ToString("N");
+        draft.FilePath = null;
+
+        var fallbackName = string.IsNullOrWhiteSpace(sourceLabel)
+            ? imported.Name
+            : Path.GetFileNameWithoutExtension(Path.GetFileNameWithoutExtension(sourceLabel));
+        Normalize(draft, fallbackName);
+
+        if (!draft.Name.EndsWith(" (imported)", StringComparison.OrdinalIgnoreCase))
+            draft.Name = $"{draft.Name} (imported)";
+
+        return draft;
+    }
+
     private string BuildWorkflowFilePath(string? name, string? id)
     {
         var safeName = SanitizeFileName(name);
@@ -129,8 +159,10 @@ public sealed class WorkflowService
     {
         return new WorkflowDefinition
         {
+            SchemaVersion = source.SchemaVersion,
             Id = source.Id,
             Name = source.Name,
+            Category = source.Category,
             Description = source.Description,
             Trigger = source.Trigger,
             Steps = new ObservableCollection<WorkflowStepDefinition>(
@@ -145,6 +177,8 @@ public sealed class WorkflowService
 
     private static void Normalize(WorkflowDefinition workflow, string? fallbackName)
     {
+        workflow.SchemaVersion = Math.Max(1, workflow.SchemaVersion);
+
         workflow.Id = string.IsNullOrWhiteSpace(workflow.Id)
             ? Guid.NewGuid().ToString("N")
             : workflow.Id.Trim();
@@ -152,6 +186,10 @@ public sealed class WorkflowService
         workflow.Name = string.IsNullOrWhiteSpace(workflow.Name)
             ? string.IsNullOrWhiteSpace(fallbackName) ? "New Workflow" : fallbackName.Trim()
             : workflow.Name.Trim();
+
+        workflow.Category = string.IsNullOrWhiteSpace(workflow.Category)
+            ? "Custom"
+            : workflow.Category.Trim();
 
         workflow.Description ??= string.Empty;
         workflow.Steps ??= new ObservableCollection<WorkflowStepDefinition>();
@@ -164,3 +202,4 @@ public sealed class WorkflowService
         File.Move(tempPath, path, overwrite: true);
     }
 }
+

@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -77,17 +77,6 @@ public partial class InlineRenameText : UserControl
         DisplayTextBlock.Visibility = Visibility.Visible;
     }
 
-    private void DisplayTextBlock_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton != MouseButton.Left)
-            return;
-
-        if (!IsEditing)
-            IsEditing = true;
-
-        e.Handled = true;
-    }
-
     private void EditorTextBox_KeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key == Key.Enter)
@@ -133,3 +122,5 @@ public partial class InlineRenameText : UserControl
         }
     }
 }
+
+

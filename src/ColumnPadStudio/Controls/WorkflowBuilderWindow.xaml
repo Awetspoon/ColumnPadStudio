@@ -19,17 +19,50 @@
                 BorderThickness="1"
                 Padding="8">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal">
-                    <Button Content="New" Width="62" Margin="0,0,6,0" Click="NewWorkflow_Click"/>
-                    <Button Content="Save"
-                            Width="62"
-                            Margin="0,0,6,0"
-                            Click="SaveWorkflow_Click"
-                            IsEnabled="{Binding HasSelectedWorkflow}"/>
-                    <Button Content="Delete"
-                            Width="62"
-                            Click="DeleteWorkflow_Click"
-                            IsEnabled="{Binding HasSelectedWorkflow}"/>
+                <StackPanel DockPanel.Dock="Top">
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="New" Width="62" Margin="0,0,6,0" Click="NewWorkflow_Click"/>
+                        <Button Content="Save"
+                                Width="62"
+                                Margin="0,0,6,0"
+                                Click="SaveWorkflow_Click"
+                                IsEnabled="{Binding HasSelectedWorkflow}"/>
+                        <Button Content="Delete"
+                                Width="62"
+                                Click="DeleteWorkflow_Click"
+                                IsEnabled="{Binding HasSelectedWorkflow}"/>
+                    </StackPanel>
+
+                    <Border Margin="0,8,0,8" Height="1" Background="#22000000"/>
+
+                    <TextBlock Text="Built-in templates:" FontWeight="SemiBold"/>
+                    <Grid Margin="0,4,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox ItemsSource="{Binding Templates}"
+                                  SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                                  DisplayMemberPath="DisplayName"/>
+                        <Button Grid.Column="1"
+                                Content="Use"
+                                Width="56"
+                                Margin="6,0,0,0"
+                                Click="UseTemplate_Click"
+                                IsEnabled="{Binding HasSelectedTemplate}"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                        <Button Content="Import JSON"
+                                Width="108"
+                                Margin="0,0,6,0"
+                                Click="ImportWorkflowJson_Click"/>
+                        <Button Content="Export JSON"
+                                Width="108"
+                                Click="ExportWorkflowJson_Click"
+                                IsEnabled="{Binding HasSelectedWorkflow}"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <TextBlock DockPanel.Dock="Bottom"
@@ -75,6 +108,7 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
                     <RowDefinition Height="80"/>
+                    <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <TextBlock Text="Description:"/>
@@ -84,6 +118,12 @@
                          TextWrapping="Wrap"
                          VerticalScrollBarVisibility="Auto"
                          Text="{Binding SelectedWorkflow.Description, UpdateSourceTrigger=PropertyChanged}"/>
+
+                <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,0" VerticalAlignment="Center">
+                    <TextBlock Text="Category:" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                    <TextBox Width="220"
+                             Text="{Binding SelectedWorkflow.Category, UpdateSourceTrigger=PropertyChanged}"/>
+                </StackPanel>
             </Grid>
 
             <Grid Grid.Row="2">
@@ -176,3 +216,4 @@
         </Grid>
     </Grid>
 </Window>
+

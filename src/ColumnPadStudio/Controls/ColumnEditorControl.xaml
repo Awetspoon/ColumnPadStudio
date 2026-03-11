@@ -1,4 +1,4 @@
-<UserControl x:Class="ColumnPadStudio.Controls.ColumnEditorControl"
+﻿<UserControl x:Class="ColumnPadStudio.Controls.ColumnEditorControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
@@ -133,7 +133,6 @@
                          FontSize="{Binding EditorFontSize}"
                          FontStyle="{Binding EditorFontStyle}"
                          FontWeight="{Binding EditorFontWeight}"
-                         Background="{DynamicResource EditorBackgroundBrush}"
                          Foreground="{DynamicResource EditorForegroundBrush}"
                          SelectionBrush="{DynamicResource EditorSelectionBrush}"
                          SelectionTextBrush="{DynamicResource EditorSelectionTextBrush}"
@@ -141,10 +140,22 @@
                          CaretBrush="{DynamicResource EditorForegroundBrush}"
                          TextWrapping="{Binding TextWrappingMode}"
                          HorizontalScrollBarVisibility="{Binding HorizontalScrollBarMode}"
+                         SpellCheck.IsEnabled="{Binding DataContext.ActiveVm.SpellCheckEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                         Language="{Binding DataContext.ActiveVm.EditorLanguageTag, RelativeSource={RelativeSource AncestorType=Window}}"
                          GotFocus="Editor_GotFocus"
                          CommandManager.PreviewExecuted="Editor_PreviewExecuted"
                          PreviewKeyDown="Editor_PreviewKeyDown"
                          PreviewMouseLeftButtonDown="Editor_PreviewMouseLeftButtonDown">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource EditorLinedPaperBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
                     <TextBox.ContextMenu>
                         <ContextMenu Opened="EditorContextMenu_Opened">
                             <MenuItem Header="Undo"
@@ -185,3 +196,4 @@
         </DockPanel>
     </Border>
 </UserControl>
+
