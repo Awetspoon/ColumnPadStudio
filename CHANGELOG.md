@@ -4,6 +4,12 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.2.2] - 2026-03-11
+
+### Fixed
+- Fixed a startup crash in the release executable caused by WPF language binding conversion on the editor control.
+- Explicitly set ConverterCulture on the editor Language binding to ensure safe conversion from language tags (for example en-US).
+
 ## [v1.2.1] - 2026-03-11
 
 ### Fixed
