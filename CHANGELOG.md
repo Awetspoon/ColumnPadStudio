@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.1.4] - 2026-03-11
+
+### Added
+- Added `View -> Column Mode` with `Ctrl+Shift+2` to restore multi-column layout after entering single text mode.
+- Added per-workspace memory of last multi-column count so column mode restores to the previous layout size.
+- Added workflow builder scaffold files (models, service, viewmodel, and window) and wired the app menu entry.
+
+### Changed
+- Refined menu separator styling to remove odd extra divider gaps and improve dropdown visual consistency.
+- Updated README structure and repository ignore/attributes files for cleaner GitHub maintenance.
+- Refreshed `docs/columnpad-screenshot.png` with an updated in-app capture.
+
+### Fixed
+- Fixed startup safety around active workspace binding by hardening `ActiveVm` resolution and initialization ordering.
+- Improved selection readability by reducing selection fill opacity while keeping highlighted text visible.
 ## [v1.1.3] - 2026-03-09
 
 ### Fixed
