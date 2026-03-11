@@ -1,9 +1,10 @@
-﻿using ColumnPadStudio.ViewModels;
+using ColumnPadStudio.ViewModels;
 using ColumnPadStudio.Services;
 using ColumnPadStudio.Controls;
 using System.Reflection;
 using System.IO;
 using System.Windows;
+using System.Text.Json;
 
 var failures = new List<string>();
 var checks = 0;
@@ -117,6 +118,22 @@ var metrics = new ColumnViewModel
 Check(metrics.ChecklistTotal == 4, "ChecklistTotal should count symbol and markdown checklist items.");
 Check(metrics.ChecklistDone == 2, "ChecklistDone should count checked symbol and markdown items.");
 
+var indentedChecklistMetrics = new ColumnViewModel
+{
+    Text = "  - [ ] nested task\n    \u2611 done task"
+};
+Check(indentedChecklistMetrics.ChecklistTotal == 2, "ChecklistTotal should include indented checklist markers.");
+Check(indentedChecklistMetrics.ChecklistDone == 1, "ChecklistDone should include indented checked markers.");
+
+var lineToggleVm = new MainViewModel();
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - 56) < 0.001), "Line-number gutter should default to visible width.");
+lineToggleVm.ShowLineNumbers = false;
+Check(lineToggleVm.Columns.All(c => c.ShowLineNumbersVisibility == Visibility.Collapsed), "Turning line numbers off should collapse line-number visibility for all columns.");
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value) < 0.001), "Turning line numbers off should collapse gutter width for all columns.");
+lineToggleVm.ShowLineNumbers = true;
+Check(lineToggleVm.Columns.All(c => c.ShowLineNumbersVisibility == Visibility.Visible), "Turning line numbers back on should restore line-number visibility for all columns.");
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - 56) < 0.001), "Turning line numbers back on should restore gutter width for all columns.");
+
 var liveStatusVm = new MainViewModel();
 liveStatusVm.Columns[0].Title = "Inbox";
 Check(liveStatusVm.StatusText.Contains("Selected: Inbox"), "Status text should refresh when the active column is renamed.");
@@ -203,6 +220,38 @@ Check(importedFromMarkdown.Columns[1].Title == "Blue", "Markdown import should p
 Check(importedFromMarkdown.Columns[1].Text == "right", "Markdown import should preserve second heading body.");
 Check(!importedFromMarkdown.IsDirty, "Imported markdown exports should start clean.");
 
+var looksLikeTextExport = typeof(ColumnPadStudio.MainWindow).GetMethod("LooksLikeTextExport", BindingFlags.Static | BindingFlags.NonPublic)
+    ?? throw new InvalidOperationException("Could not find text-export detection helper.");
+Check((bool)(looksLikeTextExport.Invoke(null, [exportedText]) ?? false), "Open-file detection should recognize exported text layouts.");
+Check(!(bool)(looksLikeTextExport.Invoke(null, ["plain note\nline two"]) ?? true), "Open-file detection should not misclassify plain text documents as exports.");
+
+var looksLikeMarkdownExport = typeof(ColumnPadStudio.MainWindow).GetMethod("LooksLikeMarkdownExport", BindingFlags.Static | BindingFlags.NonPublic)
+    ?? throw new InvalidOperationException("Could not find markdown-export detection helper.");
+Check((bool)(looksLikeMarkdownExport.Invoke(null, [exportedMarkdown]) ?? false), "Open-file detection should recognize exported markdown layouts.");
+Check(!(bool)(looksLikeMarkdownExport.Invoke(null, ["intro paragraph\n## later heading"]) ?? true), "Open-file detection should require exported markdown heading structure.");
+
+var isWorkspaceSessionJson = typeof(ColumnPadStudio.MainWindow).GetMethod("IsWorkspaceSessionJson", BindingFlags.Static | BindingFlags.NonPublic)
+    ?? throw new InvalidOperationException("Could not find workspace-session detection helper.");
+var singleLayoutJson = vm.ToLayoutJson();
+var workspaceSessionJson = JsonSerializer.Serialize(new
+{
+    Version = 1,
+    ActiveWorkspaceIndex = 0,
+    Workspaces = new[]
+    {
+        new
+        {
+            Name = "Workspace 1",
+            LayoutJson = singleLayoutJson,
+            LastMultiColumnCount = 3
+        }
+    }
+});
+Check((bool)(isWorkspaceSessionJson.Invoke(null, [workspaceSessionJson]) ?? false), "Session detection should recognize workspace session JSON files.");
+Check(!(bool)(isWorkspaceSessionJson.Invoke(null, [singleLayoutJson]) ?? true), "Session detection should not treat single-layout JSON as a workspace session file.");
+
+
+
 var transformBullets = typeof(ColumnEditorControl).GetMethod("TransformBullets", BindingFlags.Static | BindingFlags.NonPublic)
     ?? throw new InvalidOperationException("Could not find bullet transform helper.");
 var bulletFormatting = (List<string>?)transformBullets.Invoke(null, [new List<string> { "alpha", "", "beta" }])
@@ -225,6 +274,7 @@ if (failures.Count > 0)
 
 Console.WriteLine($"Smoke tests passed ({checks} checks).");
 return 0;
+
 
 
 

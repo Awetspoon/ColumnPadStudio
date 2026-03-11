@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -314,6 +314,14 @@ public sealed class MainViewModel : NotifyBase
         OnPropertyChanged(nameof(CanSaveCurrentFileDirectly));
         OnPropertyChanged(nameof(RequiresSaveAsBeforeOverwrite));
     }
+
+    public void SetExternalFileReference(string? path, SaveFileKind kind, bool requiresSaveAs, bool markClean)
+    {
+        SetCurrentFileReference(path, kind, requiresSaveAs);
+        if (markClean)
+            MarkClean();
+    }
+
     private void MarkClean()
     {
         _cleanStateSignature = CaptureDirtyState();
@@ -1342,6 +1350,7 @@ public sealed class MainViewModel : NotifyBase
 
     private readonly record struct FontFaceOption(string Name, FontStyle Style, FontWeight Weight);
 }
+
 
 
 

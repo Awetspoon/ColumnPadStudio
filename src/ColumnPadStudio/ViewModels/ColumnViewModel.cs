@@ -122,6 +122,7 @@ public sealed class ColumnViewModel : NotifyBase
         {
             Set(ref _showLineNumbers, value);
             OnPropertyChanged(nameof(ShowLineNumbersVisibility));
+            OnPropertyChanged(nameof(LineNumberColumnWidth));
         }
     }
 
@@ -165,6 +166,7 @@ public sealed class ColumnViewModel : NotifyBase
     }
 
     public Visibility ShowLineNumbersVisibility => ShowLineNumbers ? Visibility.Visible : Visibility.Collapsed;
+    public GridLength LineNumberColumnWidth => ShowLineNumbers ? new GridLength(56) : new GridLength(0);
     public TextWrapping TextWrappingMode => WordWrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
     public ScrollBarVisibility HorizontalScrollBarMode => WordWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 
@@ -173,7 +175,7 @@ public sealed class ColumnViewModel : NotifyBase
         ? "This column width is frozen. Click to allow drag resizing again."
         : "Freeze this column width so the splitter cannot resize it.";
 
-    public double LineNumberFontSize => Math.Max(8.0, EditorFontSize - 1.0);
+    public double LineNumberFontSize => Math.Max(8.0, EditorFontSize);
 
     public string LineNumbersText
     {
@@ -253,15 +255,17 @@ public sealed class ColumnViewModel : NotifyBase
         var logicalLines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
         foreach (var line in logicalLines)
         {
-            if (line.StartsWith(ChecklistUncheckedPrefix, StringComparison.Ordinal) || line.StartsWith("- [ ] ", StringComparison.Ordinal))
+            var normalizedLine = line.TrimStart();
+
+            if (normalizedLine.StartsWith(ChecklistUncheckedPrefix, StringComparison.Ordinal) || normalizedLine.StartsWith("- [ ] ", StringComparison.Ordinal))
             {
                 checklistTotal++;
                 continue;
             }
 
-            if (line.StartsWith(ChecklistCheckedPrefix, StringComparison.Ordinal) ||
-                line.StartsWith("- [x] ", StringComparison.Ordinal) ||
-                line.StartsWith("- [X] ", StringComparison.Ordinal))
+            if (normalizedLine.StartsWith(ChecklistCheckedPrefix, StringComparison.Ordinal) ||
+                normalizedLine.StartsWith("- [x] ", StringComparison.Ordinal) ||
+                normalizedLine.StartsWith("- [X] ", StringComparison.Ordinal))
             {
                 checklistTotal++;
                 checklistDone++;
@@ -276,4 +280,5 @@ public sealed class ColumnViewModel : NotifyBase
             : $"{wordCount} words | {lines} lines";
     }
 }
+
 

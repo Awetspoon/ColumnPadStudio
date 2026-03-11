@@ -1,4 +1,4 @@
-﻿# Release Checklist
+# Release Checklist
 
 Use this checklist before creating a GitHub release.
 
@@ -47,3 +47,9 @@ Expected output location:
 2. Tag the release version.
 3. Attach `ColumnPadStudio.exe` from `.\src\ColumnPadStudio\publish\`.
 
+
+## 7. Download verification
+
+1. Download the release `ColumnPadStudio.exe` from GitHub Releases to a clean folder.
+2. Launch the downloaded file (not the local publish folder copy).
+3. Verify app startup and basic typing in at least one column.

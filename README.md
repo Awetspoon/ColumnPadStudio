@@ -27,6 +27,12 @@ git clone https://github.com/Awetspoon/ColumnPadStudio.git
 cd ColumnPadStudio
 ```
 
+## Install (Release EXE)
+1. Download `ColumnPadStudio.exe` from the latest [GitHub Release](https://github.com/Awetspoon/ColumnPadStudio/releases).
+2. Place the executable in a permanent folder (for example `C:\Apps\ColumnPad`).
+3. Launch `ColumnPadStudio.exe`.
+4. If Windows SmartScreen/Defender pauses launch, use `More info -> Run anyway` for trusted builds.
+
 ## Run
 ```powershell
 dotnet run --project .\src\ColumnPadStudio\ColumnPadStudio.csproj -c Release

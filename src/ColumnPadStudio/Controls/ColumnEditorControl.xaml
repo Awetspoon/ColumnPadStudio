@@ -107,14 +107,24 @@
 
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="56"/>
+                    <ColumnDefinition Width="{Binding LineNumberColumnWidth}"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <Border Grid.Column="0"
-                        Background="{DynamicResource LineNumberBackgroundBrush}"
                         BorderBrush="#22000000"
-                        BorderThickness="0,0,1,0">
+                        BorderThickness="0,0,1,0"
+                        Visibility="{Binding ShowLineNumbersVisibility}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="{DynamicResource LineNumberBackgroundBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource EditorLinedPaperBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
                         <TextBlock x:Name="LineNumbers"
                                    FontFamily="{Binding EditorFontFamily}"
@@ -196,4 +206,5 @@
         </DockPanel>
     </Border>
 </UserControl>
+
 

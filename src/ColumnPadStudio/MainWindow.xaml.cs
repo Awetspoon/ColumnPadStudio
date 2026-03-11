@@ -1,4 +1,4 @@
-﻿using ColumnPadStudio.Controls;
+using ColumnPadStudio.Controls;
 using ColumnPadStudio.ViewModels;
 using Microsoft.Win32;
 using System.Collections.ObjectModel;
@@ -6,6 +6,7 @@ using System.ComponentModel;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using System.Text.Json;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
@@ -22,6 +23,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private const double DefaultColumnWidthPx = 320.0;
     private readonly Dictionary<string, ColumnEditorControl> _editorsById = new(StringComparer.Ordinal);
     private readonly DispatcherTimer _autoSaveTimer = new() { Interval = TimeSpan.FromSeconds(25) };
+    private static readonly JsonSerializerOptions SessionJsonOptions = new() { WriteIndented = true };
 
     private WorkspaceSession? _activeWorkspace;
     private string _lastFindText = string.Empty;
@@ -154,6 +156,39 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             column.IsActive = column.Id == selectedId;
     }
 
+    private static void RunColumnAction(MainViewModel vm, ColumnViewModel column, Action action)
+    {
+        vm.ActiveColumnId = column.Id;
+        action();
+    }
+
+    private void WireEditorEvents(ColumnEditorControl editor, MainViewModel vm, ColumnViewModel column)
+    {
+        editor.EditorFocused += (_, __) =>
+        {
+            var selectionChanged = !string.Equals(vm.ActiveColumnId, column.Id, StringComparison.Ordinal);
+            vm.ActiveColumnId = column.Id;
+            if (selectionChanged)
+                vm.RefreshStatus();
+        };
+
+        editor.LockWidthRequested += (_, __) => RunColumnAction(vm, column, vm.ToggleLockActiveWidth);
+        editor.MoveLeftRequested += (_, __) => RunColumnAction(vm, column, () => MoveActiveLeft_Click(this, new RoutedEventArgs()));
+        editor.MoveRightRequested += (_, __) => RunColumnAction(vm, column, () => MoveActiveRight_Click(this, new RoutedEventArgs()));
+        editor.DeleteRequested += (_, __) => RunColumnAction(vm, column, RemoveActiveWithConfirmation);
+        editor.ResetWidthRequested += (_, __) => RunColumnAction(vm, column, vm.ResetActiveColumnWidth);
+        editor.ResetAllWidthsRequested += (_, __) => RunColumnAction(vm, column, vm.ResetAllColumnWidths);
+        editor.ResizeRequested += (_, __) => RunColumnAction(vm, column, ResizeActiveColumn);
+        editor.SetFontFamilyRequested += (_, __) => RunColumnAction(vm, column, SetActiveColumnFontFamily);
+        editor.IncreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(+1));
+        editor.DecreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(-1));
+        editor.ToggleBoldRequested += (_, __) => RunColumnAction(vm, column, ToggleActiveColumnBold);
+        editor.ToggleItalicRequested += (_, __) => RunColumnAction(vm, column, ToggleActiveColumnItalic);
+        editor.ResetFontRequested += (_, __) => RunColumnAction(vm, column, ResetActiveColumnFont);
+    }
+
+    private void Splitter_DragDelta(object? sender, DragDeltaEventArgs e) => PersistWidthsFromGrid();
+    private void Splitter_DragCompleted(object? sender, DragCompletedEventArgs e) => PersistWidthsFromGrid();
     private void RebuildColumns()
     {
         var vm = ActiveVm;
@@ -191,95 +226,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 Margin = new Thickness(0),
             };
 
-            editor.EditorFocused += (_, __) =>
-            {
-                var selectionChanged = !string.Equals(vm.ActiveColumnId, colVm.Id, StringComparison.Ordinal);
-                vm.ActiveColumnId = colVm.Id;
-                if (selectionChanged)
-                    vm.RefreshStatus();
-            };
-
-
-
-            editor.LockWidthRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                vm.ToggleLockActiveWidth();
-            };
-
-            editor.MoveLeftRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                MoveActiveLeft_Click(this, new RoutedEventArgs());
-            };
-
-            editor.MoveRightRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                MoveActiveRight_Click(this, new RoutedEventArgs());
-            };
-
-            editor.DeleteRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                RemoveActiveWithConfirmation();
-            };
-
-            editor.ResetWidthRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                vm.ResetActiveColumnWidth();
-            };
-
-            editor.ResetAllWidthsRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                vm.ResetAllColumnWidths();
-            };
-
-            editor.ResizeRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                ResizeActiveColumn();
-            };
-
-            editor.SetFontFamilyRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                SetActiveColumnFontFamily();
-            };
-
-            editor.IncreaseFontRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                AdjustActiveColumnFontSize(+1);
-            };
-
-            editor.DecreaseFontRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                AdjustActiveColumnFontSize(-1);
-            };
-
-            editor.ToggleBoldRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                ToggleActiveColumnBold();
-            };
-
-            editor.ToggleItalicRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                ToggleActiveColumnItalic();
-            };
-
-            editor.ResetFontRequested += (_, __) =>
-            {
-                vm.ActiveColumnId = colVm.Id;
-                ResetActiveColumnFont();
-            };
-
-
+            WireEditorEvents(editor, vm, colVm);
 
             _editorsById[colVm.Id] = editor;
 
@@ -311,8 +258,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                     Cursor = locked ? Cursors.Arrow : Cursors.SizeWE
                 };
 
-                splitter.DragDelta += (_, __) => PersistWidthsFromGrid();
-                splitter.DragCompleted += (_, __) => PersistWidthsFromGrid();
+                splitter.DragDelta += Splitter_DragDelta;
+                splitter.DragCompleted += Splitter_DragCompleted;
 
                 Grid.SetColumn(splitter, gridCol);
                 ColumnsHost.Children.Add(splitter);
@@ -536,13 +483,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             var content = File.ReadAllText(dlg.FileName);
             if (extension == ".txt")
             {
-                ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.TextDocument);
+                if (LooksLikeTextExport(content))
+                    ActiveVm.LoadFromExportText(content, fileName, dlg.FileName);
+                else
+                    ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.TextDocument);
             }
             else if (extension == ".md")
             {
-                ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.MarkdownDocument);
+                if (LooksLikeMarkdownExport(content))
+                    ActiveVm.LoadFromExportMarkdown(content, fileName, dlg.FileName);
+                else
+                    ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.MarkdownDocument);
             }
-            else
+            else if (!TryLoadWorkspaceSession(content, fileName, dlg.FileName))
             {
                 ActiveVm.LoadFromJson(content, fileName, dlg.FileName, preserveCurrentTheme: true);
             }
@@ -558,6 +511,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void Save_Click(object sender, RoutedEventArgs e)
     {
         PersistWidthsFromGrid();
+
+        if (ShouldSaveWorkspaceSession())
+        {
+            var sessionPath = GetDirectWorkspaceSessionPath();
+            if (string.IsNullOrWhiteSpace(sessionPath))
+            {
+                SaveAs_Click(sender, e);
+                return;
+            }
+
+            TryRunFileAction("Save Failed", $"save {Path.GetFileName(sessionPath)}", () => SaveWorkspaceSessionToPath(sessionPath));
+            return;
+        }
+
         if (ActiveVm.CanSaveCurrentFileDirectly)
         {
             TryRunFileAction("Save Failed", $"save {Path.GetFileName(ActiveVm.CurrentFilePath)}", () => ActiveVm.SaveCurrentFile());
@@ -570,6 +537,17 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private void SaveAs_Click(object sender, RoutedEventArgs e)
     {
         PersistWidthsFromGrid();
+
+        if (ShouldSaveWorkspaceSession())
+        {
+            var sessionDialog = CreateWorkspaceSessionSaveDialog();
+            if (sessionDialog.ShowDialog() != true)
+                return;
+
+            TryRunFileAction("Save Failed", $"save {Path.GetFileName(sessionDialog.FileName)}", () => SaveWorkspaceSessionToPath(sessionDialog.FileName));
+            return;
+        }
+
         var dlg = CreateSaveDialog(ActiveVm);
         if (dlg.ShowDialog() != true)
             return;
@@ -577,6 +555,195 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         TryRunFileAction("Save Failed", $"save {Path.GetFileName(dlg.FileName)}", () => ActiveVm.SaveToPath(dlg.FileName, ActiveVm.CurrentFileKind));
     }
 
+    private bool ShouldSaveWorkspaceSession()
+    {
+        if (Workspaces.Count > 1)
+            return true;
+
+        return IsExistingWorkspaceSessionFile(GetDirectWorkspaceSessionPath());
+    }
+
+    private string? GetDirectWorkspaceSessionPath()
+    {
+        var distinctPaths = Workspaces
+            .Select(workspace => workspace.Vm.CurrentFilePath)
+            .Where(path => !string.IsNullOrWhiteSpace(path))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        if (distinctPaths.Count != 1)
+            return null;
+
+        if (Workspaces.Any(workspace =>
+                workspace.Vm.CurrentFileKind != SaveFileKind.Layout ||
+                workspace.Vm.RequiresSaveAsBeforeOverwrite))
+        {
+            return null;
+        }
+
+        return distinctPaths[0];
+    }
+
+    private static bool IsExistingWorkspaceSessionFile(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
+            return false;
+
+        try
+        {
+            return IsWorkspaceSessionJson(File.ReadAllText(path));
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return false;
+        }
+    }
+
+    private static bool IsWorkspaceSessionJson(string json)
+    {
+        if (string.IsNullOrWhiteSpace(json))
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            if (document.RootElement.ValueKind != JsonValueKind.Object)
+                return false;
+
+            return document.RootElement.TryGetProperty(nameof(WorkspaceSessionFile.Workspaces), out var workspaces) &&
+                   workspaces.ValueKind == JsonValueKind.Array;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+    private SaveFileDialog CreateWorkspaceSessionSaveDialog()
+    {
+        var preferredPath = GetDirectWorkspaceSessionPath() ?? Workspaces
+            .Select(workspace => workspace.Vm.CurrentFilePath)
+            .FirstOrDefault(path => !string.IsNullOrWhiteSpace(path));
+
+        return new SaveFileDialog
+        {
+            FileName = string.IsNullOrWhiteSpace(preferredPath)
+                ? "layout.columnpad.json"
+                : Path.GetFileName(preferredPath),
+            Filter = "ColumnPad Layout (*.columnpad.json)|*.columnpad.json|JSON (*.json)|*.json|All files (*.*)|*.*",
+            DefaultExt = ".columnpad.json",
+            AddExtension = true
+        };
+    }
+
+    private void SaveWorkspaceSessionToPath(string path)
+    {
+        var workspaces = Workspaces
+            .Select(workspace => new WorkspaceSessionFileEntry(
+                workspace.Name,
+                workspace.Vm.ToLayoutJson(),
+                workspace.LastMultiColumnCount))
+            .ToList();
+
+        var activeIndex = ActiveWorkspace is null ? 0 : Math.Max(0, Workspaces.IndexOf(ActiveWorkspace));
+        var session = new WorkspaceSessionFile(
+            Version: 1,
+            ActiveWorkspaceIndex: activeIndex,
+            Workspaces: workspaces);
+
+        var json = JsonSerializer.Serialize(session, SessionJsonOptions);
+        File.WriteAllText(path, json, Encoding.UTF8);
+
+        foreach (var workspace in Workspaces)
+            workspace.Vm.SetExternalFileReference(path, SaveFileKind.Layout, requiresSaveAs: false, markClean: true);
+
+        ActiveVm.StatusText = $"Saved: {Path.GetFileName(path)}";
+    }
+
+    private bool TryLoadWorkspaceSession(string json, string? sourceLabel = null, string? sourcePath = null)
+    {
+        WorkspaceSessionFile? session;
+        try
+        {
+            session = JsonSerializer.Deserialize<WorkspaceSessionFile>(json);
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+
+        if (session?.Workspaces is null || session.Workspaces.Count == 0)
+            return false;
+
+        var loaded = new List<(WorkspaceSessionFileEntry Entry, MainViewModel Vm)>(session.Workspaces.Count);
+        foreach (var entry in session.Workspaces)
+        {
+            if (string.IsNullOrWhiteSpace(entry.LayoutJson))
+                return false;
+
+            var vm = new MainViewModel();
+            if (!vm.LoadFromJson(entry.LayoutJson, entry.Name, sourcePath, preserveCurrentTheme: true))
+                return false;
+
+            vm.SetExternalFileReference(sourcePath, SaveFileKind.Layout, requiresSaveAs: !string.IsNullOrWhiteSpace(sourcePath), markClean: true);
+            loaded.Add((entry, vm));
+        }
+
+        if (loaded.Count == 0)
+            return false;
+
+        Workspaces.Clear();
+        foreach (var (entry, vm) in loaded)
+        {
+            var name = string.IsNullOrWhiteSpace(entry.Name) ? NextWorkspaceName() : entry.Name.Trim();
+            var workspaceSession = CreateWorkspace(name, vm);
+            workspaceSession.LastMultiColumnCount = Math.Max(2, entry.LastMultiColumnCount);
+        }
+
+        var activeIndex = Math.Clamp(session.ActiveWorkspaceIndex, 0, Workspaces.Count - 1);
+        ActiveWorkspace = Workspaces[activeIndex];
+        WorkspaceTabs.SelectedItem = ActiveWorkspace;
+        ActiveVm.StatusText = sourceLabel is null ? "Workspace session loaded." : $"Opened: {sourceLabel}";
+        return true;
+    }
+
+    private static bool LooksLikeTextExport(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return false;
+
+        var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
+        return lines.Any(line => TryParseTextExportHeader(line, out _));
+    }
+
+    private static bool LooksLikeMarkdownExport(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content))
+            return false;
+
+        var normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
+        if (!normalized.TrimStart().StartsWith("## ", StringComparison.Ordinal))
+            return false;
+
+        var lines = normalized.Split('\n');
+        return lines.Any(line => line.StartsWith("## ", StringComparison.Ordinal) && line.Length > 3);
+    }
+
+    private static bool TryParseTextExportHeader(string line, out string title)
+    {
+        const string prefix = "===== ";
+        const string suffix = " =====";
+
+        if (line.StartsWith(prefix, StringComparison.Ordinal) &&
+            line.EndsWith(suffix, StringComparison.Ordinal) &&
+            line.Length >= prefix.Length + suffix.Length + 1)
+        {
+            title = line[prefix.Length..^suffix.Length];
+            return true;
+        }
+
+        title = string.Empty;
+        return false;
+    }
     private static SaveFileDialog CreateSaveDialog(MainViewModel vm)
     {
         return vm.CurrentFileKind switch
@@ -671,6 +838,21 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
         if (result == MessageBoxResult.No)
             return true;
+
+        if (ShouldSaveWorkspaceSession())
+        {
+            var sessionPath = GetDirectWorkspaceSessionPath();
+            if (string.IsNullOrWhiteSpace(sessionPath))
+            {
+                var sessionDialog = CreateWorkspaceSessionSaveDialog();
+                if (sessionDialog.ShowDialog() != true)
+                    return false;
+
+                return TryRunFileAction("Save Failed", $"save {Path.GetFileName(sessionDialog.FileName)}", () => SaveWorkspaceSessionToPath(sessionDialog.FileName));
+            }
+
+            return TryRunFileAction("Save Failed", $"save {Path.GetFileName(sessionPath)}", () => SaveWorkspaceSessionToPath(sessionPath));
+        }
 
         foreach (var workspace in dirtyWorkspaces)
         {
@@ -1795,6 +1977,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     }
 }
 
+file sealed record WorkspaceSessionFile(
+    int Version,
+    int ActiveWorkspaceIndex,
+    List<WorkspaceSessionFileEntry> Workspaces);
+
+file sealed record WorkspaceSessionFileEntry(
+    string Name,
+    string LayoutJson,
+    int LastMultiColumnCount);
 public sealed class WorkspaceSession : NotifyBase
 {
     private string _name;
@@ -1822,6 +2013,19 @@ public sealed class WorkspaceSession : NotifyBase
 
     public MainViewModel Vm { get; }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

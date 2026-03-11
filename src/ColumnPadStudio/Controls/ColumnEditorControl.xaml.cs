@@ -124,19 +124,18 @@ public partial class ColumnEditorControl : UserControl
         if (marker.Kind == MarkerKind.None)
             return;
 
-        e.Handled = true;
         var bodyStart = marker.LeadingWhitespaceLength + marker.Prefix.Length;
         var body = lineInfo.Value.Text[bodyStart..];
 
-        // Empty list item: remove marker and exit the list.
+        // Let Enter behave like a normal editor on empty list items.
         if (string.IsNullOrWhiteSpace(body))
-        {
-            Editor.Select(lineInfo.Value.Start + marker.LeadingWhitespaceLength, marker.Prefix.Length);
-            Editor.SelectedText = string.Empty;
-            Editor.CaretIndex = lineInfo.Value.Start;
             return;
-        }
 
+        // Auto-continue only canonical list markers, not markdown-style "- " lines.
+        if (!ShouldAutoContinueMarker(marker))
+            return;
+
+        e.Handled = true;
         var continuationPrefix = marker.Kind == MarkerKind.Bullet ? BulletPrefix : ChecklistUncheckedPrefix;
         var leading = lineInfo.Value.Text[..marker.LeadingWhitespaceLength];
         Editor.SelectedText = Environment.NewLine + leading + continuationPrefix;
@@ -543,6 +542,13 @@ public partial class ColumnEditorControl : UserControl
         return new LineMarkerInfo(marker.Kind, leadingWhitespaceLength, marker.Prefix);
     }
 
+    private static bool ShouldAutoContinueMarker(LineMarkerInfo marker)
+    {
+        return marker.Prefix == BulletPrefix ||
+               marker.Prefix == ChecklistUncheckedPrefix ||
+               marker.Prefix == ChecklistCheckedPrefix;
+    }
+
     private static int CountLeadingWhitespace(string line)
     {
         var i = 0;
@@ -620,3 +626,5 @@ public partial class ColumnEditorControl : UserControl
     private readonly record struct LineMarkerInfo(MarkerKind Kind, int LeadingWhitespaceLength, string Prefix);
     private readonly record struct LineInfo(int Start, string Text);
 }
+
+
