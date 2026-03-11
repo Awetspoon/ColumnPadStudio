@@ -1,8 +1,8 @@
-﻿# ColumnPad
+# ColumnPad
 
-[![Release](https://img.shields.io/github/v/release/Awetspoon/ColumnPad?display_name=tag)](https://github.com/Awetspoon/ColumnPad/releases)
+[![Release](https://img.shields.io/github/v/release/Awetspoon/ColumnPadStudio?display_name=tag)](https://github.com/Awetspoon/ColumnPadStudio/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Awetspoon/ColumnPad)
+[![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Awetspoon/ColumnPadStudio)
 
 ColumnPad is a Windows WPF text editor focused on side-by-side writing, fast workspace switching, and clean text workflows.
 
@@ -23,8 +23,8 @@ ColumnPad is a Windows WPF text editor focused on side-by-side writing, fast wor
 
 ## Setup
 ```powershell
-git clone https://github.com/Awetspoon/ColumnPad.git
-cd ColumnPad
+git clone https://github.com/Awetspoon/ColumnPadStudio.git
+cd ColumnPadStudio
 ```
 
 ## Run
