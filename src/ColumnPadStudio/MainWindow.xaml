@@ -1,12 +1,10 @@
-﻿<Window x:Class="ColumnPadStudio.MainWindow"
+<Window x:Class="ColumnPadStudio.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
         Title="ColumnPad"
         Width="1240"
         Height="780"
-        MaxWidth="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Width}"
-        MaxHeight="{Binding Source={x:Static SystemParameters.WorkArea}, Path=Height}"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource WindowBackgroundBrush}"
         Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">

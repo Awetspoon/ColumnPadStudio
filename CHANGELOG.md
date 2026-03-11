@@ -4,6 +4,11 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.2.3] - 2026-03-11
+
+### Fixed
+- Removed hard MaxWidth/MaxHeight work-area caps from the main window so maximized layout fully fills the desktop work area without a bottom black strip.
+
 ## [v1.2.2] - 2026-03-11
 
 ### Fixed
