@@ -1,8 +1,13 @@
-﻿# Changelog
+# Changelog
 
 All notable changes to this project are documented in this file.
 
 ## [Unreleased]
+
+## [v1.2.1] - 2026-03-11
+
+### Fixed
+- Improved Windows launch reliability for the single-file release executable by disabling single-file compression and forcing full self-extract content.
 
 ## [v1.2.0] - 2026-03-11
 
