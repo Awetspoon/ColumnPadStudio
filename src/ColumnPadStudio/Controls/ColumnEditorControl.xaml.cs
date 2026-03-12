@@ -1,4 +1,4 @@
-﻿using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Domain.Lists;
 using ColumnPadStudio.ViewModels;
 using System.ComponentModel;
 using System.Globalization;
@@ -416,7 +416,7 @@ public partial class ColumnEditorControl : UserControl
         if (e.Command != ApplicationCommands.Paste)
             return;
 
-        if (!TryApplyPastePresetFromClipboard())
+        if (!TryHandleTextPasteFromClipboard())
             return;
 
         e.Handled = true;
@@ -590,17 +590,20 @@ public partial class ColumnEditorControl : UserControl
         }
     }
 
-    private bool TryApplyPastePresetFromClipboard()
+    private bool TryHandleTextPasteFromClipboard()
     {
-        var preset = VM?.PastePreset ?? PasteListPreset.None;
-        if (preset == PasteListPreset.None || !Clipboard.ContainsText())
+        if (!Clipboard.ContainsText())
             return false;
 
         var source = Clipboard.GetText();
         if (string.IsNullOrEmpty(source))
             return false;
 
-        Editor.SelectedText = ApplyPastePreset(source, preset);
+        var normalized = NormalizeClipboardText(source);
+        var preset = VM?.PastePreset ?? PasteListPreset.None;
+        var transformed = ApplyPastePreset(normalized, preset);
+
+        Editor.SelectedText = transformed;
         return true;
     }
 
@@ -609,12 +612,100 @@ public partial class ColumnEditorControl : UserControl
     private static bool IsOrderedListLine(string line)
         => ListMarkerRules.HasOrderedListPrefix(line);
 
+    private static string NormalizeClipboardText(string source)
+    {
+        if (string.IsNullOrEmpty(source))
+            return string.Empty;
+
+        // Some clipboard providers emit CRCRLF for single line breaks.
+        // Collapse that malformed sequence first so we avoid double-spaced paste.
+        while (source.Contains("\r\r\n", StringComparison.Ordinal))
+            source = source.Replace("\r\r\n", "\r\n", StringComparison.Ordinal);
+
+        source = source
+            .Replace("\u2028", "\n", StringComparison.Ordinal)
+            .Replace("\u2029", "\n", StringComparison.Ordinal)
+            .Replace("\n\r", "\n", StringComparison.Ordinal);
+
+        var normalized = source
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
+
+        normalized = CollapseAlternatingBlankClipboardLines(normalized);
+        return normalized.Replace("\n", Environment.NewLine, StringComparison.Ordinal);
+    }
+
+    private static string CollapseAlternatingBlankClipboardLines(string text)
+    {
+        var lines = text.Split('\n');
+        if (lines.Length < 6)
+            return text;
+
+        // Only collapse if there are no consecutive content lines; this targets
+        // malformed alternating blank-line paste without flattening normal paragraphs.
+        for (var i = 0; i < lines.Length - 1; i++)
+        {
+            if (!string.IsNullOrWhiteSpace(lines[i]) && !string.IsNullOrWhiteSpace(lines[i + 1]))
+                return text;
+        }
+
+        var evenCount = 0;
+        var oddCount = 0;
+        var evenBlank = 0;
+        var oddBlank = 0;
+        var evenContent = 0;
+        var oddContent = 0;
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            var isBlank = string.IsNullOrWhiteSpace(lines[i]);
+            if ((i & 1) == 0)
+            {
+                evenCount++;
+                if (isBlank)
+                    evenBlank++;
+                else
+                    evenContent++;
+            }
+            else
+            {
+                oddCount++;
+                if (isBlank)
+                    oddBlank++;
+                else
+                    oddContent++;
+            }
+        }
+
+        var collapseOdd = oddCount > 0 &&
+                          oddBlank >= (int)Math.Ceiling(oddCount * 0.85) &&
+                          evenContent >= 3 &&
+                          evenBlank <= 1;
+        var collapseEven = evenCount > 0 &&
+                           evenBlank >= (int)Math.Ceiling(evenCount * 0.85) &&
+                           oddContent >= 3 &&
+                           oddBlank <= 1;
+
+        if (!collapseOdd && !collapseEven)
+            return text;
+
+        var blankParityToRemove = collapseOdd ? 1 : 0;
+        var filtered = lines
+            .Where((line, index) => !((index & 1) == blankParityToRemove && string.IsNullOrWhiteSpace(line)))
+            .ToArray();
+
+        return string.Join('\n', filtered);
+    }
+
     private static string ApplyPastePreset(string source, PasteListPreset preset)
     {
         if (preset == PasteListPreset.None || string.IsNullOrEmpty(source))
             return source;
 
-        var normalized = source.Replace("\r\n", "\n", StringComparison.Ordinal);
+        var normalized = source
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
+
         var lines = normalized.Split('\n');
         for (var i = 0; i < lines.Length; i++)
         {
@@ -638,9 +729,6 @@ public partial class ColumnEditorControl : UserControl
             };
         }
 
-        var transformed = string.Join('\n', lines);
-        return source.Contains("\r\n", StringComparison.Ordinal)
-            ? transformed.Replace("\n", "\r\n", StringComparison.Ordinal)
-            : transformed;
+        return string.Join(Environment.NewLine, lines);
     }
 }
