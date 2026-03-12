@@ -4,7 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Awetspoon/ColumnPadStudio)
 
-ColumnPad is a Windows WPF text editor focused on side-by-side writing, fast workspace switching, and clean text workflows.
+ColumnPad is a Windows desktop writing app that lets you work in multiple side-by-side columns, keep reusable workspace layouts, and manage long-form notes without losing structure.
+
+## What ColumnPad Does
+- Splits your writing space into independent columns so you can draft, compare, and organize ideas in parallel.
+- Saves complete workspace layouts (`.columnpad.json`) so projects reopen exactly how you left them.
+- Keeps each column clean and readable with lined paper, line numbers, list/checklist markers, wrapping, and theme controls.
+- Includes a diagram-based Workflow Builder for planning repeatable processes and exporting them as workflow JSON.
 
 ## Features
 - Multi-column writing layout with drag-resize splitters.
@@ -81,3 +87,4 @@ No `.env` variables are required for local run/build.
 
 ## License
 MIT. See [LICENSE](LICENSE).
+

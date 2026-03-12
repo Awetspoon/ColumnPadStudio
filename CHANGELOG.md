@@ -4,6 +4,15 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.3.1] - 2026-03-12
+
+### Changed
+- Clarified README documentation to better explain ColumnPad's core writing workflow, workspace model, and release usage.
+
+### Fixed
+- Fixed clipboard paste normalization so copied content keeps expected line breaks instead of fragmenting into broken rows.
+- Fixed inline workspace/column rename behavior so typing replaces selected rename text instead of appending unexpectedly.
+
 ## [v1.3.0] - 2026-03-12
 
 ### Added
@@ -22,6 +31,7 @@ All notable changes to this project are documented in this file.
 - Fixed marker-mode behavior so bullets/checklists are rendered in gutter mode without duplicating symbols in text content.
 - Fixed selection scoping so active interactions stay isolated to the selected column/editor.
 - Fixed workspace/session load and import paths to preserve structure and avoid inline/flattened legacy text regressions.
+
 ## [v1.2.3] - 2026-03-11
 
 ### Fixed
@@ -141,5 +151,4 @@ All notable changes to this project are documented in this file.
 - Consolidated dark-theme control foreground and background bindings so toolbar, menu, tab, and button text remains readable in dark mode.
 - Kept backward compatibility for legacy theme names (`Notepad Classic`, `High Contrast`, `Compact`) while using current names (`Light Mode`, `Dark Mode`, `Default Mode`).
 - Improved list handling for indented lines when toggling bullets or checklists and continuing lists on Enter.
-
 
