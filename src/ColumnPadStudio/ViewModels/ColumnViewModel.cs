@@ -1,6 +1,8 @@
-using System.Text;
+using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using ColumnPadStudio.Domain.Lists;
 
 namespace ColumnPadStudio.ViewModels;
 
@@ -11,11 +13,15 @@ public enum PasteListPreset
     Checklist
 }
 
+public enum LineMarkerMode
+{
+    Numbers,
+    Bullets,
+    Checklist
+}
+
 public sealed class ColumnViewModel : NotifyBase
 {
-    private const string ChecklistUncheckedPrefix = "\u2610 ";
-    private const string ChecklistCheckedPrefix = "\u2611 ";
-
     private string _title = "Column";
     private string _text = "";
     private int? _widthPx;
@@ -33,14 +39,15 @@ public sealed class ColumnViewModel : NotifyBase
     private bool _isActive;
     private bool _isRenaming;
     private PasteListPreset _pastePreset = PasteListPreset.None;
+    private LineMarkerMode _lineMarkerMode = LineMarkerMode.Numbers;
     private bool _useDefaultFont = true;
-
-    private string _lineNumbersText = "1\n";
     private int _lineCount = 1;
+    private int? _visibleLineCount;
     private int _wordCount;
     private int _checklistTotal;
     private int _checklistDone;
     private string _metricsText = "0 words | 1 line";
+    private HashSet<int> _checkedChecklistLineIndexes = [];
 
     public string Id { get; } = Guid.NewGuid().ToString("N");
 
@@ -55,6 +62,7 @@ public sealed class ColumnViewModel : NotifyBase
         get => _text;
         set
         {
+            _visibleLineCount = null;
             Set(ref _text, value ?? string.Empty);
             RecomputeDerivedMetrics();
         }
@@ -77,7 +85,6 @@ public sealed class ColumnViewModel : NotifyBase
         }
     }
 
-
     public bool CanMoveLeft
     {
         get => _canMoveLeft;
@@ -90,7 +97,6 @@ public sealed class ColumnViewModel : NotifyBase
         set => Set(ref _canMoveRight, value);
     }
 
-
     public bool IsActive
     {
         get => _isActive;
@@ -101,6 +107,20 @@ public sealed class ColumnViewModel : NotifyBase
     {
         get => _pastePreset;
         set => Set(ref _pastePreset, value);
+    }
+
+    public LineMarkerMode LineMarkerMode
+    {
+        get => _lineMarkerMode;
+        set
+        {
+            if (_lineMarkerMode == value)
+                return;
+
+            _lineMarkerMode = value;
+            OnPropertyChanged();
+            RecomputeDerivedMetrics();
+        }
     }
 
     public bool IsRenaming
@@ -150,6 +170,7 @@ public sealed class ColumnViewModel : NotifyBase
         {
             Set(ref _editorFontSize, Math.Clamp(value, 8.0, 40.0));
             OnPropertyChanged(nameof(LineNumberFontSize));
+            OnPropertyChanged(nameof(EditorLineHeight));
         }
     }
 
@@ -176,12 +197,7 @@ public sealed class ColumnViewModel : NotifyBase
         : "Freeze this column width so the splitter cannot resize it.";
 
     public double LineNumberFontSize => Math.Max(8.0, EditorFontSize);
-
-    public string LineNumbersText
-    {
-        get => _lineNumbersText;
-        private set => Set(ref _lineNumbersText, value);
-    }
+    public double EditorLineHeight => Math.Max(15.0, Math.Round((EditorFontSize / 13.0) * 23.0, 2));
 
     public int LineCount
     {
@@ -213,9 +229,96 @@ public sealed class ColumnViewModel : NotifyBase
         private set => Set(ref _metricsText, value);
     }
 
+    public IReadOnlyList<int> GetCheckedChecklistLineIndexes()
+    {
+        var sorted = _checkedChecklistLineIndexes.ToList();
+        sorted.Sort();
+        return sorted;
+    }
+
+    public void SetCheckedChecklistLineIndexes(IEnumerable<int>? lineIndexes)
+    {
+        var next = new HashSet<int>();
+        if (lineIndexes is not null)
+        {
+            foreach (var lineIndex in lineIndexes)
+            {
+                if (lineIndex >= 0)
+                    next.Add(lineIndex);
+            }
+        }
+
+        if (_checkedChecklistLineIndexes.SetEquals(next))
+            return;
+
+        _checkedChecklistLineIndexes = next;
+        TrimChecklistLineIndexesToBounds();
+        RecomputeDerivedMetrics();
+    }
+
+    public bool IsChecklistLineChecked(int lineIndex)
+        => lineIndex >= 0 && _checkedChecklistLineIndexes.Contains(lineIndex);
+
+    public void ToggleChecklistLineChecked(int lineIndex)
+    {
+        if (lineIndex < 0)
+            return;
+
+        if (!_checkedChecklistLineIndexes.Remove(lineIndex))
+            _checkedChecklistLineIndexes.Add(lineIndex);
+
+        TrimChecklistLineIndexesToBounds();
+        RecomputeDerivedMetrics();
+    }
+
+    public void ShiftChecklistLineIndexes(int startLineIndexInclusive, int delta)
+    {
+        if (delta == 0 || _checkedChecklistLineIndexes.Count == 0)
+            return;
+
+        var remapped = new HashSet<int>();
+        foreach (var index in _checkedChecklistLineIndexes)
+        {
+            if (index < startLineIndexInclusive)
+            {
+                remapped.Add(index);
+                continue;
+            }
+
+            var shifted = index + delta;
+            if (shifted >= 0)
+                remapped.Add(shifted);
+        }
+
+        if (_checkedChecklistLineIndexes.SetEquals(remapped))
+            return;
+
+        _checkedChecklistLineIndexes = remapped;
+        TrimChecklistLineIndexesToBounds();
+        RecomputeDerivedMetrics();
+    }
+
+    public void SetVisibleLineCount(int lineCount)
+    {
+        var normalized = Math.Max(1, lineCount);
+        if (_visibleLineCount == normalized)
+            return;
+
+        _visibleLineCount = normalized;
+        UpdateMetricsText();
+    }
+
+    private void UpdateMetricsText()
+    {
+        var displayedLines = _visibleLineCount ?? LineCount;
+        MetricsText = ChecklistTotal > 0
+            ? $"{WordCount} words | {displayedLines} lines | {ChecklistDone}/{ChecklistTotal} done"
+            : $"{WordCount} words | {displayedLines} lines";
+    }
+
     private void RecomputeDerivedMetrics()
     {
-        // Keep metrics and line numbers in one pass for consistency.
+        // Keep all text-derived metrics in one pass for consistency.
         var text = _text ?? string.Empty;
 
         var lines = 1;
@@ -226,11 +329,7 @@ public sealed class ColumnViewModel : NotifyBase
         }
 
         LineCount = lines;
-
-        var sb = new StringBuilder(lines * 3);
-        for (int i = 1; i <= lines; i++)
-            sb.Append(i).Append('\n');
-        LineNumbersText = sb.ToString();
+        TrimChecklistLineIndexesToBounds();
 
         var wordCount = 0;
         var inWord = false;
@@ -250,35 +349,42 @@ public sealed class ColumnViewModel : NotifyBase
 
         WordCount = wordCount;
 
-        var checklistTotal = 0;
-        var checklistDone = 0;
-        var logicalLines = text.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        foreach (var line in logicalLines)
+        if (LineMarkerMode == LineMarkerMode.Checklist)
         {
-            var normalizedLine = line.TrimStart();
+            var normalizedText = text
+                .Replace("\r\n", "\n", StringComparison.Ordinal)
+                .Replace("\r", "\n", StringComparison.Ordinal);
 
-            if (normalizedLine.StartsWith(ChecklistUncheckedPrefix, StringComparison.Ordinal) || normalizedLine.StartsWith("- [ ] ", StringComparison.Ordinal))
+            var splitLines = normalizedText.Split('\n');
+            var checklistTotal = 0;
+            var checklistDone = 0;
+
+            for (var i = 0; i < splitLines.Length; i++)
             {
+                if (string.IsNullOrWhiteSpace(splitLines[i]))
+                    continue;
+
                 checklistTotal++;
-                continue;
+                if (_checkedChecklistLineIndexes.Contains(i))
+                    checklistDone++;
             }
 
-            if (normalizedLine.StartsWith(ChecklistCheckedPrefix, StringComparison.Ordinal) ||
-                normalizedLine.StartsWith("- [x] ", StringComparison.Ordinal) ||
-                normalizedLine.StartsWith("- [X] ", StringComparison.Ordinal))
-            {
-                checklistTotal++;
-                checklistDone++;
-            }
+            ChecklistTotal = checklistTotal;
+            ChecklistDone = checklistDone;
+        }
+        else
+        {
+            var checklistMetrics = ChecklistMetricsCalculator.Compute(text);
+            ChecklistTotal = checklistMetrics.Total;
+            ChecklistDone = checklistMetrics.Done;
         }
 
-        ChecklistTotal = checklistTotal;
-        ChecklistDone = checklistDone;
+        UpdateMetricsText();
+    }
 
-        MetricsText = checklistTotal > 0
-            ? $"{wordCount} words | {lines} lines | {checklistDone}/{checklistTotal} done"
-            : $"{wordCount} words | {lines} lines";
+    private void TrimChecklistLineIndexesToBounds()
+    {
+        var maxIndex = Math.Max(0, LineCount - 1);
+        _checkedChecklistLineIndexes.RemoveWhere(index => index < 0 || index > maxIndex);
     }
 }
-
-

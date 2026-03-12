@@ -1,4 +1,4 @@
-<UserControl x:Class="ColumnPadStudio.Controls.ColumnEditorControl"
+﻿<UserControl x:Class="ColumnPadStudio.Controls.ColumnEditorControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
@@ -125,15 +125,41 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <ScrollViewer VerticalScrollBarVisibility="Hidden" HorizontalScrollBarVisibility="Disabled">
-                        <TextBlock x:Name="LineNumbers"
-                                   FontFamily="{Binding EditorFontFamily}"
-                                   FontSize="{Binding LineNumberFontSize}"
-                                   Foreground="{DynamicResource LineNumberForegroundBrush}"
-                                   Padding="8,8,6,8"
-                                   Text="{Binding LineNumbersText}"
-                                   Visibility="{Binding ShowLineNumbersVisibility}"/>
-                    </ScrollViewer>
+                    <TextBox x:Name="LineNumbers"
+                             IsReadOnly="True"
+                             IsReadOnlyCaretVisible="False"
+                             IsTabStop="False"
+                             Focusable="False"
+                             IsHitTestVisible="True"
+                             PreviewMouseLeftButtonDown="LineNumbers_PreviewMouseLeftButtonDown"
+                             PreviewMouseRightButtonDown="LineNumbers_PreviewMouseRightButtonDown"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             FontFamily="{Binding EditorFontFamily}"
+                             FontSize="{Binding LineNumberFontSize}"
+                             Foreground="{DynamicResource LineNumberForegroundBrush}"
+                             Padding="8,0,6,0"
+                             TextAlignment="Right"
+                             TextWrapping="NoWrap"
+                             VerticalContentAlignment="Top"
+                             TextBlock.LineHeight="{Binding EditorLineHeight}"
+                             TextBlock.LineStackingStrategy="BlockLineHeight"
+                             VerticalScrollBarVisibility="Hidden"
+                             HorizontalScrollBarVisibility="Disabled"
+                             AcceptsReturn="True"
+                             TextOptions.TextFormattingMode="Display"
+                             Text="1"
+                             Visibility="{Binding ShowLineNumbersVisibility}">
+                        <TextBox.ContextMenu>
+                            <ContextMenu Opened="LineNumbersContextMenu_Opened">
+                                <MenuItem x:Name="LineMarkerNumbersMenuItem" Header="Numbers" IsCheckable="True" Click="LineMarkerNumbers_Click"/>
+                                <MenuItem x:Name="LineMarkerBulletsMenuItem" Header="Bullets" IsCheckable="True" Click="LineMarkerBullets_Click"/>
+                                <MenuItem x:Name="LineMarkerChecklistMenuItem" Header="Checklist" IsCheckable="True" Click="LineMarkerChecklist_Click"/>
+                                <Separator/>
+                                <MenuItem x:Name="LineMarkerToggleCheckMenuItem" Header="Toggle Check" Click="LineMarkerToggleCheck_Click"/>
+                            </ContextMenu>
+                        </TextBox.ContextMenu>
+                    </TextBox>
                 </Border>
 
                 <TextBox x:Name="Editor"
@@ -149,13 +175,23 @@
                          SelectionOpacity="0.45"
                          CaretBrush="{DynamicResource EditorForegroundBrush}"
                          TextWrapping="{Binding TextWrappingMode}"
+                         VerticalContentAlignment="Top"
+                         TextBlock.LineHeight="{Binding EditorLineHeight}"
+                         TextBlock.LineStackingStrategy="BlockLineHeight"
                          HorizontalScrollBarVisibility="{Binding HorizontalScrollBarMode}"
+                         VerticalScrollBarVisibility="Auto"
+                         AcceptsReturn="True"
+                         AcceptsTab="True"
+                         Padding="8,0,8,0"
+                         TextOptions.TextFormattingMode="Display"
                          SpellCheck.IsEnabled="{Binding DataContext.ActiveVm.SpellCheckEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
                          Language="{Binding DataContext.ActiveVm.EditorLanguageTag, RelativeSource={RelativeSource AncestorType=Window}, ConverterCulture=en-US}"
                          GotFocus="Editor_GotFocus"
+                         TextChanged="Editor_TextChanged"
+                         SizeChanged="Editor_SizeChanged"
                          CommandManager.PreviewExecuted="Editor_PreviewExecuted"
                          PreviewKeyDown="Editor_PreviewKeyDown"
-                         PreviewMouseLeftButtonDown="Editor_PreviewMouseLeftButtonDown">
+                         >
                     <TextBox.Style>
                         <Style TargetType="TextBox">
                             <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}"/>
@@ -206,5 +242,16 @@
         </DockPanel>
     </Border>
 </UserControl>
+
+
+
+
+
+
+
+
+
+
+
 
 

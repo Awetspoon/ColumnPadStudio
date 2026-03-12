@@ -1,4 +1,4 @@
-﻿# Repository Structure
+# Repository Structure
 
 This repository follows a `src/tests/docs/tools` layout to keep application code, validation code, and operational assets separated.
 
@@ -7,9 +7,11 @@ This repository follows a `src/tests/docs/tools` layout to keep application code
 ```text
 .
 |-- src/
-|   `-- ColumnPadStudio/
+|   |-- ColumnPadStudio/
+|   `-- ColumnPadStudio.Domain/
 |-- tests/
-|   `-- ColumnPadStudio.SmokeTests/
+|   |-- ColumnPadStudio.SmokeTests/
+|   `-- ColumnPadStudio.Domain.Tests/
 |-- docs/
 |-- tools/
 |-- ColumnPadStudio.sln
@@ -31,3 +33,4 @@ This repository follows a `src/tests/docs/tools` layout to keep application code
 - Build solution: `dotnet build .\ColumnPadStudio.sln -c Release`
 - Run app: `dotnet run --project .\src\ColumnPadStudio\ColumnPadStudio.csproj -c Release`
 - Run smoke tests: `dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release`
+

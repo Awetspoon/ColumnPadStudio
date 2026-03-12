@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using System.Windows;
 using ColumnPadStudio.Services;
 using ColumnPadStudio.ViewModels;
@@ -80,30 +81,59 @@ public partial class WorkflowBuilderWindow : Window
         }
     }
 
-    private void AddStep_Click(object sender, RoutedEventArgs e)
+    private void AddNode_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.AddStep();
+        ViewModel.AddNode();
     }
 
-    private void RemoveStep_Click(object sender, RoutedEventArgs e)
+    private void DuplicateNode_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.RemoveSelectedStep();
+        ViewModel.DuplicateSelectedNode();
     }
 
-    private void MoveStepUp_Click(object sender, RoutedEventArgs e)
+    private void RemoveNode_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.MoveSelectedStepUp();
+        ViewModel.RemoveSelectedNode();
     }
 
-    private void MoveStepDown_Click(object sender, RoutedEventArgs e)
+    private void AutoLayout_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.MoveSelectedStepDown();
+        ViewModel.AutoLayoutSelectedWorkflow();
+    }
+
+    private void AddLink_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.AddLink();
+    }
+
+    private void RemoveLink_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.RemoveSelectedLink();
+    }
+
+    private void NudgeNodeLeft_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.NudgeSelectedNode(-16, 0);
+    }
+
+    private void NudgeNodeRight_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.NudgeSelectedNode(16, 0);
+    }
+
+    private void NudgeNodeUp_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.NudgeSelectedNode(0, -16);
+    }
+
+    private void NudgeNodeDown_Click(object sender, RoutedEventArgs e)
+    {
+        ViewModel.NudgeSelectedNode(0, 16);
     }
 
     private void UseTemplate_Click(object sender, RoutedEventArgs e)
     {
-        if (!ViewModel.CreateWorkflowFromSelectedTemplate())
-            return;
+        ViewModel.CreateWorkflowFromSelectedTemplate();
     }
 
     private void ImportWorkflowJson_Click(object sender, RoutedEventArgs e)
@@ -190,4 +220,3 @@ public partial class WorkflowBuilderWindow : Window
         return $"{sanitized}.workflow.json";
     }
 }
-

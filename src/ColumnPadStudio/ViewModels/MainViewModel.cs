@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+﻿using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
 using System.IO;
@@ -8,6 +8,8 @@ using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Media;
 using ColumnPadStudio.Services;
+using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Domain.Workspaces;
 
 namespace ColumnPadStudio.ViewModels;
 
@@ -43,6 +45,7 @@ public sealed class MainViewModel : NotifyBase
     private string _cleanStateSignature = string.Empty;
     private bool _forceDirty;
     private static readonly JsonSerializerOptions LayoutJsonOptions = new() { WriteIndented = true };
+    private const int CurrentLayoutVersion = 13;
 
     private readonly Dictionary<string, FontFaceOption> _fontFaceOptionsByName =
         new(StringComparer.CurrentCultureIgnoreCase);
@@ -356,6 +359,8 @@ public sealed class MainViewModel : NotifyBase
                     c.WidthPx,
                     c.IsWidthLocked,
                     c.PastePreset.ToString(),
+                    c.LineMarkerMode.ToString(),
+                    c.GetCheckedChecklistLineIndexes().ToList(),
                     c.EditorFontFamily,
                     c.EditorFontSize,
                     c.EditorFontStyle.ToString(),
@@ -406,7 +411,7 @@ public sealed class MainViewModel : NotifyBase
 
     public void SetColumnCount(int requestedCount)
     {
-        var target = Math.Clamp(requestedCount, 1, 9999);
+        var target = WorkspaceConstraints.ClampColumnCount(requestedCount);
         PromoteRawDocumentToLayoutIfNeeded(target);
         var changed = false;
 
@@ -643,20 +648,20 @@ public sealed class MainViewModel : NotifyBase
 
     public void LoadFromExportText(string text, string? sourceLabel = null, string? sourcePath = null)
     {
-        var parsed = ParseTextExportColumns(text);
+        var parsed = WorkspaceImportRules.ParseTextExportColumns(text);
         ApplyImportedColumns(parsed, sourceLabel, sourcePath, SaveFileKind.TextExport, "Text imported.");
     }
 
     public void LoadFromExportMarkdown(string markdown, string? sourceLabel = null, string? sourcePath = null)
     {
-        var parsed = ParseMarkdownExportColumns(markdown);
+        var parsed = WorkspaceImportRules.ParseMarkdownExportColumns(markdown);
         ApplyImportedColumns(parsed, sourceLabel, sourcePath, SaveFileKind.MarkdownExport, "Markdown imported.");
     }
 
     public string ToLayoutJson()
     {
         var lf = new LayoutFile(
-            Version: 11,
+            Version: CurrentLayoutVersion,
             ShowLineNumbers: ShowLineNumbers,
             WordWrap: WordWrap,
             EditorFontFamily: EditorFontFamily,
@@ -674,6 +679,8 @@ public sealed class MainViewModel : NotifyBase
                 c.WidthPx,
                 c.IsWidthLocked,
                 c.PastePreset.ToString(),
+                c.LineMarkerMode.ToString(),
+                c.GetCheckedChecklistLineIndexes().ToList(),
                 c.EditorFontFamily,
                 c.EditorFontSize,
                 c.EditorFontStyle.ToString(),
@@ -710,6 +717,7 @@ public sealed class MainViewModel : NotifyBase
         }
 
         var currentTheme = ThemePreset;
+        var layoutVersion = GetJsonValueOrDefault(node, nameof(LayoutFile.Version), 0);
         var showLine = GetJsonValueOrDefault(node, nameof(LayoutFile.ShowLineNumbers), true);
         var wrap = GetJsonValueOrDefault(node, nameof(LayoutFile.WordWrap), true);
         var fontFamily = GetJsonValueOrDefault(node, nameof(LayoutFile.EditorFontFamily), "Consolas");
@@ -740,16 +748,24 @@ public sealed class MainViewModel : NotifyBase
             if (string.IsNullOrWhiteSpace(title))
                 title = defaultTitle;
 
-            var text = GetJsonValueOrDefault(obj, nameof(LayoutColumn.Text), string.Empty);
             var widthPx = GetJsonNullableInt(obj, nameof(LayoutColumn.WidthPx));
             var isWidthLocked = GetJsonValueOrDefault(obj, nameof(LayoutColumn.IsWidthLocked), false);
             var pastePresetName = GetJsonValueOrDefault(obj, nameof(LayoutColumn.PastePreset), nameof(PasteListPreset.None));
             var pastePreset = ParsePastePreset(pastePresetName);
+            var markerModeName = GetJsonValueOrDefault(obj, nameof(LayoutColumn.LineMarkerMode), nameof(LineMarkerMode.Numbers));
+            var markerMode = ParseLineMarkerMode(markerModeName);
+            var checkedChecklistLineIndexes = GetJsonIntArray(obj, nameof(LayoutColumn.CheckedChecklistLineIndexes));
             var columnFontFamily = GetJsonValueOrDefault(obj, nameof(LayoutColumn.FontFamily), fontFamily);
             var columnFontSize = GetJsonDoubleOrDefault(obj, nameof(LayoutColumn.FontSize), fontSize);
             var columnFontStyle = GetJsonValueOrDefault(obj, nameof(LayoutColumn.FontStyle), _editorFontStyle.ToString());
             var columnFontWeight = GetJsonValueOrDefault(obj, nameof(LayoutColumn.FontWeight), _editorFontWeight.ToString());
             var useDefaultFont = GetJsonValueOrDefault(obj, nameof(LayoutColumn.UseDefaultFont), true);
+            var text = NormalizeLoadedColumnText(GetJsonValueOrDefault(obj, nameof(LayoutColumn.Text), string.Empty));
+            text = MigrateLegacyInlineTextIfNeeded(layoutVersion, text, widthPx, columnFontSize);
+            var markerMigration = MigrateLegacyLineMarkersIfNeeded(layoutVersion, text, markerMode, checkedChecklistLineIndexes);
+            text = markerMigration.Text;
+            markerMode = markerMigration.Mode;
+            checkedChecklistLineIndexes = markerMigration.CheckedChecklistLineIndexes;
 
             parsedColumns.Add(new LayoutColumn(
                 title,
@@ -757,6 +773,8 @@ public sealed class MainViewModel : NotifyBase
                 widthPx,
                 isWidthLocked,
                 pastePreset.ToString(),
+                markerMode.ToString(),
+                checkedChecklistLineIndexes,
                 columnFontFamily,
                 columnFontSize,
                 columnFontStyle,
@@ -783,6 +801,8 @@ public sealed class MainViewModel : NotifyBase
             vm.WidthPx = column.WidthPx;
             vm.IsWidthLocked = column.IsWidthLocked;
             vm.PastePreset = ParsePastePreset(column.PastePreset);
+            vm.LineMarkerMode = ParseLineMarkerMode(column.LineMarkerMode);
+            vm.SetCheckedChecklistLineIndexes(column.CheckedChecklistLineIndexes);
             vm.EditorFontFamily = string.IsNullOrWhiteSpace(column.FontFamily) ? EditorFontFamily : column.FontFamily;
             vm.EditorFontSize = column.FontSize <= 0 ? EditorFontSize : column.FontSize;
             vm.EditorFontStyle = ParseFontStyle(column.FontStyle, _editorFontStyle);
@@ -881,7 +901,7 @@ public sealed class MainViewModel : NotifyBase
     }
 
     private void ApplyImportedColumns(
-        IReadOnlyList<(string Title, string Text)> parsed,
+        IReadOnlyList<ImportedColumn> parsed,
         string? sourceLabel,
         string? sourcePath,
         SaveFileKind kind,
@@ -889,7 +909,7 @@ public sealed class MainViewModel : NotifyBase
     {
         var imported = parsed.Count > 0
             ? parsed
-            : [("Column 1", string.Empty)];
+            : [new ImportedColumn("Column 1", string.Empty)];
 
         SetColumnCount(imported.Count);
 
@@ -903,6 +923,8 @@ public sealed class MainViewModel : NotifyBase
             column.WidthPx = null;
             column.IsWidthLocked = false;
             column.PastePreset = PasteListPreset.None;
+            column.LineMarkerMode = LineMarkerMode.Numbers;
+            column.SetCheckedChecklistLineIndexes(null);
             column.EditorFontFamily = EditorFontFamily;
             column.EditorFontSize = EditorFontSize;
             column.EditorFontStyle = _editorFontStyle;
@@ -916,122 +938,6 @@ public sealed class MainViewModel : NotifyBase
         RefreshStatus();
         StatusText = sourceLabel is null ? fallbackStatus : $"Opened: {sourceLabel}";
         MarkClean();
-    }
-
-    private static List<(string Title, string Text)> ParseTextExportColumns(string text)
-    {
-        var normalized = (text ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal);
-        var lines = normalized.Split('\n');
-        var parsed = new List<(string Title, string Text)>();
-
-        string? currentTitle = null;
-        var body = new StringBuilder();
-        var skipInitialBlank = false;
-
-        void Flush()
-        {
-            if (currentTitle is null)
-                return;
-
-            parsed.Add((currentTitle, body.ToString().TrimEnd('\n')));
-            body.Clear();
-        }
-
-        foreach (var line in lines)
-        {
-            if (TryParseTextExportHeader(line, out var title))
-            {
-                Flush();
-                currentTitle = string.IsNullOrWhiteSpace(title) ? $"Column {parsed.Count + 1}" : title.Trim();
-                skipInitialBlank = true;
-                continue;
-            }
-
-            currentTitle ??= "Column 1";
-
-            if (skipInitialBlank && line.Length == 0)
-            {
-                skipInitialBlank = false;
-                continue;
-            }
-
-            skipInitialBlank = false;
-            body.Append(line).Append('\n');
-        }
-
-        Flush();
-
-        if (parsed.Count == 0)
-            parsed.Add(("Column 1", normalized.TrimEnd('\n')));
-
-        return parsed;
-    }
-
-    private static bool TryParseTextExportHeader(string line, out string title)
-    {
-        const string prefix = "===== ";
-        const string suffix = " =====";
-
-        if (line.StartsWith(prefix, StringComparison.Ordinal) &&
-            line.EndsWith(suffix, StringComparison.Ordinal) &&
-            line.Length >= prefix.Length + suffix.Length + 1)
-        {
-            title = line[prefix.Length..^suffix.Length];
-            return true;
-        }
-
-        title = string.Empty;
-        return false;
-    }
-
-    private static List<(string Title, string Text)> ParseMarkdownExportColumns(string markdown)
-    {
-        var normalized = (markdown ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal);
-        var lines = normalized.Split('\n');
-        var parsed = new List<(string Title, string Text)>();
-
-        string? currentTitle = null;
-        var body = new StringBuilder();
-        var skipInitialBlank = false;
-
-        void Flush()
-        {
-            if (currentTitle is null)
-                return;
-
-            parsed.Add((currentTitle, body.ToString().TrimEnd('\n')));
-            body.Clear();
-        }
-
-        foreach (var line in lines)
-        {
-            if (line.StartsWith("## ", StringComparison.Ordinal))
-            {
-                Flush();
-                var heading = line[3..];
-                currentTitle = string.IsNullOrWhiteSpace(heading) ? $"Column {parsed.Count + 1}" : heading.Trim();
-                skipInitialBlank = true;
-                continue;
-            }
-
-            currentTitle ??= "Column 1";
-
-            if (skipInitialBlank && line.Length == 0)
-            {
-                skipInitialBlank = false;
-                continue;
-            }
-
-            skipInitialBlank = false;
-            body.Append(line).Append('\n');
-        }
-
-        Flush();
-
-        if (parsed.Count == 0)
-            parsed.Add(("Column 1", normalized.TrimEnd('\n')));
-
-        return parsed;
     }
 
     private static IReadOnlyList<EditorLanguageOption> BuildEditorLanguages()
@@ -1211,6 +1117,210 @@ public sealed class MainViewModel : NotifyBase
         return PasteListPreset.None;
     }
 
+    private static LineMarkerMode ParseLineMarkerMode(string? value)
+    {
+        if (Enum.TryParse<LineMarkerMode>(value, ignoreCase: true, out var parsed))
+            return parsed;
+
+        return LineMarkerMode.Numbers;
+    }
+
+    private static List<int> NormalizeCheckedChecklistLineIndexes(IEnumerable<int>? lineIndexes)
+    {
+        var normalized = new SortedSet<int>();
+        if (lineIndexes is not null)
+        {
+            foreach (var lineIndex in lineIndexes)
+            {
+                if (lineIndex >= 0)
+                    normalized.Add(lineIndex);
+            }
+        }
+
+        return normalized.ToList();
+    }
+
+    private static (string Text, LineMarkerMode Mode, List<int> CheckedChecklistLineIndexes) MigrateLegacyLineMarkersIfNeeded(
+        int layoutVersion,
+        string text,
+        LineMarkerMode persistedMode,
+        IReadOnlyList<int>? persistedCheckedChecklistLineIndexes)
+    {
+        var normalizedIndexes = NormalizeCheckedChecklistLineIndexes(persistedCheckedChecklistLineIndexes);
+        if (layoutVersion >= CurrentLayoutVersion)
+            return (text, persistedMode, normalizedIndexes);
+
+        if (string.IsNullOrWhiteSpace(text))
+            return (text, persistedMode, normalizedIndexes);
+
+        var lines = text.Split('\n');
+        var contentLineCount = 0;
+        var bulletLineCount = 0;
+        var checklistLineCount = 0;
+        var checkedLineIndexes = new List<int>();
+
+        for (var i = 0; i < lines.Length; i++)
+        {
+            if (string.IsNullOrWhiteSpace(lines[i]))
+                continue;
+
+            contentLineCount++;
+            var marker = ListMarkerRules.ParseLineMarker(lines[i]);
+            switch (marker.Kind)
+            {
+                case ListMarkerKind.Bullet:
+                    bulletLineCount++;
+                    break;
+                case ListMarkerKind.ChecklistUnchecked:
+                    checklistLineCount++;
+                    break;
+                case ListMarkerKind.ChecklistChecked:
+                    checklistLineCount++;
+                    checkedLineIndexes.Add(i);
+                    break;
+            }
+        }
+
+        if (contentLineCount == 0)
+            return (text, persistedMode, normalizedIndexes);
+
+        if (checklistLineCount == contentLineCount)
+        {
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var marker = ListMarkerRules.ParseLineMarker(lines[i]);
+                if (marker.Kind is ListMarkerKind.ChecklistUnchecked or ListMarkerKind.ChecklistChecked)
+                    lines[i] = ListMarkerRules.RemoveMarker(lines[i], marker);
+            }
+
+            return (string.Join('\n', lines), LineMarkerMode.Checklist, checkedLineIndexes);
+        }
+
+        if (bulletLineCount == contentLineCount)
+        {
+            for (var i = 0; i < lines.Length; i++)
+            {
+                var marker = ListMarkerRules.ParseLineMarker(lines[i]);
+                if (marker.Kind == ListMarkerKind.Bullet)
+                    lines[i] = ListMarkerRules.RemoveMarker(lines[i], marker);
+            }
+
+            return (string.Join('\n', lines), LineMarkerMode.Bullets, []);
+        }
+
+        return (text, persistedMode, normalizedIndexes);
+    }
+
+    private static string NormalizeLoadedColumnText(string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+            return string.Empty;
+
+        var normalized = text;
+        var hasNewLine = normalized.Contains('\n') || normalized.Contains('\r');
+
+        // Legacy files may contain escaped newline text sequences instead of real newlines.
+        if (!hasNewLine)
+        {
+            normalized = normalized
+                .Replace("\\r\\n", "\n", StringComparison.Ordinal)
+                .Replace("\\n", "\n", StringComparison.Ordinal)
+                .Replace("\\r", "\n", StringComparison.Ordinal);
+        }
+
+        return normalized
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace("\r", "\n", StringComparison.Ordinal);
+    }
+
+    private static string MigrateLegacyInlineTextIfNeeded(int layoutVersion, string text, int? widthPx, double fontSize)
+    {
+        if (layoutVersion >= CurrentLayoutVersion)
+            return text;
+
+        if (string.IsNullOrWhiteSpace(text))
+            return text;
+
+        if (text.Contains('\n') || text.Contains('\r'))
+            return text;
+
+        if (text.Length < 80)
+            return text;
+
+        if (TrySplitArrowChain(text, out var structured))
+            return structured;
+
+        return HardWrapAtEstimatedWidth(text, EstimateCharactersPerLine(widthPx, fontSize));
+    }
+
+    private static bool TrySplitArrowChain(string text, out string normalized)
+    {
+        normalized = text;
+        if (!text.Contains("->", StringComparison.Ordinal))
+            return false;
+
+        var segments = text.Split("->", StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length < 3)
+            return false;
+
+        var lines = new List<string>(segments.Length);
+        for (var i = 0; i < segments.Length; i++)
+        {
+            var line = segments[i];
+            if (i < segments.Length - 1)
+                line += " ->";
+
+            lines.Add(line);
+        }
+
+        normalized = string.Join('\n', lines);
+        return true;
+    }
+
+    private static int EstimateCharactersPerLine(int? widthPx, double fontSize)
+    {
+        var effectiveWidth = Math.Max(180, widthPx ?? 320) - 72;
+        var averageGlyphWidth = Math.Max(6.2, fontSize * 0.58);
+        var estimated = (int)Math.Floor(effectiveWidth / averageGlyphWidth);
+        return Math.Clamp(estimated, 18, 72);
+    }
+
+    private static string HardWrapAtEstimatedWidth(string text, int maxCharsPerLine)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+            return text;
+
+        var words = text.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (words.Length <= 1)
+            return text;
+
+        var lines = new List<string>();
+        var current = new StringBuilder();
+
+        foreach (var word in words)
+        {
+            if (current.Length == 0)
+            {
+                current.Append(word);
+                continue;
+            }
+
+            if (current.Length + 1 + word.Length <= maxCharsPerLine)
+            {
+                current.Append(' ').Append(word);
+                continue;
+            }
+
+            lines.Add(current.ToString());
+            current.Clear();
+            current.Append(word);
+        }
+
+        if (current.Length > 0)
+            lines.Add(current.ToString());
+
+        return lines.Count <= 1 ? text : string.Join('\n', lines);
+    }
     private static FontStyle ParseFontStyle(string? value, FontStyle fallback)
     {
         if (string.IsNullOrWhiteSpace(value))
@@ -1295,6 +1405,21 @@ public sealed class MainViewModel : NotifyBase
         return null;
     }
 
+    private static List<int> GetJsonIntArray(JsonObject? node, string propertyName)
+    {
+        if (node is null || node[propertyName] is not JsonArray values)
+            return [];
+
+        var parsed = new List<int>(values.Count);
+        foreach (var value in values)
+        {
+            if (value is JsonValue valueNode && valueNode.TryGetValue<int>(out var lineIndex) && lineIndex >= 0)
+                parsed.Add(lineIndex);
+        }
+
+        return NormalizeCheckedChecklistLineIndexes(parsed);
+    }
+
     private sealed record LayoutFile(
         int Version,
         bool ShowLineNumbers,
@@ -1316,6 +1441,8 @@ public sealed class MainViewModel : NotifyBase
         int? WidthPx,
         bool IsWidthLocked,
         string PastePreset,
+        string LineMarkerMode,
+        List<int> CheckedChecklistLineIndexes,
         string FontFamily,
         double FontSize,
         string FontStyle,
@@ -1340,6 +1467,8 @@ public sealed class MainViewModel : NotifyBase
         int? WidthPx,
         bool IsWidthLocked,
         string PastePreset,
+        string LineMarkerMode,
+        List<int> CheckedChecklistLineIndexes,
         string FontFamily,
         double FontSize,
         string FontStyle,
@@ -1350,6 +1479,24 @@ public sealed class MainViewModel : NotifyBase
 
     private readonly record struct FontFaceOption(string Name, FontStyle Style, FontWeight Weight);
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,4 +1,4 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Text.Json;
 using ColumnPadStudio.ViewModels;
@@ -165,19 +165,32 @@ public sealed class WorkflowService
             Category = source.Category,
             Description = source.Description,
             Trigger = source.Trigger,
-            Steps = new ObservableCollection<WorkflowStepDefinition>(
-                source.Steps.Select(step => new WorkflowStepDefinition
+            Nodes = new ObservableCollection<WorkflowDiagramNode>(
+                source.Nodes.Select(node => new WorkflowDiagramNode
                 {
-                    Kind = step.Kind,
-                    Argument = step.Argument,
-                    Notes = step.Notes
+                    Id = node.Id,
+                    Kind = node.Kind,
+                    Title = node.Title,
+                    Description = node.Description,
+                    X = node.X,
+                    Y = node.Y,
+                    Width = node.Width,
+                    Height = node.Height
+                })),
+            Links = new ObservableCollection<WorkflowDiagramLink>(
+                source.Links.Select(link => new WorkflowDiagramLink
+                {
+                    Id = link.Id,
+                    FromNodeId = link.FromNodeId,
+                    ToNodeId = link.ToNodeId,
+                    Label = link.Label
                 }))
         };
     }
 
     private static void Normalize(WorkflowDefinition workflow, string? fallbackName)
     {
-        workflow.SchemaVersion = Math.Max(1, workflow.SchemaVersion);
+        workflow.SchemaVersion = Math.Max(2, workflow.SchemaVersion);
 
         workflow.Id = string.IsNullOrWhiteSpace(workflow.Id)
             ? Guid.NewGuid().ToString("N")
@@ -192,7 +205,91 @@ public sealed class WorkflowService
             : workflow.Category.Trim();
 
         workflow.Description ??= string.Empty;
-        workflow.Steps ??= new ObservableCollection<WorkflowStepDefinition>();
+        workflow.Nodes ??= [];
+        workflow.Links ??= [];
+
+        if (workflow.Nodes.Count == 0)
+        {
+            var startNode = new WorkflowDiagramNode
+            {
+                Id = "start",
+                Kind = WorkflowNodeKind.Start,
+                Title = "Start",
+                X = 80,
+                Y = 90,
+                Width = 130,
+                Height = 60
+            };
+            var stepNode = new WorkflowDiagramNode
+            {
+                Id = "step-1",
+                Kind = WorkflowNodeKind.Step,
+                Title = "Step",
+                X = 80,
+                Y = 220
+            };
+            var endNode = new WorkflowDiagramNode
+            {
+                Id = "end",
+                Kind = WorkflowNodeKind.End,
+                Title = "End",
+                X = 80,
+                Y = 350,
+                Width = 130,
+                Height = 60
+            };
+
+            workflow.Nodes.Add(startNode);
+            workflow.Nodes.Add(stepNode);
+            workflow.Nodes.Add(endNode);
+            workflow.Links.Add(new WorkflowDiagramLink { FromNodeId = startNode.Id, ToNodeId = stepNode.Id });
+            workflow.Links.Add(new WorkflowDiagramLink { FromNodeId = stepNode.Id, ToNodeId = endNode.Id });
+        }
+
+        EnsureUniqueNodeIds(workflow.Nodes);
+        EnsureUniqueLinkIds(workflow.Links);
+
+        var nodeIds = new HashSet<string>(workflow.Nodes.Select(n => n.Id), StringComparer.Ordinal);
+        for (var i = workflow.Links.Count - 1; i >= 0; i--)
+        {
+            var link = workflow.Links[i];
+            if (string.IsNullOrWhiteSpace(link.FromNodeId) ||
+                string.IsNullOrWhiteSpace(link.ToNodeId) ||
+                !nodeIds.Contains(link.FromNodeId) ||
+                !nodeIds.Contains(link.ToNodeId))
+            {
+                workflow.Links.RemoveAt(i);
+            }
+        }
+    }
+
+    private static void EnsureUniqueNodeIds(IEnumerable<WorkflowDiagramNode> nodes)
+    {
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var node in nodes)
+        {
+            var candidate = string.IsNullOrWhiteSpace(node.Id) ? Guid.NewGuid().ToString("N") : node.Id.Trim();
+            while (!used.Add(candidate))
+                candidate = Guid.NewGuid().ToString("N");
+
+            node.Id = candidate;
+
+            if (string.IsNullOrWhiteSpace(node.Title))
+                node.Title = WorkflowDiagramNode.DefaultTitleForKind(node.Kind);
+        }
+    }
+
+    private static void EnsureUniqueLinkIds(IEnumerable<WorkflowDiagramLink> links)
+    {
+        var used = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var link in links)
+        {
+            var candidate = string.IsNullOrWhiteSpace(link.Id) ? Guid.NewGuid().ToString("N") : link.Id.Trim();
+            while (!used.Add(candidate))
+                candidate = Guid.NewGuid().ToString("N");
+
+            link.Id = candidate;
+        }
     }
 
     private static void WriteTextAtomically(string path, string content)

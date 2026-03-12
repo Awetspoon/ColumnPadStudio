@@ -1,21 +1,19 @@
+﻿using ColumnPadStudio.Domain.Lists;
 using ColumnPadStudio.ViewModels;
+using System.ComponentModel;
+using System.Globalization;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Threading;
 
 namespace ColumnPadStudio.Controls;
 
 public partial class ColumnEditorControl : UserControl
 {
-    private const string BulletPrefix = "\u2022 ";
-    private const string ChecklistUncheckedPrefix = "\u2610 ";
-    private const string ChecklistCheckedPrefix = "\u2611 ";
-
-    private static readonly string[] BulletPrefixes = [BulletPrefix, "- "];
-    private static readonly string[] ChecklistUncheckedPrefixes = [ChecklistUncheckedPrefix, "- [ ] "];
-    private static readonly string[] ChecklistCheckedPrefixes = [ChecklistCheckedPrefix, "- [x] ", "- [X] "];
-
     public event EventHandler? EditorFocused;
     public event EventHandler? LockWidthRequested;
     public event EventHandler? MoveLeftRequested;
@@ -31,9 +29,20 @@ public partial class ColumnEditorControl : UserControl
     public event EventHandler? ToggleItalicRequested;
     public event EventHandler? ResetFontRequested;
 
+    private ScrollViewer? _editorScrollViewer;
+    private ScrollViewer? _lineNumberScrollViewer;
+    private bool _isSyncingLineNumberScroll;
+    private bool _lineNumberRefreshPending;
+    private int _lastRenderedLineNumberCount = -1;
+    private int _gutterContextLineIndex = -1;
+    private ColumnViewModel? _observedVm;
+
     public ColumnEditorControl()
     {
         InitializeComponent();
+        Loaded += ColumnEditorControl_Loaded;
+        Unloaded += ColumnEditorControl_Unloaded;
+        DataContextChanged += ColumnEditorControl_DataContextChanged;
     }
 
     public int SelectionStart => Editor.SelectionStart;
@@ -59,19 +68,44 @@ public partial class ColumnEditorControl : UserControl
         Editor.ScrollToLine(line);
     }
 
-    public void ApplyBulletsToSelection() => ToggleBullets();
-    public void ApplyChecklistToSelection() => ToggleChecklist();
-    public void ToggleChecklistChecksInSelection() => ToggleCheckMarks();
+    public void ApplyBulletsToSelection() => SetLineMarkerMode(LineMarkerMode.Bullets);
+    public void ApplyChecklistToSelection() => SetLineMarkerMode(LineMarkerMode.Checklist);
+    public void ToggleChecklistChecksInSelection() => ToggleChecklistChecksForSelection();
 
-    public bool ClearSelection()
+    public bool ClearSelection(bool focusEditor = true)
     {
         if (Editor.SelectionLength <= 0)
             return false;
 
         var caretIndex = Editor.SelectionStart + Editor.SelectionLength;
         Editor.Select(caretIndex, 0);
-        Editor.Focus();
+        if (focusEditor)
+            Editor.Focus();
+
         return true;
+    }
+
+    private void ColumnEditorControl_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
+    {
+        if (_observedVm is not null)
+            _observedVm.PropertyChanged -= ObservedVm_PropertyChanged;
+
+        _observedVm = e.NewValue as ColumnViewModel;
+        if (_observedVm is not null)
+            _observedVm.PropertyChanged += ObservedVm_PropertyChanged;
+
+        _lastRenderedLineNumberCount = -1;
+        QueueLineNumberRefresh();
+        SyncLineNumberScrollWithEditor();
+    }
+
+    private void ObservedVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName is nameof(ColumnViewModel.LineMarkerMode) or nameof(ColumnViewModel.ChecklistDone) or nameof(ColumnViewModel.ShowLineNumbers))
+        {
+            _lastRenderedLineNumberCount = -1;
+            QueueLineNumberRefresh();
+        }
     }
 
     private void Editor_GotFocus(object sender, RoutedEventArgs e)
@@ -79,7 +113,166 @@ public partial class ColumnEditorControl : UserControl
         EditorFocused?.Invoke(this, EventArgs.Empty);
     }
 
+    private void ColumnEditorControl_Loaded(object sender, RoutedEventArgs e)
+    {
+        AttachEditorScrollViewer();
+        AttachLineNumberScrollViewer();
+        QueueLineNumberRefresh();
+        SyncLineNumberScrollWithEditor();
+    }
 
+    private void ColumnEditorControl_Unloaded(object sender, RoutedEventArgs e)
+    {
+        DetachEditorScrollViewer();
+        DetachLineNumberScrollViewer();
+
+        if (_observedVm is not null)
+            _observedVm.PropertyChanged -= ObservedVm_PropertyChanged;
+    }
+
+    private void Editor_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        QueueLineNumberRefresh();
+        SyncLineNumberScrollWithEditor();
+    }
+
+    private void Editor_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        QueueLineNumberRefresh();
+        SyncLineNumberScrollWithEditor();
+    }
+
+    private void AttachEditorScrollViewer()
+    {
+        if (_editorScrollViewer is not null)
+            return;
+
+        _editorScrollViewer = FindDescendant<ScrollViewer>(Editor);
+        if (_editorScrollViewer is null)
+            return;
+
+        _editorScrollViewer.ScrollChanged += EditorScrollViewer_ScrollChanged;
+    }
+
+    private void DetachEditorScrollViewer()
+    {
+        if (_editorScrollViewer is null)
+            return;
+
+        _editorScrollViewer.ScrollChanged -= EditorScrollViewer_ScrollChanged;
+        _editorScrollViewer = null;
+    }
+
+    private void AttachLineNumberScrollViewer()
+    {
+        if (_lineNumberScrollViewer is not null)
+            return;
+
+        _lineNumberScrollViewer = FindDescendant<ScrollViewer>(LineNumbers);
+    }
+
+    private void DetachLineNumberScrollViewer()
+    {
+        _lineNumberScrollViewer = null;
+    }
+
+    private void EditorScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
+    {
+        if (e.VerticalChange == 0 && e.ExtentHeightChange == 0)
+            return;
+
+        if (e.ExtentHeightChange != 0)
+            QueueLineNumberRefresh();
+
+        SyncLineNumberScroll(e.VerticalOffset);
+    }
+
+    private void SyncLineNumberScrollWithEditor()
+    {
+        AttachEditorScrollViewer();
+        AttachLineNumberScrollViewer();
+        SyncLineNumberScroll(_editorScrollViewer?.VerticalOffset ?? 0);
+    }
+
+    private void SyncLineNumberScroll(double verticalOffset)
+    {
+        if (_isSyncingLineNumberScroll)
+            return;
+
+        _isSyncingLineNumberScroll = true;
+        try
+        {
+            _lineNumberScrollViewer?.ScrollToVerticalOffset(verticalOffset);
+        }
+        finally
+        {
+            _isSyncingLineNumberScroll = false;
+        }
+    }
+
+    private static T? FindDescendant<T>(DependencyObject parent) where T : DependencyObject
+    {
+        var childCount = VisualTreeHelper.GetChildrenCount(parent);
+        for (var i = 0; i < childCount; i++)
+        {
+            var child = VisualTreeHelper.GetChild(parent, i);
+            if (child is T match)
+                return match;
+
+            var nested = FindDescendant<T>(child);
+            if (nested is not null)
+                return nested;
+        }
+
+        return null;
+    }
+
+    private void QueueLineNumberRefresh()
+    {
+        if (_lineNumberRefreshPending)
+            return;
+
+        _lineNumberRefreshPending = true;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _lineNumberRefreshPending = false;
+            RefreshVisibleLineNumbers();
+        }), DispatcherPriority.Background);
+    }
+
+    private void RefreshVisibleLineNumbers()
+    {
+        var lineCount = Math.Max(1, Editor.LineCount);
+        var markerMode = VM?.LineMarkerMode ?? LineMarkerMode.Numbers;
+
+        var lineBreak = Environment.NewLine;
+        var sb = new StringBuilder(lineCount * (lineBreak.Length + 3));
+        for (var lineIndex = 0; lineIndex < lineCount; lineIndex++)
+            sb.Append(GetLineNumberLabel(markerMode, lineIndex)).Append(lineBreak);
+
+        var renderedLineNumbers = sb.ToString();
+        if (lineCount == _lastRenderedLineNumberCount &&
+            string.Equals(LineNumbers.Text, renderedLineNumbers, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        LineNumbers.Text = renderedLineNumbers;
+        VM?.SetVisibleLineCount(lineCount);
+        _lastRenderedLineNumberCount = lineCount;
+        SyncLineNumberScrollWithEditor();
+    }
+
+    private string GetLineNumberLabel(LineMarkerMode markerMode, int lineIndex)
+    {
+        if (markerMode == LineMarkerMode.Bullets)
+            return "\u2022";
+
+        if (markerMode == LineMarkerMode.Checklist)
+            return VM?.IsChecklistLineChecked(lineIndex) == true ? "\u2611" : "\u2610";
+
+        return (lineIndex + 1).ToString(CultureInfo.InvariantCulture);
+    }
 
     private void Editor_PreviewKeyDown(object sender, KeyEventArgs e)
     {
@@ -93,14 +286,14 @@ public partial class ColumnEditorControl : UserControl
         {
             if (e.Key is Key.D8 or Key.NumPad8)
             {
-                ApplyBulletsToSelection();
+                SetLineMarkerMode(LineMarkerMode.Bullets);
                 e.Handled = true;
                 return;
             }
 
             if (e.Key is Key.D7 or Key.NumPad7)
             {
-                ApplyChecklistToSelection();
+                SetLineMarkerMode(LineMarkerMode.Checklist);
                 e.Handled = true;
                 return;
             }
@@ -108,69 +301,112 @@ public partial class ColumnEditorControl : UserControl
 
         if (Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.Enter)
         {
-            ToggleChecklistChecksInSelection();
+            ToggleChecklistChecksForSelection();
             e.Handled = true;
             return;
         }
 
-        if (e.Key != Key.Enter || Keyboard.Modifiers != ModifierKeys.None || Editor.SelectionLength > 0)
-            return;
-
-        var lineInfo = GetLineInfoAtCharacter(Editor.CaretIndex);
-        if (lineInfo is null)
-            return;
-
-        var marker = ParseLineMarker(lineInfo.Value.Text);
-        if (marker.Kind == MarkerKind.None)
-            return;
-
-        var bodyStart = marker.LeadingWhitespaceLength + marker.Prefix.Length;
-        var body = lineInfo.Value.Text[bodyStart..];
-
-        // Let Enter behave like a normal editor on empty list items.
-        if (string.IsNullOrWhiteSpace(body))
-            return;
-
-        // Auto-continue only canonical list markers, not markdown-style "- " lines.
-        if (!ShouldAutoContinueMarker(marker))
-            return;
-
-        e.Handled = true;
-        var continuationPrefix = marker.Kind == MarkerKind.Bullet ? BulletPrefix : ChecklistUncheckedPrefix;
-        var leading = lineInfo.Value.Text[..marker.LeadingWhitespaceLength];
-        Editor.SelectedText = Environment.NewLine + leading + continuationPrefix;
+        if (Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.Enter && Editor.SelectionLength == 0 && VM?.LineMarkerMode == LineMarkerMode.Checklist)
+        {
+            var caretIndex = Editor.CaretIndex;
+            var lineIndex = Editor.GetLineIndexFromCharacterIndex(caretIndex);
+            var lineStart = Editor.GetCharacterIndexFromLineIndex(lineIndex);
+            var shiftFrom = caretIndex == lineStart ? lineIndex : lineIndex + 1;
+            VM.ShiftChecklistLineIndexes(shiftFrom, +1);
+        }
     }
 
-    private void Editor_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    private void LineNumbers_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
     {
-        var point = e.GetPosition(Editor);
-        var charIndex = Editor.GetCharacterIndexFromPoint(point, true);
+        EditorFocused?.Invoke(this, EventArgs.Empty);
+
+        var lineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumbers));
+        if (lineIndex < 0)
+            return;
+
+        _gutterContextLineIndex = lineIndex;
+        if (VM?.LineMarkerMode == LineMarkerMode.Checklist)
+        {
+            VM.ToggleChecklistLineChecked(lineIndex);
+            QueueLineNumberRefresh();
+            e.Handled = true;
+            return;
+        }
+
+        MoveCaretToLineStart(lineIndex);
+        e.Handled = true;
+    }
+
+    private void LineNumbers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        EditorFocused?.Invoke(this, EventArgs.Empty);
+        _gutterContextLineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumbers));
+    }
+
+    private int GetLineIndexFromGutterPoint(Point point)
+    {
+        var charIndex = LineNumbers.GetCharacterIndexFromPoint(point, true);
+        if (charIndex < 0)
+            return -1;
+
+        var lineIndex = LineNumbers.GetLineIndexFromCharacterIndex(charIndex);
+        if (lineIndex < 0)
+            return -1;
+
+        return Math.Clamp(lineIndex, 0, Math.Max(0, Editor.LineCount - 1));
+    }
+
+    private void MoveCaretToLineStart(int lineIndex)
+    {
+        if (Editor.LineCount <= 0)
+            return;
+
+        var safeLine = Math.Clamp(lineIndex, 0, Math.Max(0, Editor.LineCount - 1));
+        var charIndex = Editor.GetCharacterIndexFromLineIndex(safeLine);
         if (charIndex < 0)
             return;
 
-        var lineInfo = GetLineInfoAtCharacter(charIndex);
-        if (lineInfo is null)
+        Editor.Focus();
+        Editor.Select(charIndex, 0);
+        Editor.ScrollToLine(safeLine);
+    }
+
+    private void LineNumbersContextMenu_Opened(object sender, RoutedEventArgs e)
+    {
+        var markerMode = VM?.LineMarkerMode ?? LineMarkerMode.Numbers;
+        LineMarkerNumbersMenuItem.IsChecked = markerMode == LineMarkerMode.Numbers;
+        LineMarkerBulletsMenuItem.IsChecked = markerMode == LineMarkerMode.Bullets;
+        LineMarkerChecklistMenuItem.IsChecked = markerMode == LineMarkerMode.Checklist;
+        LineMarkerToggleCheckMenuItem.IsEnabled = markerMode == LineMarkerMode.Checklist;
+    }
+
+    private void LineMarkerNumbers_Click(object sender, RoutedEventArgs e) => SetLineMarkerMode(LineMarkerMode.Numbers);
+    private void LineMarkerBullets_Click(object sender, RoutedEventArgs e) => SetLineMarkerMode(LineMarkerMode.Bullets);
+    private void LineMarkerChecklist_Click(object sender, RoutedEventArgs e) => SetLineMarkerMode(LineMarkerMode.Checklist);
+
+    private void LineMarkerToggleCheck_Click(object sender, RoutedEventArgs e)
+    {
+        if (VM is null)
             return;
 
-        var marker = ParseLineMarker(lineInfo.Value.Text);
-        if (marker.Kind is not MarkerKind.ChecklistUnchecked and not MarkerKind.ChecklistChecked)
+        if (VM.LineMarkerMode != LineMarkerMode.Checklist)
+            VM.LineMarkerMode = LineMarkerMode.Checklist;
+
+        var targetLine = _gutterContextLineIndex >= 0
+            ? _gutterContextLineIndex
+            : Editor.GetLineIndexFromCharacterIndex(Editor.CaretIndex);
+
+        VM.ToggleChecklistLineChecked(targetLine);
+        QueueLineNumberRefresh();
+    }
+
+    private void SetLineMarkerMode(LineMarkerMode markerMode)
+    {
+        if (VM is null)
             return;
 
-        var offsetInLine = charIndex - lineInfo.Value.Start;
-        var markerStart = marker.LeadingWhitespaceLength;
-        var markerEnd = marker.LeadingWhitespaceLength + marker.Prefix.Length;
-        if (offsetInLine < markerStart || offsetInLine >= markerEnd)
-            return;
-
-        e.Handled = true;
-
-        var replacementPrefix = marker.Kind == MarkerKind.ChecklistChecked
-            ? ChecklistUncheckedPrefix
-            : ChecklistCheckedPrefix;
-
-        Editor.Select(lineInfo.Value.Start + marker.LeadingWhitespaceLength, marker.Prefix.Length);
-        Editor.SelectedText = replacementPrefix;
-        Editor.CaretIndex = lineInfo.Value.Start + marker.LeadingWhitespaceLength + replacementPrefix.Length;
+        VM.LineMarkerMode = markerMode;
+        QueueLineNumberRefresh();
     }
 
     private void Editor_PreviewExecuted(object sender, ExecutedRoutedEventArgs e)
@@ -237,6 +473,7 @@ public partial class ColumnEditorControl : UserControl
     {
         ResizeRequested?.Invoke(this, EventArgs.Empty);
     }
+
     private void ColumnMenuToggleWidthLock_Click(object sender, RoutedEventArgs e)
     {
         LockWidthRequested?.Invoke(this, EventArgs.Empty);
@@ -281,151 +518,26 @@ public partial class ColumnEditorControl : UserControl
     private void PastePresetBullets_Click(object sender, RoutedEventArgs e) => SetPastePreset(PasteListPreset.Bullets);
     private void PastePresetChecklist_Click(object sender, RoutedEventArgs e) => SetPastePreset(PasteListPreset.Checklist);
 
-    private void ToggleBullets_Click(object sender, RoutedEventArgs e) => ToggleBullets();
-    private void ToggleChecklist_Click(object sender, RoutedEventArgs e) => ToggleChecklist();
-    private void ToggleCheckMarks_Click(object sender, RoutedEventArgs e) => ToggleCheckMarks();
+    private void ToggleBullets_Click(object sender, RoutedEventArgs e) => SetLineMarkerMode(LineMarkerMode.Bullets);
+    private void ToggleChecklist_Click(object sender, RoutedEventArgs e) => SetLineMarkerMode(LineMarkerMode.Checklist);
+    private void ToggleCheckMarks_Click(object sender, RoutedEventArgs e) => ToggleChecklistChecksForSelection();
 
-    private void ToggleBullets()
+    private void ToggleChecklistChecksForSelection()
     {
-        ApplyLineTransform(TransformBullets);
-    }
-
-    private void ToggleChecklist()
-    {
-        ApplyLineTransform(TransformChecklist);
-    }
-
-    private static List<string> TransformBullets(List<string> lines)
-    {
-        if (lines.Count == 0)
-            return lines;
-
-        var hasContentLines = lines.Any(line => !string.IsNullOrWhiteSpace(line));
-        var allBulleted = hasContentLines && lines
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .All(line => ParseLineMarker(line).Kind == MarkerKind.Bullet);
-
-        for (var i = 0; i < lines.Count; i++)
-        {
-            if (hasContentLines && string.IsNullOrWhiteSpace(lines[i]))
-                continue;
-
-            var marker = ParseLineMarker(lines[i]);
-            if (allBulleted)
-            {
-                if (marker.Kind == MarkerKind.Bullet)
-                    lines[i] = RemoveMarker(lines[i], marker);
-                continue;
-            }
-
-            if (marker.Kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked)
-                continue;
-
-            lines[i] = UpsertMarker(lines[i], BulletPrefix);
-        }
-
-        return lines;
-    }
-
-    private static List<string> TransformChecklist(List<string> lines)
-    {
-        if (lines.Count == 0)
-            return lines;
-
-        var hasContentLines = lines.Any(line => !string.IsNullOrWhiteSpace(line));
-        var allChecklist = hasContentLines && lines
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .All(line =>
-            {
-                var kind = ParseLineMarker(line).Kind;
-                return kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked;
-            });
-
-        for (var i = 0; i < lines.Count; i++)
-        {
-            if (hasContentLines && string.IsNullOrWhiteSpace(lines[i]))
-                continue;
-
-            var marker = ParseLineMarker(lines[i]);
-            if (allChecklist)
-            {
-                if (marker.Kind is MarkerKind.ChecklistUnchecked or MarkerKind.ChecklistChecked)
-                    lines[i] = RemoveMarker(lines[i], marker);
-                continue;
-            }
-
-            if (marker.Kind == MarkerKind.ChecklistChecked)
-            {
-                lines[i] = UpsertMarker(lines[i], ChecklistCheckedPrefix);
-                continue;
-            }
-
-            if (marker.Kind == MarkerKind.ChecklistUnchecked)
-            {
-                lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
-                continue;
-            }
-
-            if (marker.Kind == MarkerKind.Bullet)
-            {
-                lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
-                continue;
-            }
-
-            lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
-        }
-
-        return lines;
-    }
-
-    private void ToggleCheckMarks()
-    {
-        ApplyLineTransform(lines =>
-        {
-            for (var i = 0; i < lines.Count; i++)
-            {
-                var marker = ParseLineMarker(lines[i]);
-                if (marker.Kind == MarkerKind.ChecklistUnchecked)
-                {
-                    lines[i] = UpsertMarker(lines[i], ChecklistCheckedPrefix);
-                }
-                else if (marker.Kind == MarkerKind.ChecklistChecked)
-                {
-                    lines[i] = UpsertMarker(lines[i], ChecklistUncheckedPrefix);
-                }
-            }
-
-            return lines;
-        });
-    }
-
-    private void ApplyLineTransform(Func<List<string>, List<string>> transform)
-    {
-        var (start, end) = GetSelectedLineRange();
-        if (start < 0 || end < start || end > Editor.Text.Length)
+        if (VM is null)
             return;
 
-        var block = Editor.Text[start..end];
-        var normalized = block.Replace("\r\n", "\n", StringComparison.Ordinal);
-        var hadTrailingNewline = normalized.EndsWith('\n');
+        if (VM.LineMarkerMode != LineMarkerMode.Checklist)
+            VM.LineMarkerMode = LineMarkerMode.Checklist;
 
-        var lines = normalized.Split('\n').ToList();
-        if (hadTrailingNewline && lines.Count > 0 && lines[^1].Length == 0)
-            lines.RemoveAt(lines.Count - 1);
+        var (startLine, endLine) = GetSelectedLineRange();
+        for (var i = startLine; i <= endLine; i++)
+            VM.ToggleChecklistLineChecked(i);
 
-        var updatedLines = transform(lines);
-        var updatedNormalized = string.Join("\n", updatedLines);
-        if (hadTrailingNewline)
-            updatedNormalized += "\n";
-
-        var updatedBlock = updatedNormalized.Replace("\n", Environment.NewLine, StringComparison.Ordinal);
-
-        Editor.Select(start, end - start);
-        Editor.SelectedText = updatedBlock;
-        Editor.Select(start, updatedBlock.Length);
+        QueueLineNumberRefresh();
     }
 
-    private (int start, int end) GetSelectedLineRange()
+    private (int StartLine, int EndLine) GetSelectedLineRange()
     {
         var selectionStart = Editor.SelectionStart;
         var selectionEnd = selectionStart + Editor.SelectionLength;
@@ -441,30 +553,10 @@ public partial class ColumnEditorControl : UserControl
             endLine--;
         }
 
-        var start = Editor.GetCharacterIndexFromLineIndex(startLine);
-        var end = endLine + 1 < Editor.LineCount
-            ? Editor.GetCharacterIndexFromLineIndex(endLine + 1)
-            : Editor.Text.Length;
+        if (endLine < startLine)
+            endLine = startLine;
 
-        return (start, end);
-    }
-
-    private LineInfo? GetLineInfoAtCharacter(int charIndex)
-    {
-        if (charIndex < 0)
-            return null;
-
-        if (Editor.LineCount <= 0)
-            return new LineInfo(0, string.Empty);
-
-        var safeIndex = Math.Min(charIndex, Editor.Text.Length);
-        var lineIndex = Editor.GetLineIndexFromCharacterIndex(safeIndex);
-        var start = Editor.GetCharacterIndexFromLineIndex(lineIndex);
-        var end = lineIndex + 1 < Editor.LineCount
-            ? Editor.GetCharacterIndexFromLineIndex(lineIndex + 1)
-            : Editor.Text.Length;
-
-        return new LineInfo(start, Editor.Text[start..end]);
+        return (startLine, endLine);
     }
 
     private void SetPastePreset(PasteListPreset preset)
@@ -512,72 +604,10 @@ public partial class ColumnEditorControl : UserControl
         return true;
     }
 
-    private static MarkerInfo ParseMarker(string line)
-    {
-        foreach (var prefix in ChecklistUncheckedPrefixes)
-        {
-            if (line.StartsWith(prefix, StringComparison.Ordinal))
-                return new MarkerInfo(MarkerKind.ChecklistUnchecked, prefix);
-        }
+    private static LineMarkerInfo ParseLineMarker(string line) => ListMarkerRules.ParseLineMarker(line);
 
-        foreach (var prefix in ChecklistCheckedPrefixes)
-        {
-            if (line.StartsWith(prefix, StringComparison.Ordinal))
-                return new MarkerInfo(MarkerKind.ChecklistChecked, prefix);
-        }
-
-        foreach (var prefix in BulletPrefixes)
-        {
-            if (line.StartsWith(prefix, StringComparison.Ordinal))
-                return new MarkerInfo(MarkerKind.Bullet, prefix);
-        }
-
-        return new MarkerInfo(MarkerKind.None, string.Empty);
-    }
-
-    private static LineMarkerInfo ParseLineMarker(string line)
-    {
-        var leadingWhitespaceLength = CountLeadingWhitespace(line);
-        var marker = ParseMarker(line[leadingWhitespaceLength..]);
-        return new LineMarkerInfo(marker.Kind, leadingWhitespaceLength, marker.Prefix);
-    }
-
-    private static bool ShouldAutoContinueMarker(LineMarkerInfo marker)
-    {
-        return marker.Prefix == BulletPrefix ||
-               marker.Prefix == ChecklistUncheckedPrefix ||
-               marker.Prefix == ChecklistCheckedPrefix;
-    }
-
-    private static int CountLeadingWhitespace(string line)
-    {
-        var i = 0;
-        while (i < line.Length && char.IsWhiteSpace(line[i]))
-            i++;
-        return i;
-    }
-
-    private static string RemoveMarker(string line, LineMarkerInfo marker)
-    {
-        if (marker.Kind == MarkerKind.None)
-            return line;
-
-        var prefixStart = marker.LeadingWhitespaceLength;
-        var bodyStart = prefixStart + marker.Prefix.Length;
-        return string.Concat(line.AsSpan(0, prefixStart), line.AsSpan(bodyStart));
-    }
-
-    private static string UpsertMarker(string line, string prefix)
-    {
-        var marker = ParseLineMarker(line);
-        var bodyStart = marker.Kind == MarkerKind.None
-            ? marker.LeadingWhitespaceLength
-            : marker.LeadingWhitespaceLength + marker.Prefix.Length;
-
-        var leading = line[..marker.LeadingWhitespaceLength];
-        var body = line[bodyStart..];
-        return $"{leading}{prefix}{body}";
-    }
+    private static bool IsOrderedListLine(string line)
+        => ListMarkerRules.HasOrderedListPrefix(line);
 
     private static string ApplyPastePreset(string source, PasteListPreset preset)
     {
@@ -588,11 +618,11 @@ public partial class ColumnEditorControl : UserControl
         var lines = normalized.Split('\n');
         for (var i = 0; i < lines.Length; i++)
         {
-            if (string.IsNullOrWhiteSpace(lines[i]))
+            if (string.IsNullOrWhiteSpace(lines[i]) || IsOrderedListLine(lines[i]))
                 continue;
 
             var parsed = ParseLineMarker(lines[i]);
-            var bodyStart = parsed.Kind == MarkerKind.None
+            var bodyStart = parsed.Kind == ListMarkerKind.None
                 ? parsed.LeadingWhitespaceLength
                 : parsed.LeadingWhitespaceLength + parsed.Prefix.Length;
 
@@ -601,9 +631,9 @@ public partial class ColumnEditorControl : UserControl
 
             lines[i] = preset switch
             {
-                PasteListPreset.Bullets => $"{leading}{BulletPrefix}{body}",
-                PasteListPreset.Checklist when parsed.Kind == MarkerKind.ChecklistChecked => $"{leading}{ChecklistCheckedPrefix}{body}",
-                PasteListPreset.Checklist => $"{leading}{ChecklistUncheckedPrefix}{body}",
+                PasteListPreset.Bullets => $"{leading}{ListMarkerRules.MarkdownBulletPrefix}{body}",
+                PasteListPreset.Checklist when parsed.Kind == ListMarkerKind.ChecklistChecked => $"{leading}{ListMarkerRules.MarkdownChecklistCheckedPrefix}{body}",
+                PasteListPreset.Checklist => $"{leading}{ListMarkerRules.MarkdownChecklistUncheckedPrefix}{body}",
                 _ => lines[i]
             };
         }
@@ -613,18 +643,4 @@ public partial class ColumnEditorControl : UserControl
             ? transformed.Replace("\n", "\r\n", StringComparison.Ordinal)
             : transformed;
     }
-
-    private enum MarkerKind
-    {
-        None,
-        Bullet,
-        ChecklistUnchecked,
-        ChecklistChecked
-    }
-
-    private readonly record struct MarkerInfo(MarkerKind Kind, string Prefix);
-    private readonly record struct LineMarkerInfo(MarkerKind Kind, int LeadingWhitespaceLength, string Prefix);
-    private readonly record struct LineInfo(int Start, string Text);
 }
-
-

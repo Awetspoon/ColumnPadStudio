@@ -19,7 +19,7 @@ Expected result: `0 Error(s)`.
 ## 3. Run smoke tests
 
 ```powershell
-dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
+dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release --no-build
 ```
 
 Expected result: `Smoke tests passed`.
@@ -53,3 +53,4 @@ Expected output location:
 1. Download the release `ColumnPadStudio.exe` from GitHub Releases to a clean folder.
 2. Launch the downloaded file (not the local publish folder copy).
 3. Verify app startup and basic typing in at least one column.
+

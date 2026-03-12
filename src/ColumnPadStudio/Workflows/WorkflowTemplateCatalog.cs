@@ -1,11 +1,21 @@
-﻿using System.Collections.ObjectModel;
+using System.Collections.ObjectModel;
 
 namespace ColumnPadStudio.Workflows;
 
-public sealed record WorkflowTemplateStep(
-    WorkflowStepKind Kind,
-    string Argument = "",
-    string Notes = "");
+public sealed record WorkflowTemplateNode(
+    string Id,
+    WorkflowNodeKind Kind,
+    string Title,
+    string Description = "",
+    double X = 80,
+    double Y = 80,
+    double Width = 180,
+    double Height = 72);
+
+public sealed record WorkflowTemplateConnection(
+    string FromNodeId,
+    string ToNodeId,
+    string Label = "");
 
 public sealed class WorkflowTemplateDefinition
 {
@@ -14,29 +24,65 @@ public sealed class WorkflowTemplateDefinition
     public required string Category { get; init; }
     public required string Description { get; init; }
     public WorkflowTriggerType Trigger { get; init; } = WorkflowTriggerType.Manual;
-    public IReadOnlyList<WorkflowTemplateStep> Steps { get; init; } = Array.Empty<WorkflowTemplateStep>();
+    public IReadOnlyList<WorkflowTemplateNode> Nodes { get; init; } = Array.Empty<WorkflowTemplateNode>();
+    public IReadOnlyList<WorkflowTemplateConnection> Connections { get; init; } = Array.Empty<WorkflowTemplateConnection>();
 
     public string DisplayName => $"{Category}: {Name}";
 
     public WorkflowDefinition CreateWorkflowInstance(string? customName = null)
     {
-        var workflow = new WorkflowDefinition
+        var instanceNodes = Nodes.Select(node => new WorkflowDiagramNode
+        {
+            Id = string.IsNullOrWhiteSpace(node.Id) ? Guid.NewGuid().ToString("N") : node.Id.Trim(),
+            Kind = node.Kind,
+            Title = node.Title,
+            Description = node.Description,
+            X = node.X,
+            Y = node.Y,
+            Width = node.Width,
+            Height = node.Height
+        }).ToList();
+
+        var idMap = instanceNodes.ToDictionary(n => n.Id, n => n.Id, StringComparer.Ordinal);
+
+        var instanceLinks = new List<WorkflowDiagramLink>();
+        if (Connections.Count > 0)
+        {
+            foreach (var link in Connections)
+            {
+                if (!idMap.ContainsKey(link.FromNodeId) || !idMap.ContainsKey(link.ToNodeId))
+                    continue;
+
+                instanceLinks.Add(new WorkflowDiagramLink
+                {
+                    FromNodeId = link.FromNodeId,
+                    ToNodeId = link.ToNodeId,
+                    Label = link.Label
+                });
+            }
+        }
+        else
+        {
+            for (var i = 0; i < instanceNodes.Count - 1; i++)
+            {
+                instanceLinks.Add(new WorkflowDiagramLink
+                {
+                    FromNodeId = instanceNodes[i].Id,
+                    ToNodeId = instanceNodes[i + 1].Id
+                });
+            }
+        }
+
+        return new WorkflowDefinition
         {
             Id = Guid.NewGuid().ToString("N"),
             Name = string.IsNullOrWhiteSpace(customName) ? Name : customName.Trim(),
             Category = Category,
             Description = Description,
             Trigger = Trigger,
-            Steps = new ObservableCollection<WorkflowStepDefinition>(
-                Steps.Select(step => new WorkflowStepDefinition
-                {
-                    Kind = step.Kind,
-                    Argument = step.Argument,
-                    Notes = step.Notes
-                }))
+            Nodes = new ObservableCollection<WorkflowDiagramNode>(instanceNodes),
+            Links = new ObservableCollection<WorkflowDiagramLink>(instanceLinks),
         };
-
-        return workflow;
     }
 }
 
@@ -46,128 +92,152 @@ public static class WorkflowTemplateCatalog
 
     private static IReadOnlyList<WorkflowTemplateDefinition> BuildTemplates()
     {
-        return new List<WorkflowTemplateDefinition>
+        return
+        [
+            BuildLinearTemplate(
+                id: "project-planning-kickoff",
+                name: "Project Planning Kickoff",
+                category: "Project Management",
+                description: "Set up a clean planning board with scope, milestones, risks, and delivery notes.",
+                trigger: WorkflowTriggerType.Manual,
+                nodeTitles:
+                [
+                    "Define scope",
+                    "Capture milestones",
+                    "Map risks",
+                    "Lock decisions"
+                ]),
+            BuildLinearTemplate(
+                id: "sprint-triage-board",
+                name: "Sprint Triage Board",
+                category: "Engineering",
+                description: "Create a triage-ready layout for backlog grooming and release readiness checks.",
+                trigger: WorkflowTriggerType.Manual,
+                nodeTitles:
+                [
+                    "Collect inbox",
+                    "Prioritize ready",
+                    "Track in-progress",
+                    "Review",
+                    "Done"
+                ]),
+            BuildLinearTemplate(
+                id: "daily-standup-notes",
+                name: "Daily Standup Notes",
+                category: "Team Ops",
+                description: "Capture yesterday/today/blockers quickly with repeatable structure.",
+                trigger: WorkflowTriggerType.OnAppStart,
+                nodeTitles:
+                [
+                    "Yesterday",
+                    "Today",
+                    "Blockers"
+                ]),
+            BuildDecisionTemplate(
+                id: "bug-investigation-log",
+                name: "Bug Investigation Log",
+                category: "Engineering",
+                description: "Track repro steps, hypotheses, evidence, and fixes in a repeatable flow.",
+                trigger: WorkflowTriggerType.Manual,
+                startTitle: "Capture repro",
+                decisionTitle: "Hypothesis confirmed?",
+                yesTitle: "Implement fix",
+                noTitle: "Gather more evidence",
+                endTitle: "Verify + document"),
+            BuildLinearTemplate(
+                id: "sop-builder",
+                name: "SOP Builder",
+                category: "Operations",
+                description: "Draft standard operating procedures with reusable sections and checklists.",
+                trigger: WorkflowTriggerType.Manual,
+                nodeTitles:
+                [
+                    "Purpose",
+                    "Procedure steps",
+                    "QA checks",
+                    "Notes"
+                ])
+        ];
+    }
+
+    private static WorkflowTemplateDefinition BuildLinearTemplate(
+        string id,
+        string name,
+        string category,
+        string description,
+        WorkflowTriggerType trigger,
+        IReadOnlyList<string> nodeTitles)
+    {
+        var nodes = new List<WorkflowTemplateNode>
         {
-            new()
-            {
-                Id = "project-planning-kickoff",
-                Name = "Project Planning Kickoff",
-                Category = "Project Management",
-                Description = "Set up a clean planning board with scope, milestones, risks, and delivery notes.",
-                Trigger = WorkflowTriggerType.Manual,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "4", "Scope | Milestones | Risks | Decisions"),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleLineNumbers, "On", "Keep numbered planning notes."),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleWordWrap, "On", "Wrap long planning items."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetTheme, "Default Mode", "Use the warm planning preset.")
-                ]
-            },
-            new()
-            {
-                Id = "sprint-triage-board",
-                Name = "Sprint Triage Board",
-                Category = "Engineering",
-                Description = "Create a triage-ready layout for backlog grooming and release readiness checks.",
-                Trigger = WorkflowTriggerType.Manual,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "5", "Inbox | Ready | In Progress | Review | Done"),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleLineNumbers, "Off", "Cleaner kanban list view."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetLinedPaper, "Off", "Prefer card-style columns."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetTheme, "Dark Mode", "High-contrast planning sessions.")
-                ]
-            },
-            new()
-            {
-                Id = "daily-standup-notes",
-                Name = "Daily Standup Notes",
-                Category = "Team Ops",
-                Description = "Capture yesterday/today/blockers quickly with repeatable structure.",
-                Trigger = WorkflowTriggerType.OnAppStart,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "3", "Yesterday | Today | Blockers"),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetLinedPaper, "On", "Notebook feel for fast updates."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetSpellCheck, "On", "Catch quick typos while typing."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetEditorLanguage, "en-US", "Default team language.")
-                ]
-            },
-            new()
-            {
-                Id = "sop-builder",
-                Name = "SOP Builder",
-                Category = "Operations",
-                Description = "Draft standard operating procedures with reusable sections and checklists.",
-                Trigger = WorkflowTriggerType.Manual,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "4", "Purpose | Steps | QA Checks | Notes"),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleWordWrap, "On", "Readable long instructions."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetLinedPaper, "On", "Procedure-writing notebook mode."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetTheme, "Light Mode", "Clean print-friendly look.")
-                ]
-            },
-            new()
-            {
-                Id = "content-calendar",
-                Name = "Content Calendar Planner",
-                Category = "Marketing",
-                Description = "Plan content topics, drafts, publish dates, and distribution notes.",
-                Trigger = WorkflowTriggerType.Manual,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "4", "Ideas | Drafting | Scheduled | Published"),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetSpellCheck, "On", "Writing quality guardrail."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetEditorLanguage, "en-GB", "UK copy tone default."),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleLineNumbers, "Off", "Less visual noise for copywork.")
-                ]
-            },
-            new()
-            {
-                Id = "onboarding-plan",
-                Name = "Employee Onboarding Plan",
-                Category = "HR",
-                Description = "Track onboarding stages, owners, and completion notes in one workspace.",
-                Trigger = WorkflowTriggerType.Manual,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "4", "Pre-Start | Week 1 | Month 1 | Handover"),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetLinedPaper, "On", "Structured checklist handwriting look."),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleLineNumbers, "On", "Reference items by line quickly."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetTheme, "Default Mode", "Comfortable onboarding reading tone.")
-                ]
-            },
-            new()
-            {
-                Id = "research-synthesis",
-                Name = "Research Synthesis",
-                Category = "Product",
-                Description = "Organize findings, themes, decisions, and follow-up actions after interviews.",
-                Trigger = WorkflowTriggerType.Manual,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "4", "Raw Notes | Themes | Insights | Actions"),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleWordWrap, "On", "Long observations stay readable."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetSpellCheck, "On", "Reduce noise in insight docs."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetTheme, "Light Mode", "Presentation-friendly output.")
-                ]
-            },
-            new()
-            {
-                Id = "bug-investigation-log",
-                Name = "Bug Investigation Log",
-                Category = "Engineering",
-                Description = "Track repro steps, hypotheses, evidence, and fixes in a repeatable JSON workflow.",
-                Trigger = WorkflowTriggerType.Manual,
-                Steps =
-                [
-                    new WorkflowTemplateStep(WorkflowStepKind.SetColumnCount, "4", "Repro | Hypothesis | Evidence | Fix"),
-                    new WorkflowTemplateStep(WorkflowStepKind.ToggleLineNumbers, "On", "Precise troubleshooting references."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SetLinedPaper, "Off", "Dense technical notes layout."),
-                    new WorkflowTemplateStep(WorkflowStepKind.SaveCurrentFile, "", "Persist investigation trail early.")
-                ]
-            }
+            new("start", WorkflowNodeKind.Start, "Start", string.Empty, 60, 80, 130, 60)
+        };
+
+        var y = 190.0;
+        var stepIndex = 1;
+        foreach (var title in nodeTitles)
+        {
+            nodes.Add(new WorkflowTemplateNode($"step-{stepIndex}", WorkflowNodeKind.Step, title, string.Empty, 60, y));
+            y += 110;
+            stepIndex++;
+        }
+
+        nodes.Add(new WorkflowTemplateNode("end", WorkflowNodeKind.End, "End", string.Empty, 60, y, 130, 60));
+
+        var links = new List<WorkflowTemplateConnection>();
+        for (var i = 0; i < nodes.Count - 1; i++)
+        {
+            links.Add(new WorkflowTemplateConnection(nodes[i].Id, nodes[i + 1].Id));
+        }
+
+        return new WorkflowTemplateDefinition
+        {
+            Id = id,
+            Name = name,
+            Category = category,
+            Description = description,
+            Trigger = trigger,
+            Nodes = nodes,
+            Connections = links
+        };
+    }
+
+    private static WorkflowTemplateDefinition BuildDecisionTemplate(
+        string id,
+        string name,
+        string category,
+        string description,
+        WorkflowTriggerType trigger,
+        string startTitle,
+        string decisionTitle,
+        string yesTitle,
+        string noTitle,
+        string endTitle)
+    {
+        return new WorkflowTemplateDefinition
+        {
+            Id = id,
+            Name = name,
+            Category = category,
+            Description = description,
+            Trigger = trigger,
+            Nodes =
+            [
+                new WorkflowTemplateNode("start", WorkflowNodeKind.Start, startTitle, string.Empty, 60, 90, 150, 60),
+                new WorkflowTemplateNode("decision", WorkflowNodeKind.Decision, decisionTitle, string.Empty, 330, 90, 190, 80),
+                new WorkflowTemplateNode("yes", WorkflowNodeKind.Step, yesTitle, string.Empty, 640, 40, 190, 72),
+                new WorkflowTemplateNode("no", WorkflowNodeKind.Step, noTitle, string.Empty, 640, 180, 190, 72),
+                new WorkflowTemplateNode("end", WorkflowNodeKind.End, endTitle, string.Empty, 910, 110, 150, 60)
+            ],
+            Connections =
+            [
+                new WorkflowTemplateConnection("start", "decision"),
+                new WorkflowTemplateConnection("decision", "yes", "Yes"),
+                new WorkflowTemplateConnection("decision", "no", "No"),
+                new WorkflowTemplateConnection("yes", "end"),
+                new WorkflowTemplateConnection("no", "end")
+            ]
         };
     }
 }
+

@@ -4,6 +4,24 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v1.3.0] - 2026-03-12
+
+### Added
+- Added a domain project (`src/ColumnPadStudio.Domain`) and domain test suite for cleaner separation of parsing and workspace rules.
+- Added dedicated services for file workflow routing, workspace session persistence, lifecycle naming/closing, and text search.
+- Added diagram-first workflow templates with node/link modeling and cleaner builder editing tools.
+
+### Changed
+- Reconstructed editor line-marker behavior so gutter numbering, bullet/checklist modes, and clean typing text no longer conflict.
+- Rebuilt Workflow Builder into a cleaner diagram-focused UI while preserving import/export, templates, and editing controls.
+- Refactored `MainViewModel` and related wiring to remove dead logic and improve maintainability.
+
+### Fixed
+- Fixed lined-paper and text alignment issues so typed text and line rows stay visually flush.
+- Fixed Enter/new-line behavior for normal writing flow across columns.
+- Fixed marker-mode behavior so bullets/checklists are rendered in gutter mode without duplicating symbols in text content.
+- Fixed selection scoping so active interactions stay isolated to the selected column/editor.
+- Fixed workspace/session load and import paths to preserve structure and avoid inline/flattened legacy text regressions.
 ## [v1.2.3] - 2026-03-11
 
 ### Fixed
@@ -123,3 +141,5 @@ All notable changes to this project are documented in this file.
 - Consolidated dark-theme control foreground and background bindings so toolbar, menu, tab, and button text remains readable in dark mode.
 - Kept backward compatibility for legacy theme names (`Notepad Classic`, `High Contrast`, `Compact`) while using current names (`Light Mode`, `Dark Mode`, `Default Mode`).
 - Improved list handling for indented lines when toggling bullets or checklists and continuing lists on Enter.
+
+

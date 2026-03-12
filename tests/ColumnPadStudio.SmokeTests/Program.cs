@@ -1,10 +1,9 @@
-using ColumnPadStudio.ViewModels;
+﻿using ColumnPadStudio.ViewModels;
 using ColumnPadStudio.Services;
-using ColumnPadStudio.Controls;
-using System.Reflection;
 using System.IO;
 using System.Windows;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 
 var failures = new List<string>();
 var checks = 0;
@@ -59,6 +58,9 @@ vm.ToggleLockActiveWidth();
 Check(vm.LockActiveWidthActionLabel == "_Allow Selected Column Width to Resize", "Locked selected column should advertise the allow-resize action.");
 vm.ToggleLockActiveWidth();
 vm.Columns[0].PastePreset = PasteListPreset.Checklist;
+vm.Columns[0].LineMarkerMode = LineMarkerMode.Checklist;
+vm.Columns[0].Text = "task one\ntask two";
+vm.Columns[0].SetCheckedChecklistLineIndexes([1]);
 vm.Columns[0].WidthPx = 444;
 vm.Columns[0].EditorFontFamily = "Consolas";
 vm.Columns[0].EditorFontSize = 17;
@@ -77,6 +79,9 @@ loaded.LoadFromJson(json, "smoke");
 Check(loaded.Columns.Count == vm.Columns.Count, "JSON round-trip should preserve column count.");
 Check(loaded.ThemePreset == vm.ThemePreset, "JSON round-trip should preserve theme preset.");
 Check(loaded.Columns[0].PastePreset == PasteListPreset.Checklist, "JSON round-trip should preserve paste preset.");
+Check(loaded.Columns[0].LineMarkerMode == LineMarkerMode.Checklist, "JSON round-trip should preserve gutter marker mode.");
+Check(loaded.Columns[0].Text == "task one\ntask two", "JSON round-trip should keep checklist text clean without inline markers.");
+Check(loaded.Columns[0].IsChecklistLineChecked(1), "JSON round-trip should preserve checked checklist line indexes.");
 Check(loaded.Columns[0].WidthPx == 444, "JSON round-trip should preserve per-column width.");
 Check(!loaded.Columns[0].UseDefaultFont, "JSON round-trip should preserve per-column default-font toggle.");
 Check(loaded.Columns[0].EditorFontFamily == "Consolas", "JSON round-trip should preserve per-column font family.");
@@ -94,6 +99,25 @@ preserveTheme.ThemePreset = "Dark Mode";
 preserveTheme.LoadFromJson(json, "smoke", preserveCurrentTheme: true);
 Check(preserveTheme.ThemePreset == "Dark Mode", "Manual layout open should preserve the current theme.");
 
+
+var legacyNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse round-trip JSON for legacy normalization test.");
+legacyNode["Version"] = 11;
+var legacyColumns = legacyNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find columns array for legacy normalization test.");
+var legacyFirstColumn = legacyColumns[0]?.AsObject() ?? throw new InvalidOperationException("Could not find first column for legacy normalization test.");
+legacyFirstColumn["Text"] = "line one\\r\\nline two\\nline three";
+var legacyLoaded = new MainViewModel();
+Check(legacyLoaded.LoadFromJson(legacyNode.ToJsonString(), "legacy"), "Legacy-escaped layout JSON should still load.");
+Check(legacyLoaded.Columns[0].Text == "line one\nline two\nline three", "Legacy-escaped newline sequences should be decoded into real line breaks during load.");
+legacyFirstColumn["Text"] = "pitch idea -> break it down -> lock it -> structure tree -> .sln -> build in sections";
+Check(legacyLoaded.LoadFromJson(legacyNode.ToJsonString(), "legacy"), "Legacy inline layout JSON should still load.");
+Check(legacyLoaded.Columns[0].Text.Contains("\n"), "Legacy inline text should be migrated into hard line breaks during load.");
+legacyFirstColumn["Text"] = "- [ ] first task\n- [x] done task";
+legacyFirstColumn["LineMarkerMode"] = null;
+legacyFirstColumn["CheckedChecklistLineIndexes"] = null;
+Check(legacyLoaded.LoadFromJson(legacyNode.ToJsonString(), "legacy"), "Legacy inline checklist-marker layouts should still load.");
+Check(legacyLoaded.Columns[0].LineMarkerMode == LineMarkerMode.Checklist, "Legacy checklist-marker text should migrate to checklist gutter mode.");
+Check(legacyLoaded.Columns[0].Text == "first task\ndone task", "Legacy checklist-marker text should decode to clean plain text.");
+Check(legacyLoaded.Columns[0].IsChecklistLineChecked(1), "Legacy checklist-marker migration should restore checked rows in gutter metadata.");
 var rawDocument = new MainViewModel();
 rawDocument.LoadTextDocument("alpha\n beta", "notes.txt", "C:\\temp\\notes.txt", SaveFileKind.TextDocument);
 Check(rawDocument.Columns.Count == 1, "Raw text open should create a single column.");
@@ -124,6 +148,19 @@ var indentedChecklistMetrics = new ColumnViewModel
 };
 Check(indentedChecklistMetrics.ChecklistTotal == 2, "ChecklistTotal should include indented checklist markers.");
 Check(indentedChecklistMetrics.ChecklistDone == 1, "ChecklistDone should include indented checked markers.");
+
+var checklistModeMetrics = new ColumnViewModel
+{
+    Text = "first\n\nsecond\nthird",
+    LineMarkerMode = LineMarkerMode.Checklist
+};
+checklistModeMetrics.SetCheckedChecklistLineIndexes([2]);
+Check(checklistModeMetrics.ChecklistTotal == 3, "Checklist gutter mode should count only non-empty checklist lines.");
+Check(checklistModeMetrics.ChecklistDone == 1, "Checklist gutter mode should count checked lines from gutter metadata.");
+checklistModeMetrics.ShiftChecklistLineIndexes(1, +1);
+Check(checklistModeMetrics.GetCheckedChecklistLineIndexes().SequenceEqual([3]), "Shifting checklist metadata should move checks with inserted lines.");
+checklistModeMetrics.Text = "first\nsecond";
+Check(checklistModeMetrics.GetCheckedChecklistLineIndexes().Count == 0, "Checklist metadata should trim invalid checked indexes after line count shrinks.");
 
 var lineToggleVm = new MainViewModel();
 Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - 56) < 0.001), "Line-number gutter should default to visible width.");
@@ -220,18 +257,6 @@ Check(importedFromMarkdown.Columns[1].Title == "Blue", "Markdown import should p
 Check(importedFromMarkdown.Columns[1].Text == "right", "Markdown import should preserve second heading body.");
 Check(!importedFromMarkdown.IsDirty, "Imported markdown exports should start clean.");
 
-var looksLikeTextExport = typeof(ColumnPadStudio.MainWindow).GetMethod("LooksLikeTextExport", BindingFlags.Static | BindingFlags.NonPublic)
-    ?? throw new InvalidOperationException("Could not find text-export detection helper.");
-Check((bool)(looksLikeTextExport.Invoke(null, [exportedText]) ?? false), "Open-file detection should recognize exported text layouts.");
-Check(!(bool)(looksLikeTextExport.Invoke(null, ["plain note\nline two"]) ?? true), "Open-file detection should not misclassify plain text documents as exports.");
-
-var looksLikeMarkdownExport = typeof(ColumnPadStudio.MainWindow).GetMethod("LooksLikeMarkdownExport", BindingFlags.Static | BindingFlags.NonPublic)
-    ?? throw new InvalidOperationException("Could not find markdown-export detection helper.");
-Check((bool)(looksLikeMarkdownExport.Invoke(null, [exportedMarkdown]) ?? false), "Open-file detection should recognize exported markdown layouts.");
-Check(!(bool)(looksLikeMarkdownExport.Invoke(null, ["intro paragraph\n## later heading"]) ?? true), "Open-file detection should require exported markdown heading structure.");
-
-var isWorkspaceSessionJson = typeof(ColumnPadStudio.MainWindow).GetMethod("IsWorkspaceSessionJson", BindingFlags.Static | BindingFlags.NonPublic)
-    ?? throw new InvalidOperationException("Could not find workspace-session detection helper.");
 var singleLayoutJson = vm.ToLayoutJson();
 var workspaceSessionJson = JsonSerializer.Serialize(new
 {
@@ -247,22 +272,106 @@ var workspaceSessionJson = JsonSerializer.Serialize(new
         }
     }
 });
-Check((bool)(isWorkspaceSessionJson.Invoke(null, [workspaceSessionJson]) ?? false), "Session detection should recognize workspace session JSON files.");
-Check(!(bool)(isWorkspaceSessionJson.Invoke(null, [singleLayoutJson]) ?? true), "Session detection should not treat single-layout JSON as a workspace session file.");
+Check(WorkspaceSessionFileService.IsWorkspaceSessionJson(workspaceSessionJson), "Session detection should recognize workspace session JSON files.");
+Check(!WorkspaceSessionFileService.IsWorkspaceSessionJson(singleLayoutJson), "Session detection should not treat single-layout JSON as a workspace session file.");
+
+Check(FileWorkflowService.ClassifyOpenFile(".txt", exportedText) == OpenFileLoadKind.TextExport, "File workflow service should classify exported text as text-export load kind.");
+Check(FileWorkflowService.ClassifyOpenFile(".txt", "plain note") == OpenFileLoadKind.TextDocument, "File workflow service should classify plain text as text-document load kind.");
+Check(FileWorkflowService.ClassifyOpenFile(".md", exportedMarkdown) == OpenFileLoadKind.MarkdownExport, "File workflow service should classify exported markdown as markdown-export load kind.");
+Check(FileWorkflowService.ClassifyOpenFile(".md", "# note") == OpenFileLoadKind.MarkdownDocument, "File workflow service should classify plain markdown as markdown-document load kind.");
+Check(FileWorkflowService.ClassifyOpenFile(".json", workspaceSessionJson) == OpenFileLoadKind.WorkspaceSession, "File workflow service should classify workspace-session JSON correctly.");
+Check(FileWorkflowService.ClassifyOpenFile(".json", singleLayoutJson) == OpenFileLoadKind.LayoutJson, "File workflow service should classify single-layout JSON as layout load kind.");
+
+var saveDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.TextDocument, "C:\\temp\\notes.txt", requiresSaveAsBeforeOverwrite: true);
+Check(saveDialogDefinition.FileName == "notes-copy.txt", "File workflow service should suggest copy-suffixed names when Save As is required.");
+Check(saveDialogDefinition.DefaultExt == ".txt", "File workflow service should return the expected default extension for text documents.");
+
+var layoutDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.Layout, "C:\\temp\\layout.columnpad.json", requiresSaveAsBeforeOverwrite: false);
+Check(layoutDialogDefinition.FileName == "layout.columnpad.json", "File workflow service should preserve existing layout filename when direct save is allowed.");
+
+var textExportDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.TextExport, currentFilePath: null, requiresSaveAsBeforeOverwrite: false);
+Check(textExportDialogDefinition.FileName == "ColumnPad_export.txt", "File workflow service should provide a standard text export filename.");
+
+var markdownExportDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.MarkdownExport, currentFilePath: null, requiresSaveAsBeforeOverwrite: false);
+Check(markdownExportDialogDefinition.FileName == "ColumnPad_export.md", "File workflow service should provide a standard markdown export filename.");
+
+var workspaceSessionDialogDefinition = FileWorkflowService.BuildWorkspaceSessionSaveDialog("C:\\temp\\session.columnpad.json");
+Check(workspaceSessionDialogDefinition.FileName == "session.columnpad.json", "File workflow service should use preferred workspace-session filename when available.");
+
+Check(WorkspaceSessionFileService.TryParseSession(workspaceSessionJson, out var parsedSession), "Session service should parse valid workspace session JSON.");
+Check(parsedSession.Workspaces.Count == 1 && parsedSession.Workspaces[0].Name == "Workspace 1", "Session service should preserve workspace entries when parsing.");
+var roundTripSessionJson = WorkspaceSessionFileService.SerializeSession(parsedSession.Workspaces.ToList(), parsedSession.ActiveWorkspaceIndex);
+Check(WorkspaceSessionFileService.IsWorkspaceSessionJson(roundTripSessionJson), "Session service should emit valid workspace session JSON.");
+
+var tempSessionPath = Path.Combine(Path.GetTempPath(), $"ColumnPadSession-{Guid.NewGuid():N}.columnpad.json");
+File.WriteAllText(tempSessionPath, workspaceSessionJson);
+try
+{
+    Check(WorkspaceSessionFileService.IsExistingWorkspaceSessionFile(tempSessionPath), "Session service should detect existing session files on disk.");
+    var singleSessionCandidate = new List<WorkspaceSessionSaveCandidate>
+    {
+        new WorkspaceSessionSaveCandidate(tempSessionPath, SaveFileKind.Layout, false)
+    };
+    Check(WorkspaceSessionFileService.GetDirectWorkspaceSessionPath(singleSessionCandidate) == tempSessionPath, "Session service should keep a single direct session path when it is a clean layout.");
+    Check(WorkspaceSessionFileService.ShouldSaveWorkspaceSession(singleSessionCandidate), "Session service should save workspace sessions when the current file is already a session file.");
+
+    var blockedSessionCandidate = new List<WorkspaceSessionSaveCandidate>
+    {
+        new WorkspaceSessionSaveCandidate(tempSessionPath, SaveFileKind.Layout, true)
+    };
+    Check(WorkspaceSessionFileService.GetDirectWorkspaceSessionPath(blockedSessionCandidate) is null, "Session service should block direct path reuse when Save As is required.");
+
+    var multiWorkspaceCandidates = new List<WorkspaceSessionSaveCandidate>
+    {
+        new WorkspaceSessionSaveCandidate(null, SaveFileKind.Layout, false),
+        new WorkspaceSessionSaveCandidate(null, SaveFileKind.Layout, false)
+    };
+    Check(WorkspaceSessionFileService.ShouldSaveWorkspaceSession(multiWorkspaceCandidates), "Session service should force workspace-session save when multiple workspaces are open.");
+    var lifecycleNames = new[] { "Workspace 1", "workspace 2", "Focus" };
+    Check(WorkspaceLifecycleService.NextWorkspaceName(lifecycleNames) == "Workspace 3", "Workspace lifecycle service should generate the next unique workspace name case-insensitively.");
+    Check(!WorkspaceLifecycleService.CanCloseWorkspace(1), "Workspace lifecycle service should prevent closing the last remaining workspace.");
+    Check(WorkspaceLifecycleService.CanCloseWorkspace(2), "Workspace lifecycle service should allow closing when more than one workspace exists.");
+    Check(WorkspaceLifecycleService.NextActiveWorkspaceIndexAfterClose(3, 3) == 2, "Workspace lifecycle service should clamp next active index after closing the last tab.");
+    Check(WorkspaceLifecycleService.NextActiveWorkspaceIndexAfterClose(0, 3) == 0, "Workspace lifecycle service should preserve first index when closing the first tab.");
+}
+finally
+{
+    if (File.Exists(tempSessionPath))
+        File.Delete(tempSessionPath);
+}
 
 
 
-var transformBullets = typeof(ColumnEditorControl).GetMethod("TransformBullets", BindingFlags.Static | BindingFlags.NonPublic)
-    ?? throw new InvalidOperationException("Could not find bullet transform helper.");
-var bulletFormatting = (List<string>?)transformBullets.Invoke(null, [new List<string> { "alpha", "", "beta" }])
-    ?? throw new InvalidOperationException("Bullet transform returned null.");
-Check(string.Join("\n", bulletFormatting) == "\u2022 alpha\n\n\u2022 beta", "Applying bullets to mixed content should leave blank separator lines blank.");
+var searchColumns = new List<string?>
+{
+    "alpha beta",
+    "gamma\nalpha",
+    string.Empty
+};
 
-var transformChecklist = typeof(ColumnEditorControl).GetMethod("TransformChecklist", BindingFlags.Static | BindingFlags.NonPublic)
-    ?? throw new InvalidOperationException("Could not find checklist transform helper.");
-var checklistFormatting = (List<string>?)transformChecklist.Invoke(null, [new List<string> { "- [ ] one", "", "- [x] two" }])
-    ?? throw new InvalidOperationException("Checklist transform returned null.");
-Check(string.Join("\n", checklistFormatting) == "one\n\ntwo", "Toggling checklist formatting off should leave blank separator lines untouched.");
+Check(TextSearchService.TryFindNext(searchColumns, "alpha", 0, 0, 0, SearchCursor.Empty, out var firstFind), "Text search service should find the first match from the active column.");
+Check(firstFind.ColumnIndex == 0 && firstFind.CharIndex == 0 && firstFind.LineNumber == 1, "Text search service should report first-column hit coordinates.");
+Check(TextSearchService.TryFindNext(searchColumns, "alpha", 0, 0, 0, new SearchCursor(firstFind.ColumnIndex, firstFind.CharIndex), out var secondFind), "Text search service should advance to the next match after the cursor.");
+Check(secondFind.ColumnIndex == 1 && secondFind.CharIndex == 6 && secondFind.LineNumber == 2, "Text search service should report line/char for cross-column next hit.");
+Check(TextSearchService.TryFindNext(searchColumns, "alpha", 0, 0, 0, new SearchCursor(secondFind.ColumnIndex, secondFind.CharIndex), out var wrappedFind), "Text search service should wrap when searching past the last match.");
+Check(wrappedFind.ColumnIndex == 0 && wrappedFind.CharIndex == 0, "Text search service wrap search should return to the first match.");
+Check(!TextSearchService.TryFindNext(searchColumns, "missing", 0, 0, 0, SearchCursor.Empty, out _), "Text search service should return no hit when the term is absent.");
+
+var (replacedTextByService, replacementCountByService) = TextSearchService.ReplaceAllWithCount("one One one", "one", "two", StringComparison.CurrentCultureIgnoreCase);
+Check(replacementCountByService == 3, "Text search service replace should count all case-insensitive hits.");
+Check(replacedTextByService == "two two two", "Text search service replace should substitute all hits in order.");
+Check(TextSearchService.ComputeLineNumber("a\nb\nc", 4) == 3, "Text search service should compute 1-based line numbers from character index.");
+
+var listModeVm = new ColumnViewModel
+{
+    Text = "alpha\nbeta",
+    LineMarkerMode = LineMarkerMode.Bullets
+};
+Check(listModeVm.LineMarkerMode == LineMarkerMode.Bullets, "Line marker mode should support bullets without mutating text.");
+listModeVm.LineMarkerMode = LineMarkerMode.Checklist;
+listModeVm.ToggleChecklistLineChecked(0);
+Check(listModeVm.IsChecklistLineChecked(0), "Checklist gutter mode should toggle checks without inserting inline symbols.");
+Check(listModeVm.Text == "alpha\nbeta", "Checklist gutter mode should keep body text unchanged.");
 
 if (failures.Count > 0)
 {
@@ -274,6 +383,17 @@ if (failures.Count > 0)
 
 Console.WriteLine($"Smoke tests passed ({checks} checks).");
 return 0;
+
+
+
+
+
+
+
+
+
+
+
 
 
 
