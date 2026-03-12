@@ -14,7 +14,7 @@ ColumnPad is a Windows WPF text editor focused on side-by-side writing, fast wor
 - Auto-recovery snapshots for crash/session restore.
 - Theme presets, line numbers, word wrap, lined-paper mode, and per-column font controls.
 - List helpers: bullets, checklist conversion, and check toggling.
-- Workflow Builder with built-in templates plus workflow JSON import/export.
+- Workflow Builder with diagram nodes/connections, built-in templates, and workflow JSON import/export.
 
 ## Requirements
 - Windows 10/11
@@ -43,7 +43,13 @@ dotnet run --project .\src\ColumnPadStudio\ColumnPadStudio.csproj -c Release
 dotnet build .\ColumnPadStudio.sln -c Release
 ```
 
-## Smoke Tests
+## Tests
+### Domain Tests
+```powershell
+dotnet run --project .\tests\ColumnPadStudio.Domain.Tests\ColumnPadStudio.Domain.Tests.csproj -c Release
+```
+
+### Smoke Tests
 ```powershell
 dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
 ```
@@ -54,10 +60,13 @@ dotnet publish .\src\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=Fo
 ```
 
 Publish output: `src\ColumnPadStudio\publish\`
+Release executable: `src\ColumnPadStudio\publish\ColumnPadStudio.exe`
 
 ## Project Structure
 - `src/ColumnPadStudio/` - WPF desktop app (UI, viewmodels, services, controls)
-- `tests/ColumnPadStudio.SmokeTests/` - lightweight behavior smoke tests
+- `src/ColumnPadStudio.Domain/` - shared domain rules and parsing logic
+- `tests/ColumnPadStudio.Domain.Tests/` - domain rules test suite
+- `tests/ColumnPadStudio.SmokeTests/` - runnable app/viewmodel smoke tests
 - `docs/` - screenshots and repo documentation assets
 - `docs/REPOSITORY_STRUCTURE.md` - repository layout and conventions
 - `tools/` - helper scripts (branding/assets)
@@ -72,6 +81,3 @@ No `.env` variables are required for local run/build.
 
 ## License
 MIT. See [LICENSE](LICENSE).
-
-
-

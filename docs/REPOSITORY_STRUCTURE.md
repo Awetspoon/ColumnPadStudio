@@ -23,7 +23,7 @@ This repository follows a `src/tests/docs/tools` layout to keep application code
 ## Conventions
 
 - `src/` contains production projects only.
-- `tests/` contains runnable smoke/integration tests and unit tests.
+- `tests/` contains runnable smoke/integration tests and domain tests.
 - `docs/` contains documentation and screenshots.
 - `tools/` contains maintenance and branding scripts.
 - Solution file stays at repo root for IDE and CI consistency.
@@ -32,5 +32,5 @@ This repository follows a `src/tests/docs/tools` layout to keep application code
 
 - Build solution: `dotnet build .\ColumnPadStudio.sln -c Release`
 - Run app: `dotnet run --project .\src\ColumnPadStudio\ColumnPadStudio.csproj -c Release`
+- Run domain tests: `dotnet run --project .\tests\ColumnPadStudio.Domain.Tests\ColumnPadStudio.Domain.Tests.csproj -c Release`
 - Run smoke tests: `dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release`
-
