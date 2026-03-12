@@ -1,4 +1,4 @@
-﻿using System.Windows;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -28,6 +28,7 @@ public partial class InlineRenameText : UserControl
 
     private string _beforeEditText = string.Empty;
     private bool _suppressLostFocusCommit;
+    private bool _selectAllOnFocus;
 
     public InlineRenameText()
     {
@@ -61,20 +62,43 @@ public partial class InlineRenameText : UserControl
     private void BeginEditInternal()
     {
         _beforeEditText = Text ?? string.Empty;
+        _selectAllOnFocus = true;
+
         DisplayTextBlock.Visibility = Visibility.Collapsed;
         EditorTextBox.Visibility = Visibility.Visible;
 
-        Dispatcher.BeginInvoke(DispatcherPriority.Input, new Action(() =>
+        // Use ContextIdle so the initial mouse-up from opening rename cannot move
+        // the caret to the edge before we grab focus/select-all.
+        Dispatcher.BeginInvoke(DispatcherPriority.ContextIdle, new Action(() =>
         {
             EditorTextBox.Focus();
-            EditorTextBox.SelectAll();
         }));
     }
 
     private void EndEditVisual()
     {
+        _selectAllOnFocus = false;
         EditorTextBox.Visibility = Visibility.Collapsed;
         DisplayTextBlock.Visibility = Visibility.Visible;
+    }
+
+    private void EditorTextBox_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+    {
+        if (EditorTextBox.IsKeyboardFocusWithin)
+            return;
+
+        _selectAllOnFocus = true;
+        e.Handled = true;
+        EditorTextBox.Focus();
+    }
+
+    private void EditorTextBox_GotKeyboardFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        if (!_selectAllOnFocus)
+            return;
+
+        EditorTextBox.SelectAll();
+        _selectAllOnFocus = false;
     }
 
     private void EditorTextBox_KeyDown(object sender, KeyEventArgs e)
@@ -122,5 +146,3 @@ public partial class InlineRenameText : UserControl
         }
     }
 }
-
-
