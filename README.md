@@ -1,4 +1,4 @@
-# ColumnPad Clean Rebuild
+# ColumnPad 
 
 ColumnPad is a Windows desktop plain-text writing app built around side-by-side text columns.
 It is designed for writing, comparing, sorting, and organising text across multiple columns inside a workspace, with support for multiple open workspaces through tabs.
