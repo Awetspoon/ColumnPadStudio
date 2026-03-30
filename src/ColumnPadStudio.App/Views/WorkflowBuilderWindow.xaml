@@ -1,0 +1,433 @@
+<Window x:Class="ColumnPadStudio.App.Views.WorkflowBuilderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:domainEnums="clr-namespace:ColumnPadStudio.Domain.Enums;assembly=ColumnPadStudio.Domain"
+        xmlns:styling="clr-namespace:ColumnPadStudio.App.Styling"
+        Title="Workflow Builder"
+        Width="1280"
+        Height="820"
+        MinWidth="1120"
+        MinHeight="720"
+        WindowStartupLocation="CenterOwner">
+    <Window.Resources>
+        <styling:WorkflowNodeBrushConverter x:Key="WorkflowNodeFillBrushConverter" />
+        <styling:WorkflowNodeBrushConverter x:Key="WorkflowNodeStrokeBrushConverter" UseStrokeBrush="True" />
+        <Style x:Key="WorkflowCompactButtonStyle"
+               TargetType="Button"
+               BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="MinWidth" Value="88" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+        </Style>
+        <Style x:Key="WorkflowCompactComboBoxStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style x:Key="WorkflowCompactTextBoxStyle"
+               TargetType="TextBox"
+               BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,4" />
+        </Style>
+        <Style x:Key="WorkflowCardStyle"
+               TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushStrong}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Padding" Value="12" />
+        </Style>
+        <Style x:Key="WorkflowSectionHeadingStyle"
+               TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </Window.Resources>
+    <DockPanel>
+        <Border DockPanel.Dock="Top" Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource BorderBrushStrong}" BorderThickness="0,0,0,1" Padding="10,8">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Style="{StaticResource WorkflowCompactButtonStyle}" Content="New" Click="NewWorkflowButton_OnClick" />
+                    <Button Style="{StaticResource WorkflowCompactButtonStyle}" Content="Save" Click="SaveWorkflowButton_OnClick" />
+                    <Button Style="{StaticResource WorkflowCompactButtonStyle}" Content="Arrange Flow" Click="AutoLayoutButton_OnClick" />
+                </StackPanel>
+
+                <TextBlock Grid.Column="1"
+                           Margin="12,0,0,0"
+                           HorizontalAlignment="Right"
+                           VerticalAlignment="Center"
+                           Foreground="{DynamicResource ForegroundMutedBrush}"
+                           Text="Build reusable workflow maps inside ColumnPad using the same theme, quick editing flow, and preview rules." />
+            </Grid>
+        </Border>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusTextBlock" Text="Workflow builder ready." />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="12">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="304" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="14" />
+                <ColumnDefinition Width="312" />
+            </Grid.ColumnDefinitions>
+
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                <StackPanel Margin="0,0,8,0">
+                    <Border Style="{StaticResource WorkflowCardStyle}" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="210" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Workflow Library" Style="{StaticResource WorkflowSectionHeadingStyle}" />
+                            <TextBlock Grid.Row="1" Margin="0,4,0,10" FontSize="11" Foreground="{DynamicResource ForegroundMutedBrush}" Text="Saved flows you can reopen, duplicate, or export." />
+
+                            <ListBox x:Name="WorkflowLibraryListBox"
+                                     Grid.Row="2"
+                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                     SelectionChanged="WorkflowLibraryListBox_OnSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel>
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <StackPanel Orientation="Horizontal" Margin="0,2,0,0">
+                                                <TextBlock Text="{Binding Category}" FontSize="10" Foreground="{DynamicResource ForegroundMutedBrush}" />
+                                                <TextBlock Text=" • " FontSize="10" Foreground="{DynamicResource ForegroundMutedBrush}" />
+                                                <TextBlock Text="{Binding Nodes.Count, StringFormat={}{0} nodes}" FontSize="10" Foreground="{DynamicResource ForegroundMutedBrush}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <Grid Grid.Row="3" Margin="0,10,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Style="{StaticResource WorkflowCompactButtonStyle}" Content="Import" Click="ImportWorkflowButton_OnClick" Margin="0,0,6,0" />
+                                <Button Grid.Column="1" Style="{StaticResource WorkflowCompactButtonStyle}" Content="Export" Click="ExportWorkflowButton_OnClick" Margin="0,0,6,0" />
+                                <Button Grid.Column="2" Style="{StaticResource WorkflowCompactButtonStyle}" Content="Delete" Click="DeleteWorkflowButton_OnClick" Margin="0" />
+                            </Grid>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource WorkflowCardStyle}" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="Starter Template" Style="{StaticResource WorkflowSectionHeadingStyle}" />
+                            <TextBlock Margin="0,4,0,10" FontSize="11" Foreground="{DynamicResource ForegroundMutedBrush}" Text="Load a ready-made flow and adapt it instead of starting from zero." />
+                            <ComboBox x:Name="TemplateComboBox" DisplayMemberPath="Name" Style="{StaticResource WorkflowCompactComboBoxStyle}" />
+                            <Button Margin="0,10,0,0" HorizontalAlignment="Stretch" Style="{StaticResource WorkflowCompactButtonStyle}" Content="Load Template" Click="UseTemplateButton_OnClick" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Style="{StaticResource WorkflowCardStyle}" Margin="0,0,0,12">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="230" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Nodes" Style="{StaticResource WorkflowSectionHeadingStyle}" />
+                            <Grid Grid.Row="1" Margin="0,10,0,10">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0" Style="{StaticResource WorkflowCompactButtonStyle}" Content="Add" Click="AddNodeButton_OnClick" Margin="0,0,6,0" />
+                                <Button Grid.Column="1" Style="{StaticResource WorkflowCompactButtonStyle}" Content="Clone" Click="DuplicateNodeButton_OnClick" Margin="0,0,6,0" />
+                                <Button Grid.Column="2" Style="{StaticResource WorkflowCompactButtonStyle}" Content="Remove" Click="RemoveNodeButton_OnClick" Margin="0" />
+                            </Grid>
+
+                            <ListBox x:Name="NodesListBox"
+                                     Grid.Row="2"
+                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                     MouseDoubleClick="NodesListBox_OnMouseDoubleClick"
+                                     PreviewMouseRightButtonDown="NodesListBox_OnPreviewMouseRightButtonDown"
+                                     PreviewKeyDown="NodesListBox_OnPreviewKeyDown"
+                                     SelectionChanged="NodesListBox_OnSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,1,0,1">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="10" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <Border Grid.Column="0"
+                                                    Margin="0,2,10,2"
+                                                    CornerRadius="4"
+                                                    Background="{Binding Converter={StaticResource WorkflowNodeFillBrushConverter}}"
+                                                    BorderBrush="{Binding Converter={StaticResource WorkflowNodeStrokeBrushConverter}}"
+                                                    BorderThickness="1" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Kind}" FontSize="10" Foreground="{DynamicResource ForegroundMutedBrush}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+
+                    <Border Style="{StaticResource WorkflowCardStyle}">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="180" />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Text="Lines" Style="{StaticResource WorkflowSectionHeadingStyle}" />
+                            <ListBox x:Name="LinksListBox"
+                                     Grid.Row="1"
+                                     Margin="0,10,0,0"
+                                     ScrollViewer.VerticalScrollBarVisibility="Visible"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                                     SelectionChanged="LinksListBox_OnSelectionChanged">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock Text="{Binding Display}" TextWrapping="Wrap" />
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="14" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Style="{StaticResource WorkflowCardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="236" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Text="Workflow Details" Style="{StaticResource WorkflowSectionHeadingStyle}" />
+                        <TextBlock x:Name="WorkflowSummaryTextBlock"
+                                   Grid.Column="1"
+                                   HorizontalAlignment="Right"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource ForegroundMutedBrush}"
+                                   Text="0 nodes • 0 lines • Flowchart" />
+
+                        <StackPanel Grid.Row="1" Margin="0,12,12,0">
+                            <TextBlock Text="Workflow Name" Margin="0,0,0,3" />
+                            <TextBox x:Name="WorkflowNameTextBox" TextChanged="WorkflowDetails_OnChanged" Style="{StaticResource WorkflowCompactTextBoxStyle}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="0,12,0,0">
+                            <TextBlock Text="Trigger" Margin="0,0,0,3" />
+                            <ComboBox x:Name="TriggerComboBox" SelectionChanged="WorkflowDetails_OnChanged" Style="{StaticResource WorkflowCompactComboBoxStyle}">
+                                <ComboBoxItem Content="Manual" Tag="{x:Static domainEnums:WorkflowTriggerType.Manual}" />
+                                <ComboBoxItem Content="On App Start" Tag="{x:Static domainEnums:WorkflowTriggerType.OnAppStart}" />
+                                <ComboBoxItem Content="On File Open" Tag="{x:Static domainEnums:WorkflowTriggerType.OnFileOpen}" />
+                                <ComboBoxItem Content="On File Save" Tag="{x:Static domainEnums:WorkflowTriggerType.OnFileSave}" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Margin="0,10,12,0">
+                            <TextBlock Text="Category" Margin="0,0,0,3" />
+                            <TextBox x:Name="CategoryTextBox" TextChanged="WorkflowDetails_OnChanged" Style="{StaticResource WorkflowCompactTextBoxStyle}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="0,10,0,0">
+                            <TextBlock Text="Chart Style" Margin="0,0,0,3" />
+                            <ComboBox x:Name="ChartStyleComboBox" SelectionChanged="WorkflowDetails_OnChanged" Style="{StaticResource WorkflowCompactComboBoxStyle}">
+                                <ComboBoxItem Content="Flowchart" Tag="{x:Static domainEnums:WorkflowChartStyle.Flowchart}" />
+                                <ComboBoxItem Content="Horizontal Timeline" Tag="{x:Static domainEnums:WorkflowChartStyle.HorizontalTimeline}" />
+                                <ComboBoxItem Content="Vertical Timeline" Tag="{x:Static domainEnums:WorkflowChartStyle.VerticalTimeline}" />
+                                <ComboBoxItem Content="Swimlane" Tag="{x:Static domainEnums:WorkflowChartStyle.Swimlane}" />
+                                <ComboBoxItem Content="Kanban Board" Tag="{x:Static domainEnums:WorkflowChartStyle.Kanban}" />
+                                <ComboBoxItem Content="Radial Map" Tag="{x:Static domainEnums:WorkflowChartStyle.RadialMap}" />
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="3" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                            <TextBlock Text="Description" Margin="0,0,0,3" />
+                            <TextBox x:Name="DescriptionTextBox"
+                                     MinHeight="64"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     VerticalScrollBarVisibility="Auto"
+                                     TextChanged="WorkflowDetails_OnChanged"
+                                     Style="{StaticResource WorkflowCompactTextBoxStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="2" Style="{StaticResource WorkflowCardStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Live Preview" Style="{StaticResource WorkflowSectionHeadingStyle}" />
+                        <TextBlock Grid.Row="1"
+                                   Margin="0,4,0,10"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource ForegroundMutedBrush}"
+                                   Text="Drag boxes to move them. Double-click a box or press F2 to rename. Right-click a box or node to change color. Click a line to select it. Arrange Flow snaps the layout back into place." />
+
+                        <ScrollViewer Grid.Row="2" HorizontalScrollBarVisibility="Visible" VerticalScrollBarVisibility="Visible">
+                            <Canvas x:Name="WorkflowCanvas"
+                                    Width="1100"
+                                    Height="640"
+                                    Background="{DynamicResource EditorPaperBrush}"
+                                    MouseMove="WorkflowCanvas_OnMouseMove"
+                                    MouseLeftButtonUp="WorkflowCanvas_OnMouseLeftButtonUp" />
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+            </Grid>
+
+            <Border Grid.Column="4" x:Name="SelectedNodePanelBorder" Style="{StaticResource WorkflowCardStyle}">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+
+                            <TextBlock Text="Selected Node" Style="{StaticResource WorkflowSectionHeadingStyle}" />
+                            <Border x:Name="SelectedNodeColorBadgeBorder"
+                                    Grid.Column="1"
+                                    Padding="8,3"
+                                    CornerRadius="10"
+                                    BorderBrush="{DynamicResource BorderBrushStrong}"
+                                    BorderThickness="1"
+                                    Background="{DynamicResource SurfaceAltBrush}">
+                                <TextBlock x:Name="SelectedNodeColorTextBlock"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Text="No node" />
+                            </Border>
+                        </Grid>
+
+                        <TextBlock x:Name="SelectedNodeHintTextBlock"
+                                   Margin="0,6,0,12"
+                                   FontSize="11"
+                                   Foreground="{DynamicResource ForegroundMutedBrush}"
+                                   Text="Choose a node from the list or preview to edit it." />
+
+                        <Grid x:Name="SelectedNodeContentGrid">
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="*" />
+                            </Grid.ColumnDefinitions>
+
+                            <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
+                                <TextBlock Text="Node Name" Margin="0,0,0,3" />
+                                <TextBox x:Name="NodeTitleTextBox"
+                                         TextChanged="NodeDetails_OnChanged"
+                                         Style="{StaticResource WorkflowCompactTextBoxStyle}" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Margin="0,10,8,0">
+                                <TextBlock Text="Node Kind" Margin="0,0,0,3" />
+                                <ComboBox x:Name="NodeKindComboBox" SelectionChanged="NodeDetails_OnChanged" Style="{StaticResource WorkflowCompactComboBoxStyle}">
+                                    <ComboBoxItem Content="Start" Tag="{x:Static domainEnums:WorkflowNodeKind.Start}" />
+                                    <ComboBoxItem Content="Step" Tag="{x:Static domainEnums:WorkflowNodeKind.Step}" />
+                                    <ComboBoxItem Content="Decision" Tag="{x:Static domainEnums:WorkflowNodeKind.Decision}" />
+                                    <ComboBoxItem Content="End" Tag="{x:Static domainEnums:WorkflowNodeKind.End}" />
+                                    <ComboBoxItem Content="Note" Tag="{x:Static domainEnums:WorkflowNodeKind.Note}" />
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="1" Grid.Column="1" Margin="8,10,0,0">
+                                <TextBlock Text="Connect To" Margin="0,0,0,3" />
+                                <ComboBox x:Name="LinkTargetComboBox" DisplayMemberPath="Title" Style="{StaticResource WorkflowCompactComboBoxStyle}" />
+                            </StackPanel>
+
+                            <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Margin="0,10,0,0">
+                                <TextBlock Text="Node Notes" Margin="0,0,0,3" />
+                                <TextBox x:Name="NodeDescriptionTextBox"
+                                         MinHeight="90"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         TextChanged="NodeDetails_OnChanged"
+                                         Style="{StaticResource WorkflowCompactTextBoxStyle}" />
+                            </StackPanel>
+
+                            <Grid Grid.Row="3" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <Button Grid.Column="0"
+                                        Style="{StaticResource WorkflowCompactButtonStyle}"
+                                        Content="Add Line"
+                                        Click="AddLinkButton_OnClick"
+                                        Margin="0,0,6,0" />
+                                <Button Grid.Column="1"
+                                        Style="{StaticResource WorkflowCompactButtonStyle}"
+                                        Content="Remove Line"
+                                        Click="RemoveLinkButton_OnClick"
+                                        Margin="6,0,0,0" />
+                            </Grid>
+
+                            <StackPanel Grid.Row="4" Grid.ColumnSpan="2" Margin="0,12,0,0">
+                                <TextBlock Text="Move Node" Margin="0,0,0,6" />
+                                <UniformGrid Rows="2" Columns="2">
+                                    <Button Style="{StaticResource WorkflowCompactButtonStyle}" Content="Up" Click="NudgeUpButton_OnClick" Margin="0,0,6,6" />
+                                    <Button Style="{StaticResource WorkflowCompactButtonStyle}" Content="Right" Click="NudgeRightButton_OnClick" Margin="0,0,0,6" />
+                                    <Button Style="{StaticResource WorkflowCompactButtonStyle}" Content="Left" Click="NudgeLeftButton_OnClick" Margin="0,0,6,0" />
+                                    <Button Style="{StaticResource WorkflowCompactButtonStyle}" Content="Down" Click="NudgeDownButton_OnClick" Margin="0" />
+                                </UniformGrid>
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+    </DockPanel>
+</Window>

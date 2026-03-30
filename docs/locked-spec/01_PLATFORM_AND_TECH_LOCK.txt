@@ -1,0 +1,16 @@
+PLATFORM AND TECH LOCK
+
+The app is a Windows-only desktop application.
+
+Locked stack:
+- WPF
+- .NET 8
+- C#
+
+Locked repo direction:
+- keep the app Windows-native
+- keep writing logic separate from UI code
+- keep file handling separate from editor controls
+- keep layout, session, and recovery logic deterministic
+
+The rebuild is not a web app, not a mobile app, and not a cross-platform redesign.

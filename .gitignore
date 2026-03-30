@@ -1,0 +1,14 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+TestResults/
+.codex-dotnet/
+.dotnet-cli/
+.dotnet-cli-home/
+artifacts/
+_workflow_debug_run*/
+_recovery_fix_run_*/
+*-build.log
+workflow-build.log

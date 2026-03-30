@@ -1,0 +1,22 @@
+COLUMNPAD LOCKED PRODUCT SUMMARY
+
+ColumnPad is a Windows desktop writing app built around side-by-side text columns.
+The app lets the user write, compare, and organise text in multiple columns inside a workspace. The user can keep several workspaces open at once using tabs.
+
+The finished app includes:
+- a main writing window
+- workspace tabs
+- multi-column editing
+- save, open, export, and recovery flows
+- list, bullet, and checklist behavior
+- theme, font, language, wrap, line number, and lined paper controls
+- a separate workflow builder window
+
+ColumnPad is not a rich text processor and it is not a fake UI shell. It is a real plain-text writing tool with a locked workflow and locked file logic.
+
+The rebuild keeps the identity of the current app:
+- plain text stays plain text
+- columns are first-class
+- workspaces are first-class
+- checklists use real logic, not visual fakery
+- save and session behavior are explicit

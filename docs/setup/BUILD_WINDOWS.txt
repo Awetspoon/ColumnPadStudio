@@ -1,0 +1,16 @@
+Open this folder in Visual Studio.
+
+Required:
+- Visual Studio 2022
+- .NET 8 SDK
+- Desktop development with .NET workload
+
+First commands if you want terminal build:
+
+dotnet restore ColumnPadStudio.sln
+dotnet build ColumnPadStudio.sln -c Debug
+dotnet run --project src/ColumnPadStudio.App/ColumnPadStudio.App.csproj
+
+Single-file Windows publish:
+
+dotnet publish src/ColumnPadStudio.App/ColumnPadStudio.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true -p:DebugType=None -p:DebugSymbols=false -o artifacts/publish/win-x64-single-bundled

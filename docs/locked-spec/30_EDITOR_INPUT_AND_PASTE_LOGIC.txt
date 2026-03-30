@@ -1,0 +1,29 @@
+EDITOR INPUT AND PASTE LOGIC
+
+Paste logic is locked and not optional.
+
+When text is pasted from the clipboard:
+- malformed CRCRLF single-line-break sequences are collapsed first
+- unicode line separators are normalised to line breaks
+- CRLF and CR are normalised to LF internally and then restored to environment newlines for the editor
+
+The app also fixes a common broken clipboard pattern where every real content line is followed by an empty line. It only collapses that pattern when it clearly looks malformed and not like intentional paragraph spacing.
+
+Paste presets:
+- None: paste clean normalized text
+- Bullets: add markdown bullet prefixes to nonblank lines
+- Checklist: add markdown checklist prefixes to nonblank lines
+
+Paste preset rules:
+- blank lines stay blank
+- ordered list lines are left alone
+- existing leading indentation is preserved
+- existing marker bodies are preserved
+- checklist preset keeps checked checklist lines checked if the source line already had a checked checklist marker
+
+Selection toggle rules:
+- toggling checks across a selection first forces checklist mode if needed
+- the action runs line by line across the selected line range
+- if a selection ends exactly at the start of the next line, that next line is not included
+
+Pressing Enter in checklist mode shifts later checked line indexes down so the stored checklist state stays lined up with the text.

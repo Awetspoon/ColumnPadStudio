@@ -1,0 +1,22 @@
+LINE MARKER AND CHECKLIST RULES
+
+ColumnPad supports three marker modes:
+- Numbers
+- Bullets
+- Checklist
+
+Supported inline marker forms that the app understands:
+- bullet: • 
+- bullet: - 
+- checklist unchecked: ☐ 
+- checklist checked: ☑ 
+- markdown checklist unchecked: - [ ] 
+- markdown checklist checked: - [x] 
+- markdown checklist checked upper-case: - [X] 
+
+The important identity rule is this:
+In the modern checklist mode, the body text stays clean and checked state is stored by line index. The gutter and checklist logic use that metadata.
+
+This means the rebuild must preserve both ideas:
+- clean text storage for current checklist mode
+- inline marker understanding for imported or legacy content

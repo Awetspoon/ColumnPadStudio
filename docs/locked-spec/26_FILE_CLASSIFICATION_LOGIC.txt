@@ -1,0 +1,31 @@
+FILE CLASSIFICATION LOGIC
+
+This file locks how ColumnPad decides what an opened file actually is.
+
+When a file is opened, the app checks the extension first, then checks the content.
+
+TXT files:
+- If the text contains at least one exact export section header in this shape:
+  ===== Title =====
+  then the file is treated as a text export.
+- If not, it is treated as a raw text document.
+
+Markdown files:
+- If the trimmed file starts with "## " and the content contains at least one real section heading line that starts with "## " and has a title after it, the file is treated as a markdown export.
+- If not, it is treated as a raw markdown document.
+
+JSON files:
+- If the JSON root object contains a Workspaces array, the file is treated as a workspace session.
+- If not, it is treated as a layout JSON file.
+
+Text export parsing:
+- each ===== Title ===== line starts a new column
+- the blank line immediately after the header is skipped once
+- the rest becomes the column body until the next header
+- missing titles become Column 1, Column 2, and so on
+- if no export headers are found, the whole file becomes one column called Column 1
+
+Markdown export parsing works the same way, except it uses lines starting with:
+## Title
+
+This classification is intentionally simple and exact. The rebuild must not add guessy behavior that changes what users expect when they open a file.

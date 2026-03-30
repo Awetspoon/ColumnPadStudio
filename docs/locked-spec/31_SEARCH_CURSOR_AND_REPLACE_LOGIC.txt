@@ -1,0 +1,30 @@
+SEARCH CURSOR AND REPLACE LOGIC
+
+Find Next follows a locked search path.
+
+If there was already a previous search hit:
+- the next search starts in that same column
+- it starts immediately after the end of the last found text
+
+If there was no previous search hit yet:
+- the search starts in the active column
+- it starts from the end of the current editor selection
+
+The search then moves across columns in order.
+- the first column searched starts at the computed start position
+- all later columns search from the top
+- if no hit is found, the app wraps only within the starting column and searches the earlier part of that same column
+
+Search comparison is case-insensitive using current-culture matching.
+
+When a hit is found:
+- the matching column becomes active
+- the editor focuses the hit
+- the matched range is selected
+- the app reports the column title and line number in the status text
+
+Replace All:
+- runs through each column in the active workspace
+- uses the same current-culture case-insensitive match rule
+- replaces non-overlapping hits only
+- reports the total count replaced

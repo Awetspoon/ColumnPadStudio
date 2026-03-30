@@ -1,0 +1,21 @@
+CLEAN REBUILD ARCHITECTURE
+
+Locked project direction:
+- App project for startup and resources
+- Presentation project for WPF windows, controls, dialogs, and theme resources
+- Application project for orchestration and use-cases
+- Domain project for pure rules and models
+- Infrastructure project for file I/O, recovery, sessions, and workflow storage
+- Tests project for domain, application, and smoke coverage
+
+Main modules in the rebuild:
+- Workspace module
+- Column module
+- Editor module
+- File/session module
+- Recovery module
+- Search module
+- Theme module
+- Workflow module
+
+The rebuild keeps behavior identical while making responsibilities easier to reason about.

@@ -1,0 +1,20 @@
+THEME AND STYLE SYSTEM
+
+ColumnPad has three locked theme presets:
+- Default Mode
+- Light Mode
+- Dark Mode
+
+Theme behavior affects:
+- window colors
+- menu colors
+- toolbar colors
+- status bar colors
+- editor background and foreground
+- selected column styling
+- line-number gutter styling
+- lined paper stroke color
+
+Legacy theme names are normalized when loading old files, but the finished app only exposes the three locked theme names above.
+
+The rebuild keeps theme logic centralised instead of scattering it through large UI files.

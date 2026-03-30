@@ -1,0 +1,24 @@
+MAIN APP FEATURE BREAKDOWN
+
+ColumnPad is made of these locked feature groups:
+
+A. Workspace system
+Each workspace is a separate writing session with its own columns, active column, save state, and UI settings.
+
+B. Column system
+Each workspace contains one or more columns. Each column has a title, text body, width state, marker mode, paste preset, and optional font override.
+
+C. Editor system
+Each column uses a plain-text editor surface with line numbers, wrap, spell check, lined paper support, selection tools, and context menu actions.
+
+D. File system
+The app opens, saves, and exports text, markdown, layout JSON, and workspace-session JSON.
+
+E. Recovery system
+The app writes timed recovery snapshots and can restore them on startup.
+
+F. Search system
+The app supports find, find next, and replace all across the active workspace.
+
+G. Workflow builder
+The app includes a separate workflow planner window with node, link, template, import, export, save, and delete behavior.

@@ -1,0 +1,28 @@
+TOP TOOLBAR AND GLOBAL CONTROLS
+
+The toolbar controls the active workspace defaults.
+It is not just cosmetic.
+
+Locked toolbar controls:
+- font family
+- font face/style
+- font size
+- theme preset
+- spell check
+- editor language
+- lined paper
+- new workspace
+- close workspace
+
+These settings belong to the active workspace:
+- show line numbers
+- word wrap
+- default editor font family
+- default editor font face/style
+- default editor font size
+- theme preset
+- spell check enabled
+- editor language tag
+- lined paper enabled
+
+When the workspace default font changes, columns that still use the default font update automatically. Columns using custom font overrides do not get replaced.

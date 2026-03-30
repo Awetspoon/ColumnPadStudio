@@ -1,0 +1,21 @@
+AUTO-RECOVERY AND EXIT SYSTEM
+
+ColumnPad writes timed recovery snapshots for open workspaces.
+
+Locked behavior:
+- the auto-save timer runs every 25 seconds
+- before recovery save, current grid widths are persisted back into the workspace models
+- recovery save failures never interrupt editing
+- recovery data is stored under the app data folder in a Recovery directory
+
+On startup:
+- if a recovery snapshot exists, the app offers restore
+- the restore prompt shows how many workspaces were found and the local saved time
+- choosing Yes restores all valid workspaces from the snapshot
+- choosing No clears the stored recovery snapshot
+
+On close:
+- the timer stops first
+- if dirty workspaces exist, the app prompts Yes / No / Cancel
+- Cancel aborts close
+- after a clean close, the recovery store is cleared

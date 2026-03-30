@@ -1,0 +1,108 @@
+<Window x:Class="ColumnPadStudio.App.Views.SettingsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:domainEnums="clr-namespace:ColumnPadStudio.Domain.Enums;assembly=ColumnPadStudio.Domain"
+        Title="Workspace Settings"
+        Width="760"
+        Height="520"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize">
+    <Grid Margin="18">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="220" />
+                <ColumnDefinition Width="18" />
+                <ColumnDefinition Width="*" />
+            </Grid.ColumnDefinitions>
+
+            <Border BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Workspaces" FontWeight="SemiBold" />
+                    <TextBlock Grid.Row="1"
+                               Margin="0,4,0,10"
+                               Text="Select a workspace tab to rename it or adjust its defaults."
+                               TextWrapping="Wrap"
+                               Opacity="0.82" />
+                    <ListBox Grid.Row="2"
+                             ItemsSource="{Binding Workspaces}"
+                             SelectedItem="{Binding SelectedWorkspace}"
+                             DisplayMemberPath="DisplayName"
+                             MinHeight="280" />
+                </Grid>
+            </Border>
+
+            <Border Grid.Column="2" BorderBrush="{DynamicResource BorderBrush}" BorderThickness="1" CornerRadius="8" Padding="12">
+                <ScrollViewer VerticalScrollBarVisibility="Auto"
+                              HorizontalScrollBarVisibility="Disabled"
+                              CanContentScroll="True">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="140" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Text="Workspace name" Margin="0,0,12,12" VerticalAlignment="Center" />
+                        <TextBox Grid.Column="1" Text="{Binding SelectedWorkspace.Name, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12" />
+
+                        <TextBlock Grid.Row="1" Text="Font family" Margin="0,0,12,12" VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="1" Grid.Column="1" ItemsSource="{Binding AvailableFonts}" SelectedItem="{Binding SelectedWorkspace.FontFamilyName}" Margin="0,0,0,12" />
+
+                        <TextBlock Grid.Row="2" Text="Font size" Margin="0,0,12,12" VerticalAlignment="Center" />
+                        <TextBox Grid.Row="2" Grid.Column="1" Text="{Binding SelectedWorkspace.FontSizeText, UpdateSourceTrigger=LostFocus}" Margin="0,0,0,12" />
+
+                        <TextBlock Grid.Row="3" Text="Font style" Margin="0,0,12,12" VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="3" Grid.Column="1" ItemsSource="{Binding AvailableFontStyles}" SelectedItem="{Binding SelectedWorkspace.FontFaceStyle}" Margin="0,0,0,12" />
+
+                        <TextBlock Grid.Row="4" Text="Language" Margin="0,0,12,12" VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="4" Grid.Column="1" ItemsSource="{Binding AvailableLanguages}" SelectedItem="{Binding SelectedWorkspace.LanguageTag}" Margin="0,0,0,12" />
+
+                        <TextBlock Grid.Row="5" Text="Theme" Margin="0,0,12,12" VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="5" Grid.Column="1" SelectedValuePath="Tag" SelectedValue="{Binding SelectedWorkspace.ThemePreset}" Margin="0,0,0,12">
+                            <ComboBoxItem Content="Default Mode" Tag="{x:Static domainEnums:ThemePreset.Default}" />
+                            <ComboBoxItem Content="Light Mode" Tag="{x:Static domainEnums:ThemePreset.Light}" />
+                            <ComboBoxItem Content="Dark Mode" Tag="{x:Static domainEnums:ThemePreset.Dark}" />
+                        </ComboBox>
+
+                        <TextBlock Grid.Row="6" Text="Line style" Margin="0,0,12,12" VerticalAlignment="Center" />
+                        <ComboBox Grid.Row="6" Grid.Column="1" SelectedValuePath="Tag" SelectedValue="{Binding SelectedWorkspace.LineStyle}" Margin="0,0,0,12">
+                            <ComboBoxItem Content="Standard ruled" Tag="{x:Static domainEnums:EditorLineStyle.StandardRuled}" />
+                            <ComboBoxItem Content="Legacy ruled" Tag="{x:Static domainEnums:EditorLineStyle.LegacyRuled}" />
+                        </ComboBox>
+
+                        <StackPanel Grid.Row="7" Grid.ColumnSpan="2" Margin="0,4,0,0">
+                            <CheckBox Content="Show line numbers" IsChecked="{Binding SelectedWorkspace.ShowLineNumbers}" Margin="0,0,0,6" />
+                            <TextBlock Text="Use the View menu for quick display toggles like lined paper, word wrap, and spell check."
+                                       TextWrapping="Wrap"
+                                       Opacity="0.82" />
+                        </StackPanel>
+                    </Grid>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,18,0,0">
+            <Button Width="96" Content="Close" Click="OnCloseClick" />
+        </StackPanel>
+    </Grid>
+</Window>

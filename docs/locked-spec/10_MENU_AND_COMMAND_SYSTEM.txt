@@ -1,0 +1,48 @@
+MENU AND COMMAND SYSTEM
+
+Locked menu groups:
+
+File
+- New Layout
+- New Workspace Tab
+- Close Workspace Tab
+- Open
+- Save
+- Save As
+- Export as TXT
+- Export as Markdown
+- Print
+- Exit
+
+Edit
+- Find
+- Find Next
+- Replace All
+- Selection to Bullets
+- Selection to Checklist
+- Toggle Checklist Checks
+- Clear Selection
+- Clear All Columns
+- Duplicate Selected Column
+
+View
+- Word Wrap
+- Line Numbers
+- Lined Paper
+- Single Text Mode
+- Column Mode
+- Light Mode
+- Dark Mode
+- Default Mode
+
+Columns
+- Add Column
+- Remove Selected Column
+- Move Left
+- Move Right
+- Reset Selected Width
+- Reset All Widths
+- Freeze / Allow Resize
+
+Workflows
+- Open Workflow Builder

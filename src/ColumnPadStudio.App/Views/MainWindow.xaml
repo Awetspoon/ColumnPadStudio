@@ -1,0 +1,190 @@
+<Window x:Class="ColumnPadStudio.App.Views.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:viewModels="clr-namespace:ColumnPadStudio.App.ViewModels"
+        xmlns:views="clr-namespace:ColumnPadStudio.App.Views.Controls"
+        mc:Ignorable="d"
+        Title="ColumnPad"
+        Width="1280"
+        Height="760"
+        MinWidth="900"
+        MinHeight="560"
+        ResizeMode="CanResize"
+        WindowStyle="SingleBorderWindow"
+        WindowState="Maximized"
+        WindowStartupLocation="CenterScreen">
+    <Window.Resources>
+        <Style x:Key="ShellToolbarComboBoxStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+            <Setter Property="Padding" Value="8,3" />
+        </Style>
+        <Style x:Key="ShellToolbarTextBoxStyle"
+               TargetType="TextBox"
+               BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="MinHeight" Value="30" />
+            <Setter Property="Margin" Value="0,0,12,0" />
+            <Setter Property="Padding" Value="8,4" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+        </Style>
+        <Style x:Key="ShellToolbarLabelStyle"
+               TargetType="TextBlock">
+            <Setter Property="VerticalAlignment" Value="Center" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="Foreground" Value="{DynamicResource ForegroundMutedBrush}" />
+        </Style>
+
+        <DataTemplate x:Key="WorkspaceContentTemplate" DataType="{x:Type viewModels:WorkspaceViewModel}">
+            <views:WorkspaceColumnsView />
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <Menu Grid.Row="0" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource ForegroundBrush}">
+            <MenuItem Header="File">
+                <MenuItem Header="New Layout" Command="{Binding NewSessionCommand}" InputGestureText="Ctrl+N" />
+                <MenuItem Header="New Workspace Tab" Command="{Binding AddWorkspaceCommand}" InputGestureText="Ctrl+Shift+N" />
+                <MenuItem Header="Close Workspace Tab" Command="{Binding CloseWorkspaceCommand}" InputGestureText="Ctrl+W" />
+                <Separator />
+                <MenuItem Header="Open" Command="{Binding OpenCommand}" InputGestureText="Ctrl+O" />
+                <MenuItem Header="Save" Command="{Binding SaveCommand}" InputGestureText="Ctrl+S" />
+                <MenuItem Header="Save As" Command="{Binding SaveAsCommand}" InputGestureText="Ctrl+Shift+S" />
+                <Separator />
+                <MenuItem Header="Export as TXT" Command="{Binding ExportTextCommand}" />
+                <MenuItem Header="Export as Markdown" Command="{Binding ExportMarkdownCommand}" />
+                <Separator />
+                <MenuItem Header="Print" Command="{Binding PrintCommand}" />
+                <MenuItem Header="Exit" Command="{Binding ExitCommand}" />
+            </MenuItem>
+
+        <MenuItem Header="Edit">
+                <MenuItem Header="Find" Command="{Binding FindCommand}" InputGestureText="Ctrl+F" />
+                <MenuItem Header="Find Next" Command="{Binding FindNextCommand}" InputGestureText="F3" />
+                <MenuItem Header="Replace All" Command="{Binding ReplaceAllCommand}" InputGestureText="Ctrl+H" />
+                <Separator />
+                <MenuItem Header="Selection to Bullets" Command="{Binding SelectionToBulletsCommand}" />
+                <MenuItem Header="Selection to Checklist" Command="{Binding SelectionToChecklistCommand}" />
+                <MenuItem Header="Toggle Checklist Checks" Command="{Binding ToggleChecklistChecksCommand}" />
+                <MenuItem Header="Clear Selection" Command="{Binding ClearSelectionCommand}" />
+                <MenuItem Header="Clear All Columns" Command="{Binding ClearAllColumnsCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="View">
+                <MenuItem Header="Word Wrap" IsCheckable="True" IsChecked="{Binding SelectedWorkspace.WordWrap}" />
+                <MenuItem Header="Line Numbers"
+                          IsCheckable="True"
+                          IsChecked="{Binding SelectedWorkspace.ShowLineNumbers, Mode=OneWay}"
+                          Command="{Binding ToggleLineNumbersCommand}" />
+                <MenuItem Header="Lined Paper" IsCheckable="True" IsChecked="{Binding SelectedWorkspace.LinedPaper}" />
+                <Separator />
+                <MenuItem Header="Single Text Mode" Command="{Binding SingleTextModeCommand}" />
+                <MenuItem Header="Column Mode" Command="{Binding ColumnModeCommand}" />
+                <Separator />
+                <MenuItem Header="Default Mode" Command="{Binding SetDefaultModeCommand}" />
+                <MenuItem Header="Light Mode" Command="{Binding SetLightModeCommand}" />
+                <MenuItem Header="Dark Mode" Command="{Binding SetDarkModeCommand}" />
+                <Separator />
+                <MenuItem Header="Workspace Settings" Command="{Binding OpenSettingsCommand}" InputGestureText="Ctrl+," />
+            </MenuItem>
+
+            <MenuItem Header="Columns">
+                <MenuItem Header="Add Column" Command="{Binding AddColumnCommand}" />
+                <MenuItem Header="Remove Selected Column" Command="{Binding RemoveColumnCommand}" />
+                <MenuItem Header="Duplicate Selected Column" Command="{Binding DuplicateSelectedColumnCommand}" />
+                <Separator />
+                <MenuItem Header="Move Left" Command="{Binding MoveColumnLeftCommand}" />
+                <MenuItem Header="Move Right" Command="{Binding MoveColumnRightCommand}" />
+                <Separator />
+                <MenuItem Header="Reset Selected Width" Command="{Binding ResetSelectedWidthCommand}" />
+                <MenuItem Header="Reset All Widths" Command="{Binding ResetAllWidthsCommand}" />
+                <MenuItem Header="Freeze / Allow Resize" Command="{Binding ToggleSelectedWidthLockCommand}" />
+            </MenuItem>
+
+            <MenuItem Header="Workflows">
+                <MenuItem Header="Open Workflow Builder" Command="{Binding OpenWorkflowBuilderCommand}" InputGestureText="Ctrl+Alt+W" />
+            </MenuItem>
+        </Menu>
+
+        <Border Grid.Row="1"
+                Background="{DynamicResource SurfaceBrush}"
+                BorderBrush="{DynamicResource BorderBrushStrong}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          CanContentScroll="False">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="Font" Style="{StaticResource ShellToolbarLabelStyle}" />
+                    <ComboBox Width="156"
+                              Style="{StaticResource ShellToolbarComboBoxStyle}"
+                              ItemsSource="{Binding AvailableFonts}"
+                              SelectedItem="{Binding SelectedWorkspace.FontFamilyName}" />
+
+                    <TextBlock Text="Style" Style="{StaticResource ShellToolbarLabelStyle}" />
+                    <ComboBox Width="116"
+                              Style="{StaticResource ShellToolbarComboBoxStyle}"
+                              ItemsSource="{Binding AvailableFontStyles}"
+                              SelectedItem="{Binding SelectedWorkspace.FontFaceStyle}" />
+
+                    <TextBlock Text="Size" Style="{StaticResource ShellToolbarLabelStyle}" />
+                    <TextBox Width="60"
+                             Style="{StaticResource ShellToolbarTextBoxStyle}"
+                             Text="{Binding SelectedWorkspace.FontSizeText, UpdateSourceTrigger=LostFocus}" />
+
+                    <TextBlock Text="Language" Style="{StaticResource ShellToolbarLabelStyle}" />
+                    <ComboBox Width="112"
+                              Style="{StaticResource ShellToolbarComboBoxStyle}"
+                              ItemsSource="{Binding AvailableLanguages}"
+                              SelectedItem="{Binding SelectedWorkspace.LanguageTag}" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <TabControl Grid.Row="2"
+                    MinHeight="0"
+                    ItemsSource="{Binding Workspaces}"
+                    SelectedItem="{Binding SelectedWorkspace}"
+                    Background="{DynamicResource AppBackgroundBrush}"
+                    ContentTemplate="{StaticResource WorkspaceContentTemplate}">
+            <TabControl.ItemContainerStyle>
+                <Style TargetType="TabItem"
+                       BasedOn="{StaticResource {x:Type TabItem}}">
+                    <EventSetter Event="PreviewMouseRightButtonDown" Handler="WorkspaceTab_OnPreviewMouseRightButtonDown" />
+                    <EventSetter Event="ContextMenuOpening" Handler="WorkspaceTab_OnContextMenuOpening" />
+                </Style>
+            </TabControl.ItemContainerStyle>
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding DisplayName}" />
+                    </StackPanel>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+        </TabControl>
+
+        <StatusBar Grid.Row="3" Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource ForegroundBrush}">
+            <StatusBarItem>
+                <TextBlock Text="{Binding StatusText}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding SelectedWorkspace.SelectedColumn.MetricsText}" />
+            </StatusBarItem>
+            <Separator />
+            <StatusBarItem>
+                <TextBlock Text="{Binding SelectedWorkspace.FileKindDisplay}" />
+            </StatusBarItem>
+        </StatusBar>
+    </Grid>
+</Window>

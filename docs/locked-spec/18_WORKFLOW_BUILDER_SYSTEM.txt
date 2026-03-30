@@ -1,0 +1,37 @@
+WORKFLOW BUILDER SYSTEM
+
+ColumnPad includes a separate workflow builder window.
+This is a real companion tool, not a placeholder.
+
+The workflow builder supports:
+- new workflow
+- save workflow
+- delete workflow
+- load workflow files
+- import workflow JSON
+- export workflow JSON
+- add node
+- duplicate node
+- remove node
+- add link
+- remove link
+- nudge node
+- auto layout
+- create from template
+
+Workflow entities include:
+- workflow definition
+- nodes
+- links
+- trigger type
+- category
+- description
+
+Node kinds include:
+- Start
+- Step
+- Decision
+- End
+- Note
+
+The workflow builder stays isolated from the writing editor architecture.

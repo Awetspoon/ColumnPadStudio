@@ -1,0 +1,26 @@
+SAVE STATE AND DIRTY LOGIC
+
+Each workspace tracks three save-reference values:
+- current file path
+- current file kind
+- whether Save As is required before overwrite
+
+Direct save is allowed only when there is a current file path and Save As is not required.
+If direct save is not allowed, the normal Save command routes to Save As.
+
+Dirty state is locked like this:
+- raw text documents compare against the single document text only
+- raw markdown documents compare against the single document text only
+- text exports compare against the generated text export output
+- markdown exports compare against the generated markdown export output
+- layouts compare against the serialized workspace state, including workspace settings and all column data
+
+A raw document becomes a layout as soon as the user turns it into more than one column. This happens when the app adds columns, duplicates the active column into a multi-column state, or sets the column count above 1.
+When that happens:
+- the file kind changes to Layout
+- the current file path is cleared
+- the app no longer points at the original raw document path
+
+This is a locked safety rule. The rebuild must not silently overwrite a raw .txt or .md file with a multi-column layout.
+
+Opening raw documents and imported exports marks them as requiring Save As before overwrite. Saving to a new chosen path clears that restriction.

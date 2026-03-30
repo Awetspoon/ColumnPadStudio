@@ -1,0 +1,15 @@
+LAYOUT AND COLUMN RENDERING
+
+Columns render in a horizontal layout with splitters between them.
+
+Locked rendering behavior:
+- each column has a minimum usable width
+- column widths can be null, meaning flexible/default width
+- dragging splitters updates stored widths
+- reset width removes a stored width and returns that column to automatic sizing
+- reset all widths removes every stored width in the workspace
+- splitters are disabled when either adjacent column is width-locked
+- disabled splitters become visually dim and lose the resize cursor
+
+The selected column has active styling in the header and body area.
+If only one column exists and it has no explicit width, it fills the available writing width.

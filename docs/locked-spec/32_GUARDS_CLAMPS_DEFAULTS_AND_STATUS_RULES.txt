@@ -1,0 +1,50 @@
+GUARDS, CLAMPS, DEFAULTS, AND STATUS RULES
+
+Locked defaults:
+- a new workspace starts with 3 columns
+- those columns are named Column 1, Column 2, and Column 3
+- the first column starts active
+- line numbers start on
+- word wrap starts on
+- default font family is Consolas when available
+- default font size is 13
+- default theme is Default Mode
+- spell check starts on
+- default language is en-US
+- lined paper starts off
+
+Locked clamps:
+- column count clamps to 1 through 9999
+- editor font size clamps to 8 through 40
+- manual column width clamps to 120 through 5000 pixels
+- workflow node width clamps to 100 through 360
+
+Locked guards:
+- the last remaining column cannot be removed
+- the last remaining workspace cannot be closed
+- moving the first column left is blocked
+- moving the last column right is blocked
+- splitters are disabled when either adjacent column is width-locked
+- single text mode warns before deleting other columns
+- deleting an edited column warns before deleting it
+
+Locked status behavior examples:
+- Selected column width reset.
+- All column widths reset.
+- Froze <title> width.
+- <title> width can resize again.
+- Swapped <title A> with <title B>.
+- <title> is already the first column.
+- <title> is already the last column.
+- Already in single text mode.
+- Single text mode enabled.
+- Already in column mode.
+- Column mode restored (N columns).
+- Found in <title> (line N).
+- No match for '<text>'.
+- Replaced N occurrence(s).
+- Saved: <file>
+- Exported: <file>
+- Sent to printer.
+
+These messages are part of the user flow and should stay clear and direct.

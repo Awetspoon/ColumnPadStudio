@@ -1,0 +1,21 @@
+WORKSPACE SYSTEM
+
+A workspace is a tab-level writing session.
+
+Each workspace keeps:
+- a display name
+- a MainViewModel instance
+- its own active column
+- its own current file reference
+- its own dirty state
+- its own last remembered multi-column count
+
+Locked behavior:
+- at least one workspace always stays open
+- new workspaces use the next available name like Workspace 1, Workspace 2, and so on
+- changing tabs swaps the whole visible writing state
+- each workspace remembers its own save/load context
+- each workspace can be dirty or clean independently of the others
+
+Closing a workspace is blocked when it is the last remaining workspace.
+After closing a workspace, the next active workspace index is clamped so one valid workspace stays selected.

@@ -1,0 +1,30 @@
+LANGUAGE, SPELL CHECK, AND FONT SYSTEM
+
+Locked editor language tags:
+- en-US
+- en-GB
+- fr-FR
+- de-DE
+- es-ES
+- it-IT
+- pt-BR
+- pt-PT
+- nl-NL
+- sv-SE
+- da-DK
+- nb-NO
+
+Language behavior:
+- invalid or unknown language tags fall back to the first supported language, which is en-US
+
+Spell check:
+- spell check is a workspace-level setting
+- editor controls bind to the active workspace spell-check setting
+
+Font behavior:
+- default family is Consolas when available, otherwise the first installed family
+- default font size is 13
+- default face is Regular
+- allowed font size range is 8 to 40
+- per-column overrides can replace family, size, style, and weight
+- resetting a column font returns that column to the workspace default font

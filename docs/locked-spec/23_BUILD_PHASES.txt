@@ -1,0 +1,41 @@
+BUILD PHASES
+
+Phase 1
+Build the pure rules first:
+- column constraints
+- import/export signatures
+- list marker rules
+- checklist metrics
+- search helpers
+- workflow models
+
+Phase 2
+Build persistence:
+- layout JSON
+- workspace sessions
+- recovery store
+- open/save classification
+
+Phase 3
+Build application services:
+- workspace orchestration
+- column operations
+- save/load flows
+- theme coordination
+- search coordination
+- workflow coordination
+
+Phase 4
+Build presentation:
+- main window
+- workspace tabs
+- column editor control
+- dialogs
+- workflow builder window
+
+Phase 5
+Finish polish:
+- prompts and status text
+- shortcut coverage
+- smoke testing
+- release packaging

@@ -1,0 +1,30 @@
+LEGACY MIGRATION LOGIC
+
+ColumnPad still understands older layout data and upgrades it when loading.
+
+Current layout version is 13.
+Migration logic only runs for older versions.
+
+Locked theme name upgrades:
+- Notepad Classic becomes Light Mode
+- High Contrast becomes Dark Mode
+- Compact becomes Default Mode
+
+Locked text cleanup when loading old columns:
+- real newline text is normalised to LF
+- if old text contains no real newlines at all, escaped newline sequences like 
+, 
+, and  are turned into real line breaks
+
+Locked old inline-text migration:
+- only runs on older layouts
+- only runs when the text is a long single line with no real line breaks
+- if the text is an arrow chain with at least three -> segments, the app splits it into one step per line
+- otherwise the app does a width-based hard wrap using the stored width and font size
+
+Locked old marker migration:
+- if every nonblank line is an inline checklist line, the app removes the inline prefixes, switches the column to checklist mode, and stores checked line indexes separately
+- if every nonblank line is an inline bullet line, the app removes the bullet prefixes and switches the column to bullet mode
+- if the content is mixed, the app leaves it alone
+
+The rebuild must keep this migration conservative. It only upgrades old content when the pattern is clear.

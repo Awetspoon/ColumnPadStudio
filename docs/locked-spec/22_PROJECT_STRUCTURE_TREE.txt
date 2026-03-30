@@ -1,0 +1,35 @@
+PROJECT STRUCTURE TREE
+
+Recommended rebuild tree:
+
+ColumnPadStudio/
+  src/
+    ColumnPadStudio.App/
+    ColumnPadStudio.Presentation/
+      Windows/
+      Controls/
+      Dialogs/
+      Themes/
+      Converters/
+    ColumnPadStudio.Application/
+      Workspaces/
+      Columns/
+      Files/
+      Recovery/
+      Search/
+      Workflows/
+    ColumnPadStudio.Domain/
+      Lists/
+      Workspaces/
+      Search/
+      Workflows/
+    ColumnPadStudio.Infrastructure/
+      Persistence/
+      Sessions/
+      Recovery/
+      Workflows/
+  tests/
+    ColumnPadStudio.Domain.Tests/
+    ColumnPadStudio.Application.Tests/
+    ColumnPadStudio.SmokeTests/
+  docs/

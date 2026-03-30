@@ -1,0 +1,46 @@
+FILE FORMATS AND PERSISTENCE
+
+ColumnPad works with five save kinds:
+- Layout
+- TextDocument
+- MarkdownDocument
+- TextExport
+- MarkdownExport
+
+Layout JSON stores the whole active workspace, including:
+- layout version
+- line number setting
+- wrap setting
+- default font family, style, and size
+- theme preset
+- spell check enabled
+- editor language tag
+- lined paper enabled
+- active column id or index
+- columns list
+
+Each stored column includes:
+- title
+- text
+- width px
+- width lock flag
+- paste preset
+- line marker mode
+- checked checklist line indexes
+- font family
+- font size
+- font style
+- font weight
+- use default font flag
+
+Workspace session JSON stores:
+- active workspace index
+- multiple named workspaces
+- each workspace layout JSON
+- each workspace last multi-column count
+
+Text export output uses section headers in this exact shape:
+===== Column Title =====
+
+Markdown export output uses section headers in this exact shape:
+## Column Title

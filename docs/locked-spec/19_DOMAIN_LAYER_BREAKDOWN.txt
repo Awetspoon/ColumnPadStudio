@@ -1,0 +1,13 @@
+DOMAIN LAYER BREAKDOWN
+
+The rebuild keeps pure rules in the domain layer.
+That includes:
+- column count constraints
+- file import signatures and parsers
+- list marker parsing
+- ordered list detection
+- marker remove / upsert logic
+- checklist metrics logic
+
+The domain layer does not own WPF windows or file dialogs.
+It owns rules that should behave the same no matter where the UI calls them from.

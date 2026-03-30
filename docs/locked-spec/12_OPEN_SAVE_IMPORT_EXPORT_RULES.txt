@@ -1,0 +1,24 @@
+OPEN, SAVE, IMPORT, AND EXPORT RULES
+
+Opening files:
+- .txt opens as either a raw text document or a text export depending on content signature
+- .md opens as either a raw markdown document or a markdown export depending on content signature
+- .json and .columnpad.json open as either a workspace session or a layout depending on content signature
+
+Saving files:
+- when more than one workspace is open, the app saves a workspace session
+- when only one workspace is open, the app can still save a workspace session if the current path already points to an existing session file
+- otherwise the active workspace saves by its own current save kind
+
+Exporting files:
+- export always writes explicit export output
+- export does not silently change the workspace save kind
+
+Printing:
+- print uses the workspace text export view as the printable body
+
+A rebuild must keep the difference clear between:
+- raw document save
+- export save
+- layout save
+- workspace-session save

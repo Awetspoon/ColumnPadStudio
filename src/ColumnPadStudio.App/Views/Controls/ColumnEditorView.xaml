@@ -1,0 +1,211 @@
+<UserControl x:Class="ColumnPadStudio.App.Views.Controls.ColumnEditorView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:domainEnums="clr-namespace:ColumnPadStudio.Domain.Enums;assembly=ColumnPadStudio.Domain"
+             xmlns:converters="clr-namespace:ColumnPadStudio.App.Converters"
+             mc:Ignorable="d">
+    <UserControl.Resources>
+        <converters:WordWrapConverter x:Key="WordWrapConverter" />
+        <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
+        <Style x:Key="CompactHeaderCheckBoxStyle"
+               TargetType="CheckBox"
+               BasedOn="{StaticResource {x:Type CheckBox}}">
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style x:Key="CompactHeaderComboBoxStyle"
+               TargetType="ComboBox"
+               BasedOn="{StaticResource {x:Type ComboBox}}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="MinHeight" Value="28" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+        <Style x:Key="CompactHeaderTextBoxStyle"
+               TargetType="TextBox"
+               BasedOn="{StaticResource {x:Type TextBox}}">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="6,4" />
+        </Style>
+    </UserControl.Resources>
+
+    <Border CornerRadius="12"
+            PreviewMouseLeftButtonDown="ContainerBorder_OnPreviewMouseLeftButtonDown"
+            Background="{DynamicResource SurfaceBrush}"
+            BorderBrush="{DynamicResource BorderBrushStrong}"
+            BorderThickness="1"
+            SnapsToDevicePixels="True">
+        <Border.Style>
+            <Style TargetType="Border">
+                <Setter Property="BorderBrush" Value="{DynamicResource BorderBrushStrong}" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                        <Setter Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
+                        <Setter Property="BorderThickness" Value="2" />
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Background="{DynamicResource HeaderBrush}" Padding="12,8,12,8" CornerRadius="12,12,0,0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="Auto" />
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox Text="{Binding Title, UpdateSourceTrigger=PropertyChanged}"
+                             Grid.Row="0"
+                             Grid.Column="0"
+                             FontSize="13"
+                                 FontWeight="SemiBold"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 Foreground="{DynamicResource ForegroundBrush}"
+                                 CaretBrush="{DynamicResource ForegroundBrush}"
+                                 Padding="0"
+                             Margin="0,0,10,0" />
+                    <TextBlock Grid.Row="0"
+                               Grid.Column="1"
+                               Text="{Binding MetricsText}"
+                               FontSize="10"
+                               VerticalAlignment="Center"
+                               TextWrapping="NoWrap"
+                               TextTrimming="CharacterEllipsis"
+                               Foreground="{DynamicResource ForegroundMutedBrush}" />
+
+                    <WrapPanel Grid.Row="1"
+                               Grid.ColumnSpan="2"
+                               Margin="0,8,0,0"
+                               Orientation="Horizontal">
+                        <CheckBox Content="Lock"
+                                  IsChecked="{Binding IsWidthLocked}"
+                                  Style="{StaticResource CompactHeaderCheckBoxStyle}"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,6" />
+                        <ComboBox Style="{StaticResource CompactHeaderComboBoxStyle}"
+                                  Width="118"
+                                  Margin="0,0,8,6"
+                                  SelectedValuePath="Tag"
+                                  SelectedValue="{Binding PastePreset}">
+                            <ComboBoxItem Content="Paste: None" Tag="{x:Static domainEnums:PastePreset.None}" />
+                            <ComboBoxItem Content="Paste: Bullets" Tag="{x:Static domainEnums:PastePreset.Bullets}" />
+                            <ComboBoxItem Content="Paste: Checklist" Tag="{x:Static domainEnums:PastePreset.Checklist}" />
+                        </ComboBox>
+                        <ComboBox Width="104"
+                                  Style="{StaticResource CompactHeaderComboBoxStyle}"
+                                  Margin="0,0,12,6"
+                                  SelectedValuePath="Tag"
+                                  SelectedValue="{Binding MarkerMode}">
+                            <ComboBoxItem Content="Numbers" Tag="{x:Static domainEnums:MarkerMode.Numbers}" />
+                            <ComboBoxItem Content="Bullets" Tag="{x:Static domainEnums:MarkerMode.Bullets}" />
+                            <ComboBoxItem Content="Checklist" Tag="{x:Static domainEnums:MarkerMode.Checklist}" />
+                        </ComboBox>
+                        <CheckBox Content="Workspace font"
+                                  IsChecked="{Binding UseDefaultFont}"
+                                  Style="{StaticResource CompactHeaderCheckBoxStyle}"
+                                  VerticalAlignment="Center"
+                                  Margin="0,0,10,6" />
+                        <WrapPanel>
+                            <WrapPanel.Style>
+                                <Style TargetType="WrapPanel">
+                                    <Setter Property="IsEnabled" Value="True" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding UseDefaultFont}" Value="True">
+                                            <Setter Property="IsEnabled" Value="False" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </WrapPanel.Style>
+                            <ComboBox Width="148"
+                                      Style="{StaticResource CompactHeaderComboBoxStyle}"
+                                      Margin="0,0,8,6"
+                                      ItemsSource="{Binding DataContext.AvailableFonts, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      SelectedItem="{Binding FontFamilyName}" />
+                            <ComboBox Width="104"
+                                      Style="{StaticResource CompactHeaderComboBoxStyle}"
+                                      Margin="0,0,8,6"
+                                      ItemsSource="{Binding DataContext.AvailableFontStyles, RelativeSource={RelativeSource AncestorType=Window}}"
+                                      SelectedItem="{Binding FontFaceStyle}" />
+                            <TextBox Width="48"
+                                     Style="{StaticResource CompactHeaderTextBoxStyle}"
+                                     Margin="0,0,0,6"
+                                     Text="{Binding FontSizeText, UpdateSourceTrigger=LostFocus}" />
+                        </WrapPanel>
+                    </WrapPanel>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="46" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <Border x:Name="GutterBorder"
+                        Background="{DynamicResource GutterBrush}"
+                        BorderBrush="{DynamicResource BorderBrushStrong}"
+                        BorderThickness="0,1,1,0"
+                        MouseLeftButtonDown="GutterBorder_OnMouseLeftButtonDown">
+                    <Grid ClipToBounds="True">
+                        <TextBlock x:Name="GutterTextBlock"
+                                   Text="{Binding GutterText}"
+                                   Foreground="{DynamicResource ForegroundMutedBrush}"
+                                   FontFamily="Cascadia Code"
+                                   FontSize="13"
+                                   Padding="0"
+                                   LineStackingStrategy="BlockLineHeight"
+                                   TextAlignment="Center"
+                                   RenderTransformOrigin="0.5,0">
+                            <TextBlock.RenderTransform>
+                                <TranslateTransform x:Name="GutterTransform" />
+                            </TextBlock.RenderTransform>
+                        </TextBlock>
+                    </Grid>
+                </Border>
+
+                <Grid Grid.Column="1">
+                    <Border Background="{DynamicResource EditorPaperBrush}" BorderBrush="{DynamicResource BorderBrushStrong}" BorderThickness="0,1,0,0" />
+                    <Border x:Name="LineGuideSurface"
+                            IsHitTestVisible="False"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Background="Transparent"
+                            Visibility="{Binding DataContext.SelectedWorkspace.LinedPaper, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource BooleanToVisibilityConverter}}" />
+                    <TextBox x:Name="EditorTextBox"
+                             Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             AcceptsReturn="True"
+                             AcceptsTab="True"
+                             MaxLength="0"
+                             Padding="0"
+                             TextWrapping="{Binding DataContext.SelectedWorkspace.WordWrap, RelativeSource={RelativeSource AncestorType=Window}, Converter={StaticResource WordWrapConverter}}"
+                             VerticalScrollBarVisibility="Visible"
+                             HorizontalScrollBarVisibility="Auto"
+                             FontFamily="{Binding EffectiveFontFamilyName}"
+                             FontSize="{Binding EffectiveFontSize}"
+                             FontStyle="{Binding EffectiveFontStyle}"
+                             FontWeight="{Binding EffectiveFontWeight}"
+                             Foreground="{DynamicResource EditorTextBrush}"
+                             SpellCheck.IsEnabled="{Binding DataContext.SelectedWorkspace.SpellCheckEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                             GotFocus="EditorTextBox_OnGotFocus"
+                             SelectionChanged="EditorTextBox_OnSelectionChanged"
+                             PreviewKeyDown="EditorTextBox_OnPreviewKeyDown" />
+                </Grid>
+            </Grid>
+        </Grid>
+    </Border>
+</UserControl>

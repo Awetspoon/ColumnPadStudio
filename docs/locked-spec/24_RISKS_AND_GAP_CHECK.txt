@@ -1,0 +1,12 @@
+RISKS AND GAP CHECK
+
+Main rebuild risks:
+- breaking the clean-text checklist model
+- losing raw-document promotion behavior
+- blurring layout save and session save
+- changing file classification signatures
+- breaking width-lock and splitter behavior
+- changing search wrap behavior
+- letting the workflow builder leak into the editor stack
+
+The coding pass needs to treat these as locked behaviors, not optional design choices.

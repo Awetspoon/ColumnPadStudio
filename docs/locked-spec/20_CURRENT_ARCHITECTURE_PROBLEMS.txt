@@ -1,0 +1,13 @@
+CURRENT ARCHITECTURE PROBLEMS TO FIX IN THE REBUILD
+
+The existing app works, but too much logic is concentrated in a few places.
+
+Main issues to remove in the rebuild:
+- MainWindow code-behind carries too much orchestration
+- MainViewModel does too many jobs at once
+- save logic, migration logic, and UI actions are too close together
+- some theme behavior is too imperative
+- workflow builder logic needs firmer separation
+
+The rebuild keeps the current product behavior but moves it into cleaner boundaries.
+The point is to keep the finished app behavior while removing structural mess.

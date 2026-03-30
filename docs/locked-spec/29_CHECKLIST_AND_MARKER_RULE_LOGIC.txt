@@ -1,0 +1,30 @@
+CHECKLIST AND MARKER RULE LOGIC
+
+ColumnPad understands these marker prefixes:
+- • 
+- - 
+- ☐ 
+- ☑ 
+- - [ ] 
+- - [x] 
+- - [X] 
+
+Marker parsing always preserves indentation. The app first counts leading whitespace, then checks for a marker, then stores the exact matched prefix.
+
+Ordered list detection is separate. A line counts as an ordered list only when it starts with digits, then a dot or closing bracket, then whitespace. Example: 1. Item or 2) Item.
+
+Checklist storage is locked like this:
+- checked state is stored by line index
+- negative indexes are dropped
+- duplicates are removed
+- indexes are kept sorted when exposed
+- indexes beyond the last line are trimmed away
+
+Checklist metrics in checklist mode work differently from inline marker metrics:
+- every nonblank line in the column counts as one checklist item
+- a line counts as done when its line index is in the checked set
+- this works even though the body text itself stays clean
+
+Outside checklist mode, inline checklist prefixes inside the text are what count for checklist metrics.
+
+This mixed model is part of the app identity and must not be simplified away.

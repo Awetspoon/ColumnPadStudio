@@ -1,0 +1,22 @@
+SEARCH AND REPLACE SYSTEM
+
+The app supports:
+- Find
+- Find Next
+- Replace All
+
+Find and Find Next work across the whole active workspace.
+Search is case-insensitive using current-culture matching.
+
+Locked behavior:
+- the first search starts from the active editor selection end
+- later Find Next continues from the last found hit
+- search moves through columns in order
+- if needed, search wraps back to the earlier part of the starting column
+- the app focuses the hit, selects the matched text, and reports the column and line number
+- if nothing matches, the status bar says there was no match
+
+Replace All:
+- runs across every column in the active workspace
+- replaces non-overlapping matches only
+- reports the total replacement count or no-match message

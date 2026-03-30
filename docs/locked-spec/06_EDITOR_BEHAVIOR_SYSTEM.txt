@@ -1,0 +1,21 @@
+EDITOR BEHAVIOR SYSTEM
+
+The editor is plain text only.
+The app does not store rich formatting in the body text.
+
+Locked editor behavior:
+- typing updates the active column text immediately
+- line metrics update from the current text
+- the line-number gutter stays in scroll sync with the editor
+- focusing an editor makes that column active
+- clearing selection does not change content
+- wrap and line-number settings come from the active workspace defaults
+- per-column font overrides can replace the workspace defaults
+
+Selection tools:
+- apply bullets to selected lines
+- apply checklist mode to selected lines
+- toggle checklist checks across selected lines
+- clear selection
+
+The app uses plain English prompts and status messages instead of hidden silent state changes.

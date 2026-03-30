@@ -1,0 +1,39 @@
+COLUMN SYSTEM
+
+A column is the core writing unit in ColumnPad.
+
+Each column stores:
+- unique id
+- title
+- text
+- optional width in pixels
+- width lock state
+- whether it can move left or right
+- active state
+- rename state
+- paste preset
+- line marker mode
+- per-column font override state
+- checked checklist line indexes
+- derived metrics
+
+Column actions:
+- add
+- delete
+- duplicate
+- move left
+- move right
+- reset width
+- reset all widths
+- set exact width
+- freeze width
+- unfreeze width
+- set font family
+- increase font size
+- decrease font size
+- toggle bold
+- toggle italic
+- reset font to workspace default
+
+A deleted column is permanent once confirmed.
+A duplicated column copies text, width, width lock, paste preset, and font settings.

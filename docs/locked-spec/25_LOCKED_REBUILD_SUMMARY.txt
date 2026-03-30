@@ -1,0 +1,13 @@
+LOCKED REBUILD SUMMARY
+
+The finished rebuild preserves these truths:
+- ColumnPad is a plain-text multi-column writing app
+- the app is built around workspace tabs and columns
+- multiple workspaces are first-class
+- save, layout, export, session, and recovery logic are part of the product identity
+- checklist behavior is real and specific
+- theme, font, language, line number, wrap, and lined paper controls remain
+- the workflow builder remains a separate companion tool
+
+This pack is not a loose idea document.
+It is the locked written blueprint for rebuilding the working app cleanly from scratch.

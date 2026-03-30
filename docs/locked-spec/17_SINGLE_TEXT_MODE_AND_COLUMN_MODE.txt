@@ -1,0 +1,24 @@
+SINGLE TEXT MODE AND COLUMN MODE
+
+Single Text Mode is a destructive workspace transformation.
+It keeps only the selected column and removes the other columns in that workspace.
+
+Locked behavior:
+- if the workspace already has one column, the app says it is already in single text mode
+- otherwise the app warns how many columns will be removed
+- if confirmed, the app stores the previous multi-column count in LastMultiColumnCount
+- the kept column preserves:
+  - title
+  - text
+  - paste preset
+  - font settings
+  - use-default-font flag
+- the kept column width resets to automatic
+- the kept column width lock resets to false
+- status becomes Single text mode enabled.
+
+Column Mode restores a multi-column workspace.
+Locked behavior:
+- if the workspace already has more than one column, the app says it is already in column mode
+- otherwise the target column count is max(2, LastMultiColumnCount or 3)
+- status reports the restored column count

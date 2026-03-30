@@ -1,0 +1,22 @@
+APP SHELL AND GLOBAL STRUCTURE
+
+The main window is made of five permanent areas:
+1. menu bar
+2. top toolbar
+3. workspace tab strip
+4. scrollable column area
+5. status bar
+
+The main window owns the active workspace and shows that workspace's columns.
+When the active workspace changes, the visible columns rebuild to match that workspace.
+
+The shell handles:
+- creating and closing workspace tabs
+- switching active workspace
+- opening files
+- saving files
+- exporting text and markdown
+- starting auto-recovery
+- applying theme resources
+- sending the workflow builder window
+- handling keyboard shortcuts
