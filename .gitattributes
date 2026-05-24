@@ -1,0 +1,16 @@
+* text=auto
+
+# Source files keep Windows-friendly line endings for WPF/.NET tooling
+*.sln text eol=crlf
+*.cs text eol=crlf
+*.xaml text eol=crlf
+*.csproj text eol=crlf
+*.pubxml text eol=crlf
+
+# Docs/scripts
+*.md text eol=lf
+*.ps1 text eol=crlf
+
+# Binary assets
+*.png binary
+*.ico binary

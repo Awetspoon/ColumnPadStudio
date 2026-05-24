@@ -1,0 +1,443 @@
+<Window x:Class="ColumnPadStudio.Controls.WorkflowBuilderWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Workflow Builder"
+        Width="1280"
+        Height="780"
+        MinWidth="1100"
+        MinHeight="620"
+        WindowStartupLocation="CenterOwner"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource ControlForegroundBrush}">
+    <Window.Resources>
+        <Style x:Key="WorkflowPanelBorderStyle" TargetType="Border">
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="7"/>
+            <Setter Property="Background" Value="{DynamicResource ControlBackgroundBrush}"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}"/>
+        </Style>
+
+        <Style x:Key="WorkflowNodeBorderStyle" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource WorkflowNodeAutoBackgroundBrush}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeAutoBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="CornerRadius" Value="{DynamicResource ControlCornerRadius}"/>
+            <Setter Property="Padding" Value="6"/>
+            <Setter Property="Cursor" Value="SizeAll"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding Kind}" Value="Start">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeGreenBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeGreenBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Decision">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeAmberBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeAmberBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="End">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeRoseBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeRoseBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Kind}" Value="Note">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeSlateBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeSlateBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Color}" Value="Blue">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeBlueBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeBlueBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Color}" Value="Green">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeGreenBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeGreenBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Color}" Value="Amber">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeAmberBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeAmberBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Color}" Value="Rose">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeRoseBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeRoseBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Color}" Value="Slate">
+                    <Setter Property="Background" Value="{DynamicResource WorkflowNodeSlateBackgroundBrush}"/>
+                    <Setter Property="BorderBrush" Value="{DynamicResource WorkflowNodeSlateBorderBrush}"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                    <Setter Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+    <Grid Margin="8">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="248"/>
+            <ColumnDefinition Width="10"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0"
+                Style="{StaticResource WorkflowPanelBorderStyle}">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button Content="New" Width="62" Margin="0,0,6,0" Click="NewWorkflow_Click"/>
+                    <Button Content="Save"
+                            Width="62"
+                            Margin="0,0,6,0"
+                            Click="SaveWorkflow_Click"
+                            IsEnabled="{Binding HasSelectedWorkflow}"/>
+                    <Button Content="Delete"
+                            Width="62"
+                            Click="DeleteWorkflow_Click"
+                            IsEnabled="{Binding HasSelectedWorkflow}"/>
+                </StackPanel>
+
+                <Border Grid.Row="1" Margin="0,6,0,6" Height="1" Background="{DynamicResource ControlBorderBrush}"/>
+
+                <StackPanel Grid.Row="2">
+                    <TextBlock Text="Templates" FontWeight="SemiBold"/>
+                    <Grid Margin="0,3,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+
+                        <ComboBox ItemsSource="{Binding Templates}"
+                                  SelectedItem="{Binding SelectedTemplate, Mode=TwoWay}"
+                                  DisplayMemberPath="DisplayName"/>
+                        <Button Grid.Column="1"
+                                Content="Use"
+                                Width="56"
+                                Margin="6,0,0,0"
+                                Click="UseTemplate_Click"
+                                IsEnabled="{Binding HasSelectedTemplate}"/>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                        <Button Content="Import"
+                                Width="104"
+                                Margin="0,0,6,0"
+                                Click="ImportWorkflowJson_Click"/>
+                        <Button Content="Export"
+                                Width="104"
+                                Click="ExportWorkflowJson_Click"
+                                IsEnabled="{Binding HasSelectedWorkflow}"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <ListBox Grid.Row="3"
+                         Margin="0,6,0,0"
+                         ItemsSource="{Binding Workflows}"
+                         SelectedItem="{Binding SelectedWorkflow, Mode=TwoWay}"
+                         DisplayMemberPath="Name"/>
+
+                <TextBlock Grid.Row="4"
+                           Margin="0,6,0,0"
+                           Foreground="{DynamicResource LineNumberForegroundBrush}"
+                           Text="{Binding SelectedWorkflowFileLabel}"/>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="2" IsEnabled="{Binding HasSelectedWorkflow}">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Style="{StaticResource WorkflowPanelBorderStyle}">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="62"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="220"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBlock Margin="0,0,6,0" VerticalAlignment="Center" Text="Name:"/>
+                    <TextBox Grid.Column="1"
+                             Margin="0,0,10,0"
+                             Text="{Binding SelectedWorkflow.Name, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Grid.Column="2" Margin="0,0,6,0" VerticalAlignment="Center" Text="Trigger:"/>
+                    <ComboBox Grid.Column="3"
+                              ItemsSource="{Binding TriggerTypes}"
+                              SelectedItem="{Binding SelectedWorkflow.Trigger, Mode=TwoWay}"/>
+
+                    <TextBlock Grid.Row="1" Margin="0,6,6,0" VerticalAlignment="Center" Text="Category:"/>
+                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,6,10,0"
+                             Text="{Binding SelectedWorkflow.Category, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <TextBlock Grid.Row="2" Grid.ColumnSpan="4" Margin="0,6,0,0" Text="Description:"/>
+                    <TextBox Grid.Row="3" Grid.ColumnSpan="4"
+                             Style="{StaticResource MultilineTextBoxStyle}"
+                             Margin="0,3,0,0"
+                             Text="{Binding SelectedWorkflow.Description, UpdateSourceTrigger=PropertyChanged}"/>
+                </Grid>
+            </Border>
+
+            <Grid Grid.Row="1" Margin="0,8,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="360"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Style="{StaticResource WorkflowPanelBorderStyle}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <DockPanel LastChildFill="False">
+                            <TextBlock DockPanel.Dock="Left" VerticalAlignment="Center" Text="Diagram" FontWeight="SemiBold"/>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                <Button Content="+ Node" Width="64" Margin="0,0,4,0" Click="AddNode_Click"/>
+                                <Button Content="Duplicate" Width="74" Margin="0,0,4,0" Click="DuplicateNode_Click" IsEnabled="{Binding HasSelectedNode}"/>
+                                <Button Content="- Node" Width="64" Margin="0,0,4,0" Click="RemoveNode_Click" IsEnabled="{Binding HasSelectedNode}"/>
+                                <Button Content="Auto Layout" Width="86" Click="AutoLayout_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
+                            </StackPanel>
+                        </DockPanel>
+
+                        <ScrollViewer Grid.Row="1"
+                                      Margin="0,6,0,0"
+                                      HorizontalScrollBarVisibility="Auto"
+                                      VerticalScrollBarVisibility="Auto">
+                            <Grid x:Name="WorkflowDiagramSurface" MinWidth="900" MinHeight="560" Background="{DynamicResource EditorBackgroundBrush}" ClipToBounds="True">
+                                <ItemsControl ItemsSource="{Binding LinkPreviews}" IsHitTestVisible="False">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Canvas>
+                                                <Line X1="{Binding X1}" Y1="{Binding Y1}" X2="{Binding X2}" Y2="{Binding Y2}">
+                                                    <Line.Style>
+                                                        <Style TargetType="Line">
+                                                            <Setter Property="Stroke" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                                                            <Setter Property="StrokeThickness" Value="1"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="StrokeThickness" Value="2"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Line.Style>
+                                                </Line>
+                                                <Path Data="M 0 0 L 6 4 L 0 8"
+                                                      StrokeLineJoin="Miter"
+                                                      Fill="Transparent"
+                                                      Canvas.Left="{Binding X2}"
+                                                      Canvas.Top="{Binding Y2}">
+                                                    <Path.Style>
+                                                        <Style TargetType="Path">
+                                                            <Setter Property="Stroke" Value="{DynamicResource ControlFocusBorderBrush}"/>
+                                                            <Setter Property="StrokeThickness" Value="1.4"/>
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                                                                    <Setter Property="StrokeThickness" Value="2.2"/>
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </Path.Style>
+                                                </Path>
+                                                <TextBlock Text="{Binding Label}"
+                                                           Foreground="{DynamicResource LineNumberForegroundBrush}"
+                                                           FontSize="11"
+                                                           Canvas.Left="{Binding LabelX}"
+                                                           Canvas.Top="{Binding LabelY}"/>
+                                            </Canvas>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+
+                                <ItemsControl ItemsSource="{Binding SelectedWorkflow.Nodes}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate>
+                                            <Canvas/>
+                                        </ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemContainerStyle>
+                                        <Style TargetType="ContentPresenter">
+                                            <Setter Property="Canvas.Left" Value="{Binding X}"/>
+                                            <Setter Property="Canvas.Top" Value="{Binding Y}"/>
+                                        </Style>
+                                    </ItemsControl.ItemContainerStyle>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Border Width="{Binding Width}"
+                                                    Height="{Binding Height}"
+                                                    Style="{StaticResource WorkflowNodeBorderStyle}"
+                                                    MouseLeftButtonDown="WorkflowNode_MouseLeftButtonDown"
+                                                    MouseMove="WorkflowNode_MouseMove"
+                                                    MouseLeftButtonUp="WorkflowNode_MouseLeftButtonUp">
+                                                <Border.ContextMenu>
+                                                    <ContextMenu>
+                                                        <MenuItem Header="Auto colour" Tag="Auto" Click="WorkflowNodeColor_Click"/>
+                                                        <Separator/>
+                                                        <MenuItem Header="Blue" Tag="Blue" Click="WorkflowNodeColor_Click"/>
+                                                        <MenuItem Header="Green" Tag="Green" Click="WorkflowNodeColor_Click"/>
+                                                        <MenuItem Header="Amber" Tag="Amber" Click="WorkflowNodeColor_Click"/>
+                                                        <MenuItem Header="Rose" Tag="Rose" Click="WorkflowNodeColor_Click"/>
+                                                        <MenuItem Header="Slate" Tag="Slate" Click="WorkflowNodeColor_Click"/>
+                                                    </ContextMenu>
+                                                </Border.ContextMenu>
+                                                <StackPanel>
+                                                    <TextBlock FontWeight="SemiBold" Text="{Binding Title}" TextWrapping="Wrap"/>
+                                                    <TextBlock Margin="0,3,0,0" Foreground="{DynamicResource LineNumberForegroundBrush}" FontSize="11" Text="{Binding Kind}"/>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </Grid>
+                        </ScrollViewer>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Column="2"
+                        Style="{StaticResource WorkflowPanelBorderStyle}">
+                    <TabControl>
+                        <TabItem Header="Node">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="5">
+                                <StackPanel>
+                                    <TextBlock Text="Nodes" FontWeight="SemiBold"/>
+                                    <ListBox Height="120"
+                                             Margin="0,6,0,0"
+                                             ItemsSource="{Binding SelectedWorkflow.Nodes}"
+                                             SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
+                                             DisplayMemberPath="Summary"/>
+
+                                    <Grid Margin="0,6,0,0" IsEnabled="{Binding HasSelectedNode}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" Text="Kind:"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding NodeKinds}"
+                                                  SelectedItem="{Binding SelectedNode.Kind, Mode=TwoWay}"/>
+
+                                        <TextBlock Grid.Row="1" Margin="0,6,6,0" VerticalAlignment="Center" Text="Title:"/>
+                                        <TextBox Grid.Row="1" Grid.Column="1" Margin="0,6,0,0"
+                                                 Text="{Binding SelectedNode.Title, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Grid.Row="2" Margin="0,6,6,0" VerticalAlignment="Center" Text="Details:"/>
+                                        <TextBox Grid.Row="2" Grid.Column="1" Margin="0,6,0,0"
+                                                 Style="{StaticResource MultilineTextBoxStyle}"
+                                                 Height="56"
+                                                 Text="{Binding SelectedNode.Description, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Grid.Row="3" Margin="0,6,6,0" VerticalAlignment="Center" Text="X:"/>
+                                        <TextBox Grid.Row="3" Grid.Column="1" Margin="0,6,0,0"
+                                                 Text="{Binding SelectedNode.X, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Grid.Row="4" Margin="0,6,6,0" VerticalAlignment="Center" Text="Y:"/>
+                                        <TextBox Grid.Row="4" Grid.Column="1" Margin="0,6,0,0"
+                                                 Text="{Binding SelectedNode.Y, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Grid.Row="5" Margin="0,6,6,0" VerticalAlignment="Center" Text="W/H:"/>
+                                        <StackPanel Grid.Row="5" Grid.Column="1" Orientation="Horizontal" Margin="0,5,0,0">
+                                            <TextBox Width="70" Margin="0,0,6,0" Text="{Binding SelectedNode.Width, UpdateSourceTrigger=PropertyChanged}"/>
+                                            <TextBox Width="70" Text="{Binding SelectedNode.Height, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="6" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,8,0,0">
+                                            <Button Content="Left" Width="48" Margin="0,0,4,0" Click="NudgeNodeLeft_Click"/>
+                                            <Button Content="Up" Width="40" Margin="0,0,4,0" Click="NudgeNodeUp_Click"/>
+                                            <Button Content="Down" Width="48" Margin="0,0,4,0" Click="NudgeNodeDown_Click"/>
+                                            <Button Content="Right" Width="52" Click="NudgeNodeRight_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+
+                        <TabItem Header="Connection">
+                            <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="5">
+                                <StackPanel>
+                                    <TextBlock Text="Connections" FontWeight="SemiBold"/>
+                                    <StackPanel Orientation="Horizontal" Margin="0,5,0,0">
+                                        <Button Content="+ Link" Width="60" Margin="0,0,4,0" Click="AddLink_Click" IsEnabled="{Binding CanCreateLink}"/>
+                                        <Button Content="- Link" Width="62" Click="RemoveLink_Click" IsEnabled="{Binding HasSelectedLink}"/>
+                                    </StackPanel>
+
+                                    <ListBox Height="120"
+                                             Margin="0,6,0,0"
+                                             ItemsSource="{Binding SelectedWorkflow.Links}"
+                                             SelectedItem="{Binding SelectedLink, Mode=TwoWay}"
+                                             DisplayMemberPath="Summary"/>
+
+                                    <Grid Margin="0,6,0,0" IsEnabled="{Binding HasSelectedLink}">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" Text="From:"/>
+                                        <ComboBox Grid.Column="1"
+                                                  ItemsSource="{Binding SelectedWorkflow.Nodes}"
+                                                  DisplayMemberPath="Summary"
+                                                  SelectedValuePath="Id"
+                                                  SelectedValue="{Binding SelectedLink.FromNodeId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Grid.Row="1" Margin="0,6,6,0" VerticalAlignment="Center" Text="To:"/>
+                                        <ComboBox Grid.Row="1" Grid.Column="1" Margin="0,6,0,0"
+                                                  ItemsSource="{Binding SelectedWorkflow.Nodes}"
+                                                  DisplayMemberPath="Summary"
+                                                  SelectedValuePath="Id"
+                                                  SelectedValue="{Binding SelectedLink.ToNodeId, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                                        <TextBlock Grid.Row="2" Margin="0,6,6,0" VerticalAlignment="Center" Text="Label:"/>
+                                        <TextBox Grid.Row="2" Grid.Column="1" Margin="0,6,0,0"
+                                                 Text="{Binding SelectedLink.Label, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </Grid>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </TabItem>
+                    </TabControl>
+                </Border>
+            </Grid>
+
+            <Border Grid.Row="2"
+                    Margin="0,8,0,0"
+                    Style="{StaticResource WorkflowPanelBorderStyle}"
+                    Padding="7,5">
+                <TextBlock Text="{Binding StatusText}"/>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
+

@@ -1,0 +1,215 @@
+﻿<Window x:Class="ColumnPadStudio.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
+        Title="ColumnPad"
+        Width="1240"
+        Height="780"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource WindowBackgroundBrush}"
+        Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+
+    <DockPanel>
+        <Menu DockPanel.Dock="Top"
+              Background="{DynamicResource MenuBackgroundBrush}"
+              Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+            <MenuItem Header="_File">
+                <MenuItem Header="_New Layout" Click="NewLayout_Click" InputGestureText="Ctrl+N"/>
+                <Separator/>
+                <MenuItem Header="New _Workspace Tab" Click="NewWorkspaceTab_Click" InputGestureText="Ctrl+Shift+N"/>
+                <MenuItem Header="_Close Workspace Tab" Click="CloseWorkspaceTab_Click" InputGestureText="Ctrl+Shift+W"/>
+                <Separator/>
+                <MenuItem Header="_Open..." Click="OpenLayout_Click" InputGestureText="Ctrl+O"/>
+                <MenuItem Header="_Save" Click="Save_Click" InputGestureText="Ctrl+S"/>
+                <MenuItem Header="Save _As..." Click="SaveAs_Click" InputGestureText="Ctrl+Shift+S"/>
+                <Separator/>
+                <MenuItem Header="E_xport Workspace as .txt" Click="ExportTxt_Click" InputGestureText="Ctrl+E"/>
+                <MenuItem Header="Export Workspace as ._md" Click="ExportMarkdown_Click" InputGestureText="Ctrl+Shift+E"/>
+                <MenuItem Header="_Print..." Click="Print_Click" InputGestureText="Ctrl+P"/>
+                <Separator/>
+                <MenuItem Header="E_xit" Click="Exit_Click"/>
+            </MenuItem>
+
+            <MenuItem Header="_Edit">
+                <MenuItem Header="_Find..." Click="Find_Click" InputGestureText="Ctrl+F"/>
+                <MenuItem Header="Find _Next" Click="FindNext_Click" InputGestureText="F3"/>
+                <MenuItem Header="_Replace All..." Click="ReplaceAll_Click" InputGestureText="Ctrl+H"/>
+                <Separator/>
+                <MenuItem Header="Show Gutter _Bullets" Click="ShowGutterBullets_Click" InputGestureText="Ctrl+Shift+8"/>
+                <MenuItem Header="Show Gutter _Checklist" Click="ShowGutterChecklist_Click" InputGestureText="Ctrl+Shift+7"/>
+                <MenuItem Header="_Toggle Checklist Check" Click="SelectionToggleChecks_Click" InputGestureText="Ctrl+Enter"/>
+                <MenuItem Header="C_lear Selection" Click="ClearSelection_Click" InputGestureText="Esc"/>
+                <Separator/>
+                <MenuItem Header="_Clear All Columns" Click="ClearAll_Click" InputGestureText="Ctrl+Shift+X"/>
+                <MenuItem Header="_Duplicate Selected Column" Click="DuplicateActive_Click" InputGestureText="Ctrl+D"/>
+            </MenuItem>
+
+            <MenuItem Header="_View">
+                <MenuItem Header="_Word Wrap"
+                          IsCheckable="True"
+                          IsChecked="{Binding ActiveVm.WordWrap, Mode=TwoWay}"
+                          InputGestureText="Alt+Z"/>
+                <MenuItem Header="_Line Numbers"
+                          IsCheckable="True"
+                          IsChecked="{Binding ActiveVm.ShowLineNumbers, Mode=TwoWay}"
+                          InputGestureText="Alt+L"/>
+                <MenuItem Header="_Lined Paper"
+                          IsCheckable="True"
+                          IsChecked="{Binding ActiveVm.LinedPaperEnabled, Mode=TwoWay}"
+                          InputGestureText="Alt+P"/>
+                <MenuItem Header="_Single Text Mode" Click="SingleTextMode_Click" InputGestureText="Ctrl+Shift+1"/>
+                <MenuItem Header="_Column Mode" Click="ColumnMode_Click" InputGestureText="Ctrl+Shift+2"/>
+                <Separator/>
+                <MenuItem Header="_Light Mode" Click="ThemeClassic_Click"/>
+                <MenuItem Header="_Dark Mode" Click="ThemeHighContrast_Click"/>
+                <MenuItem Header="_Default Mode" Click="ThemeCompact_Click"/>
+            </MenuItem>
+
+            <MenuItem Header="_Workflows">
+                <MenuItem Header="_Workflow Builder..." Click="OpenWorkflowBuilder_Click" InputGestureText="Ctrl+Shift+B"/>
+            </MenuItem>
+
+            <MenuItem Header="_Columns">
+                <MenuItem Header="_Add Column" Click="AddColumn_Click" InputGestureText="Ctrl+Shift++"/>
+                <MenuItem Header="_Remove Selected Column" Click="RemoveActive_Click" InputGestureText="Ctrl+Shift+-"/>
+                <MenuItem Header="Swap Selected Column with Column on _Left"
+                          Click="MoveActiveLeft_Click"
+                          InputGestureText="Alt+Shift+Left"
+                          IsEnabled="{Binding ActiveVm.CanMoveActiveColumnLeft}"/>
+                <MenuItem Header="Swap Selected Column with Column on _Right"
+                          Click="MoveActiveRight_Click"
+                          InputGestureText="Alt+Shift+Right"
+                          IsEnabled="{Binding ActiveVm.CanMoveActiveColumnRight}"/>
+                <Separator/>
+                <MenuItem Header="Reset _Column Size" Click="ResetActiveWidth_Click"/>
+                <MenuItem Header="_Reset All Column Sizes" Click="ResetWidths_Click" InputGestureText="Ctrl+R"/>
+                <Separator/>
+                <MenuItem Header="{Binding ActiveVm.LockActiveWidthActionLabel}"
+                          ToolTip="{Binding ActiveVm.LockActiveWidthActionToolTip}"
+                          Click="LockActiveWidth_Click"
+                          InputGestureText="Ctrl+Shift+L"/>
+            </MenuItem>
+        </Menu>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource ToolbarBackgroundBrush}"
+                BorderBrush="{DynamicResource ControlBorderBrush}"
+                BorderThickness="0,0,0,1">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Disabled"
+                          Focusable="False">
+                <StackPanel Orientation="Horizontal" Margin="8,3">
+                    <TextBlock Text="Font:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <ComboBox Width="160"
+                              Margin="0,0,6,0"
+                              VerticalAlignment="Center"
+                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              IsTextSearchEnabled="True"
+                              ItemsSource="{Binding ActiveVm.EditorFontFamilies}"
+                              SelectedItem="{Binding ActiveVm.EditorFontFamily, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Style:" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                    <ComboBox Width="128"
+                              Margin="0,0,6,0"
+                              VerticalAlignment="Center"
+                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              IsTextSearchEnabled="True"
+                              ItemsSource="{Binding ActiveVm.EditorFontStyles}"
+                              SelectedItem="{Binding ActiveVm.EditorFontStyleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <TextBlock Text="Size:" VerticalAlignment="Center" Margin="4,0,4,0"/>
+                    <ComboBox Width="60"
+                              Margin="0,0,8,0"
+                              VerticalAlignment="Center"
+                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              ItemsSource="{Binding ActiveVm.EditorFontSizes}"
+                              ItemStringFormat="F0"
+                              SelectedItem="{Binding ActiveVm.EditorFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <Border Width="1" Height="22" Margin="10,0" Background="{DynamicResource ControlBorderBrush}"/>
+                    <TextBlock Text="Theme:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <ComboBox Width="145"
+                              VerticalAlignment="Center"
+                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              ItemsSource="{Binding ActiveVm.ThemePresets}"
+                              SelectedItem="{Binding ActiveVm.ThemePreset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+                    <Border Width="1" Height="22" Margin="10,0" Background="{DynamicResource ControlBorderBrush}"/>
+                    <CheckBox Content="Spell Check"
+                              VerticalAlignment="Center"
+                              Margin="0,0,8,0"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              IsChecked="{Binding ActiveVm.SpellCheckEnabled, Mode=TwoWay}"/>
+                    <TextBlock Text="Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
+                    <ComboBox Width="210"
+                              VerticalAlignment="Center"
+                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Background="{DynamicResource ControlBackgroundBrush}"
+                              BorderBrush="{DynamicResource ControlBorderBrush}"
+                              IsTextSearchEnabled="True"
+                              ItemsSource="{Binding ActiveVm.EditorLanguages}"
+                              DisplayMemberPath="DisplayName"
+                              SelectedValuePath="Tag"
+                              SelectedValue="{Binding ActiveVm.EditorLanguageTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    <CheckBox Content="Lined Paper"
+                              VerticalAlignment="Center"
+                              Margin="8,0,0,0"
+                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              IsChecked="{Binding ActiveVm.LinedPaperEnabled, Mode=TwoWay}"/>
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+
+        <TabControl x:Name="WorkspaceTabs"
+                    DockPanel.Dock="Top"
+                    Height="33"
+                    Margin="0,0,0,1"
+                    ItemsSource="{Binding Workspaces}"
+                    SelectedItem="{Binding ActiveWorkspace, Mode=TwoWay}"
+                    SelectionChanged="WorkspaceTabs_SelectionChanged"
+                    Background="{DynamicResource WindowBackgroundBrush}"
+                    Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+            <TabControl.ContextMenu>
+                <ContextMenu>
+                    <MenuItem x:Name="WorkspaceRenameMenuItem" Header="Rename Workspace"/>
+                </ContextMenu>
+            </TabControl.ContextMenu>
+            <TabControl.ItemTemplate>
+                <DataTemplate>
+                    <controls:InlineRenameText Text="{Binding Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                               IsEditing="{Binding IsRenaming, Mode=TwoWay}"
+                                               Margin="2,0"/>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+                <DataTemplate>
+                    <Grid Height="0"/>
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+
+        <StatusBar DockPanel.Dock="Bottom"
+                   Background="{DynamicResource StatusBackgroundBrush}"
+                   Foreground="{DynamicResource ControlForegroundBrush}" UseLayoutRounding="True" SnapsToDevicePixels="True">
+            <StatusBarItem Content="{Binding ActiveVm.StatusText}" />
+        </StatusBar>
+
+        <ScrollViewer x:Name="ColumnsScrollViewer"
+                      HorizontalScrollBarVisibility="Auto"
+                      VerticalScrollBarVisibility="Disabled">
+            <Grid x:Name="ColumnsHost" Background="{DynamicResource ColumnHostBackgroundBrush}" />
+        </ScrollViewer>
+    </DockPanel>
+</Window>
+

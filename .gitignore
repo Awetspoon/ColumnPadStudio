@@ -1,14 +1,46 @@
-bin/
-obj/
+# Build outputs
+**/bin/
+**/obj/
+**/publish/
+**/TestResults/
+
+# .NET / NuGet
+*.nupkg
+*.snupkg
+
+# IDE/session files
 .vs/
-*.user
+.vscode/
+.idea/
 *.suo
-TestResults/
-.codex-dotnet/
+*.user
+*.userosscache
+*.sln.docstates
+*.vsidx
+
+# Local Codex/session files
+.codex/
+.codex-dotnet-home/
 .dotnet-cli/
-.dotnet-cli-home/
-artifacts/
-_workflow_debug_run*/
-_recovery_fix_run_*/
-*-build.log
-workflow-build.log
+.tmp-build/
+.tmp/
+_tmp_ui_check/
+_dotnet_test.log
+.release-staging/
+.release-staging-*/
+
+# Temp/cache/logs
+*wpftmp*
+*.cache
+*.tmp
+*.log
+
+# OS junk
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Publish output directories used by this repo
+src/ColumnPadStudio/publish/
+src/ColumnPadStudio/publish-validation/
+ColumnPadStudio_Publish/

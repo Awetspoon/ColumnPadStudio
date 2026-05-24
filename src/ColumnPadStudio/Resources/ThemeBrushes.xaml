@@ -1,0 +1,85 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <CornerRadius x:Key="ControlCornerRadius">2</CornerRadius>
+
+    <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#FFEFEFEF"/>
+    <SolidColorBrush x:Key="MenuBackgroundBrush" Color="#FFF5F5F5"/>
+    <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#FFE8EEF6"/>
+    <SolidColorBrush x:Key="ControlForegroundBrush" Color="#FF111111"/>
+    <SolidColorBrush x:Key="ControlBackgroundBrush" Color="#FFF4F4F4"/>
+    <SolidColorBrush x:Key="ControlBorderBrush" Color="#FFB8B8B8"/>
+    <SolidColorBrush x:Key="ControlHoverBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="ControlPressedBackgroundBrush" Color="#FFDCE7F7"/>
+    <SolidColorBrush x:Key="ControlFocusBorderBrush" Color="#FF2B579A"/>
+    <SolidColorBrush x:Key="WorkflowNodeAutoBackgroundBrush" Color="#FFEAF3FF"/>
+    <SolidColorBrush x:Key="WorkflowNodeAutoBorderBrush" Color="#FF7D8FA3"/>
+    <SolidColorBrush x:Key="WorkflowNodeBlueBackgroundBrush" Color="#FFE7F0FF"/>
+    <SolidColorBrush x:Key="WorkflowNodeBlueBorderBrush" Color="#FF5B7EAD"/>
+    <SolidColorBrush x:Key="WorkflowNodeGreenBackgroundBrush" Color="#FFE7F8E7"/>
+    <SolidColorBrush x:Key="WorkflowNodeGreenBorderBrush" Color="#FF4F8A4F"/>
+    <SolidColorBrush x:Key="WorkflowNodeAmberBackgroundBrush" Color="#FFFFF6DB"/>
+    <SolidColorBrush x:Key="WorkflowNodeAmberBorderBrush" Color="#FFB28A22"/>
+    <SolidColorBrush x:Key="WorkflowNodeRoseBackgroundBrush" Color="#FFFDEAEA"/>
+    <SolidColorBrush x:Key="WorkflowNodeRoseBorderBrush" Color="#FFB15A5A"/>
+    <SolidColorBrush x:Key="WorkflowNodeSlateBackgroundBrush" Color="#FFF1F1F1"/>
+    <SolidColorBrush x:Key="WorkflowNodeSlateBorderBrush" Color="#FF8A8A8A"/>
+    <SolidColorBrush x:Key="ControlPopupBackgroundBrush" Color="#FFF4F4F4"/>
+    <SolidColorBrush x:Key="ControlPopupForegroundBrush" Color="#FF111111"/>
+    <SolidColorBrush x:Key="ControlPopupHighlightBrush" Color="#FFDCE7F7"/>
+    <SolidColorBrush x:Key="ControlPopupHighlightTextBrush" Color="#FF111111"/>
+    <SolidColorBrush x:Key="ColumnHostBackgroundBrush" Color="#FFF2F2F2"/>
+    <SolidColorBrush x:Key="ColumnHeaderBackgroundBrush" Color="#FFE4E4E4"/>
+    <SolidColorBrush x:Key="ColumnSelectedHeaderBackgroundBrush" Color="#FFE8EEF6"/>
+    <SolidColorBrush x:Key="EditorBackgroundBrush" Color="#FFFFFFFF"/>
+    <SolidColorBrush x:Key="EditorForegroundBrush" Color="#FF111111"/>
+    <SolidColorBrush x:Key="EditorSelectionBrush" Color="#FFB7D0F2"/>
+    <SolidColorBrush x:Key="EditorSelectionTextBrush" Color="#FF111111"/>
+    <SolidColorBrush x:Key="EditorInactiveSelectionBrush" Color="#FFD5E3F4"/>
+    <SolidColorBrush x:Key="EditorInactiveSelectionTextBrush" Color="#FF111111"/>
+    <SolidColorBrush x:Key="LinedPaperLineBrush" Color="#FFB5CFF2"/>
+
+    <DrawingBrush x:Key="EditorLinedPaperBrush"
+                  TileMode="Tile"
+                  Viewport="0,0,200,23"
+                  ViewportUnits="Absolute"
+                  Viewbox="0,0,200,23"
+                  ViewboxUnits="Absolute"
+                  Stretch="Fill">
+        <DrawingBrush.Drawing>
+            <DrawingGroup>
+                <GeometryDrawing Brush="{DynamicResource EditorBackgroundBrush}">
+                    <GeometryDrawing.Geometry>
+                        <RectangleGeometry Rect="0,0,200,23"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+                <GeometryDrawing>
+                    <GeometryDrawing.Pen>
+                        <Pen Brush="{DynamicResource LinedPaperLineBrush}" Thickness="1"/>
+                    </GeometryDrawing.Pen>
+                    <GeometryDrawing.Geometry>
+                        <LineGeometry StartPoint="0,22.75" EndPoint="200,22.75"/>
+                    </GeometryDrawing.Geometry>
+                </GeometryDrawing>
+            </DrawingGroup>
+        </DrawingBrush.Drawing>
+    </DrawingBrush>
+
+    <SolidColorBrush x:Key="LineNumberBackgroundBrush" Color="#FFF7F7F7"/>
+    <SolidColorBrush x:Key="LineNumberForegroundBrush" Color="#FF7A7A7A"/>
+    <SolidColorBrush x:Key="StatusBackgroundBrush" Color="#FFF3F3F3"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightBrushKey}" Color="#FFDCE7F7"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HighlightTextBrushKey}" Color="#FF111111"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuHighlightBrushKey}" Color="#FFDCE7F7"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.HotTrackBrushKey}" Color="#FF2B579A"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightBrushKey}" Color="#FFD5E3F4"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.InactiveSelectionHighlightTextBrushKey}" Color="#FF111111"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuBrushKey}" Color="#FFF4F4F4"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.MenuTextBrushKey}" Color="#FF111111"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.GrayTextBrushKey}" Color="#FF7A7A7A"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlTextBrushKey}" Color="#FF111111"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowBrushKey}" Color="#FFF4F4F4"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.WindowTextBrushKey}" Color="#FF111111"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.ControlBrushKey}" Color="#FFF4F4F4"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.InfoBrushKey}" Color="#FFF4F4F4"/>
+    <SolidColorBrush x:Key="{x:Static SystemColors.InfoTextBrushKey}" Color="#FF111111"/>
+</ResourceDictionary>
