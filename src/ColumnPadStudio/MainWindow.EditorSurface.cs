@@ -1,4 +1,5 @@
 using ColumnPadStudio.Controls;
+using ColumnPadStudio.Domain.Lists;
 using ColumnPadStudio.Services;
 using ColumnPadStudio.ViewModels;
 using System.Globalization;
@@ -138,7 +139,12 @@ public partial class MainWindow
         if (active is null)
             return;
 
-        var prompt = PromptDialog.Show(this, "Column Font Family", "Font family:", active.EditorFontFamily);
+        var prompt = PromptDialog.ShowChoice(
+            this,
+            "Column Font Family",
+            "Font family:",
+            active.EditorFontFamily,
+            ActiveVm.EditorFontFamilies);
         if (string.IsNullOrWhiteSpace(prompt))
             return;
 
@@ -244,7 +250,7 @@ public partial class MainWindow
         return cleared;
     }
 
-    private void ToolbarComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
+    private void SettingsComboBox_PreviewKeyDown(object sender, KeyEventArgs e)
     {
         if (e.Key != Key.Escape || Keyboard.Modifiers != ModifierKeys.None)
             return;

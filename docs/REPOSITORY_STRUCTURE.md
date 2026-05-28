@@ -44,7 +44,7 @@ Important areas:
 - `Controls/`
   Reusable UI controls and dialogs.
 - `Resources/`
-  Shared WPF resource dictionaries loaded by `App.xaml`. `AppResources.xaml` is only an index. `ThemeBrushes.xaml` contains app brushes, system colour overrides, and shared geometry. `ControlStyles.xaml` contains reusable WPF control templates and shared hover/open states.
+  Shared WPF resource dictionaries loaded by `App.xaml`. `AppResources.xaml` is only an index. `ThemeBrushes.xaml` contains app brushes, system colour overrides, and shared geometry. `ControlStyles.xaml` contains reusable WPF control templates. `MenuStyles.xaml` contains shared menu and context-menu styling.
 - `ViewModels/`
   Writable app state for the shell, columns, workflows, and workspace tabs. Larger view models are split into named partial files, for example `MainViewModel.Columns.cs`, `MainViewModel.FileState.cs`, `MainViewModel.Persistence.cs`, `MainViewModel.LayoutMigration.cs`, and `WorkflowBuilderViewModel.Preview.cs`.
 - `Services/`
@@ -100,7 +100,8 @@ The app is intentionally lightweight:
 - Keep `bin/`, `obj/`, and `publish/` as generated output only.
 - Keep app-wide WPF resources in `src/ColumnPadStudio/Resources/`, not directly in `App.xaml`.
 - Put new shared colours and theme brushes in `ThemeBrushes.xaml`.
-- Put reusable control templates and shared interaction states in `ControlStyles.xaml`.
+- Put reusable control templates in `ControlStyles.xaml`.
+- Put shared menu and right-click dropdown styling in `MenuStyles.xaml`.
 - Put new app-facing helpers under `src/ColumnPadStudio/Services/` only if they have one clear job.
 - Put pure parsing/rule logic under `src/ColumnPadStudio.Domain/` when it does not need WPF types.
 - Avoid growing `MainWindow` or `MainViewModel` into single-file catch-alls again; add new partial files or focused helpers instead.

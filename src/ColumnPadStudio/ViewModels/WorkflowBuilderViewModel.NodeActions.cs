@@ -4,7 +4,7 @@ namespace ColumnPadStudio.ViewModels;
 
 public sealed partial class WorkflowBuilderViewModel
 {
-    public void AddNode()
+    public void AddNode(WorkflowNodeKind kind)
     {
         if (SelectedWorkflow is null)
             return;
@@ -15,8 +15,11 @@ public sealed partial class WorkflowBuilderViewModel
         var node = new WorkflowDiagramNode
         {
             Id = $"node-{nodeIndex}",
-            Kind = WorkflowNodeKind.Step,
-            Title = $"Step {nodeIndex}",
+            Kind = kind,
+            Title = $"{WorkflowDiagramNode.DefaultTitleForKind(kind)} {nodeIndex}",
+            Goal = DefaultGoalForKind(kind),
+            Instructions = DefaultInstructionsForKind(kind),
+            ExpectedOutput = DefaultExpectedOutputForKind(kind),
             X = reference?.X ?? 320,
             Y = (reference?.Y ?? 120) + 110
         };
@@ -38,10 +41,20 @@ public sealed partial class WorkflowBuilderViewModel
             Kind = SelectedNode.Kind,
             Title = $"{SelectedNode.Title} Copy",
             Description = SelectedNode.Description,
+            Goal = SelectedNode.Goal,
+            Instructions = SelectedNode.Instructions,
+            ExpectedOutput = SelectedNode.ExpectedOutput,
+            ChecklistItems = new(
+                SelectedNode.ChecklistItems.Select(item => new WorkflowChecklistItem
+                {
+                    Text = item.Text,
+                    IsDone = item.IsDone
+                })),
             X = SelectedNode.X + 36,
             Y = SelectedNode.Y + 36,
             Width = SelectedNode.Width,
-            Height = SelectedNode.Height
+            Height = SelectedNode.Height,
+            Color = SelectedNode.Color
         };
 
         SelectedWorkflow.Nodes.Add(clone);
@@ -163,4 +176,34 @@ public sealed partial class WorkflowBuilderViewModel
         StatusText = "Connection removed.";
         return true;
     }
+
+    private static string DefaultGoalForKind(WorkflowNodeKind kind)
+        => kind switch
+        {
+            WorkflowNodeKind.Start => "Define what starts this workflow.",
+            WorkflowNodeKind.Decision => "Make the branch condition clear.",
+            WorkflowNodeKind.End => "Close the workflow with a clear outcome.",
+            WorkflowNodeKind.Note => "Capture supporting context.",
+            _ => "Complete this workflow step."
+        };
+
+    private static string DefaultInstructionsForKind(WorkflowNodeKind kind)
+        => kind switch
+        {
+            WorkflowNodeKind.Start => "Write the trigger, source material, or opening question.",
+            WorkflowNodeKind.Decision => "Write the yes/no rule and the evidence needed to choose a path.",
+            WorkflowNodeKind.End => "Summarize the final result and any follow-up.",
+            WorkflowNodeKind.Note => "Add context, references, warnings, or reminders that support nearby steps.",
+            _ => "Write the useful notes, decisions, blockers, and next action for this step."
+        };
+
+    private static string DefaultExpectedOutputForKind(WorkflowNodeKind kind)
+        => kind switch
+        {
+            WorkflowNodeKind.Start => "A clear start brief.",
+            WorkflowNodeKind.Decision => "A testable branch condition.",
+            WorkflowNodeKind.End => "A finished outcome note.",
+            WorkflowNodeKind.Note => "Helpful context for the workflow.",
+            _ => "A clear note that lets the next step continue."
+        };
 }

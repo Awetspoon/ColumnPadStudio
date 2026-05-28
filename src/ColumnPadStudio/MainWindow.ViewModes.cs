@@ -10,6 +10,13 @@ public partial class MainWindow
     private void ThemeHighContrast_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DarkPreset);
     private void ThemeCompact_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DefaultPreset);
 
+    private void ResetEditorFont_Click(object sender, RoutedEventArgs e)
+    {
+        ActiveVm.EditorFontFamily = "Consolas";
+        ActiveVm.EditorFontStyleName = "Regular";
+        ActiveVm.EditorFontSize = 13;
+    }
+
     private void SetTheme(string preset)
     {
         ActiveVm.ThemePreset = preset;
@@ -84,6 +91,11 @@ public partial class MainWindow
 
     private void OpenWorkflowBuilder_Click(object sender, RoutedEventArgs e)
     {
+        OpenWorkflowBuilder();
+    }
+
+    private void OpenWorkflowBuilder()
+    {
         if (_workflowBuilderWindow is not null)
         {
             _workflowBuilderWindow.Activate();
@@ -98,6 +110,7 @@ public partial class MainWindow
 
         window.Closed += (_, __) => _workflowBuilderWindow = null;
         _workflowBuilderWindow = window;
+
         window.Show();
     }
 

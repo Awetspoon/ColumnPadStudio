@@ -35,9 +35,9 @@ public partial class WorkflowBuilderWindow : Window
         ViewModel.Load();
     }
 
-    private void NewWorkflow_Click(object sender, RoutedEventArgs e)
+    private void AddWorkflow_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.NewWorkflow();
+        ViewModel.AddWorkflow();
     }
 
     private void SaveWorkflow_Click(object sender, RoutedEventArgs e)
@@ -89,9 +89,15 @@ public partial class WorkflowBuilderWindow : Window
         }
     }
 
-    private void AddNode_Click(object sender, RoutedEventArgs e)
+    private void AddNodeOfKind_Click(object sender, RoutedEventArgs e)
     {
-        ViewModel.AddNode();
+        if (sender is not FrameworkElement { Tag: string kindName })
+            return;
+
+        if (!Enum.TryParse<WorkflowNodeKind>(kindName, ignoreCase: true, out var kind))
+            return;
+
+        ViewModel.AddNode(kind);
     }
 
     private void DuplicateNode_Click(object sender, RoutedEventArgs e)
@@ -139,9 +145,15 @@ public partial class WorkflowBuilderWindow : Window
         ViewModel.NudgeSelectedNode(0, 16);
     }
 
-    private void UseTemplate_Click(object sender, RoutedEventArgs e)
+    private void UseStarter_Click(object sender, RoutedEventArgs e)
     {
         ViewModel.CreateWorkflowFromSelectedTemplate();
+    }
+
+    private void StarterList_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+    {
+        if (ViewModel.HasSelectedTemplate)
+            ViewModel.CreateWorkflowFromSelectedTemplate();
     }
 
     private void ImportWorkflowJson_Click(object sender, RoutedEventArgs e)

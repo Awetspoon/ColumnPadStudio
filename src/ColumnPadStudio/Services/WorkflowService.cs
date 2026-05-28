@@ -171,6 +171,10 @@ public sealed class WorkflowService
                     Kind = node.Kind,
                     Title = node.Title,
                     Description = node.Description,
+                    Goal = node.Goal,
+                    Instructions = node.Instructions,
+                    ExpectedOutput = node.ExpectedOutput,
+                    ChecklistItems = CopyChecklistItems(node.ChecklistItems),
                     X = node.X,
                     Y = node.Y,
                     Width = node.Width,
@@ -190,7 +194,7 @@ public sealed class WorkflowService
 
     private static void Normalize(WorkflowDefinition workflow, string? fallbackName)
     {
-        workflow.SchemaVersion = Math.Max(2, workflow.SchemaVersion);
+        workflow.SchemaVersion = Math.Max(3, workflow.SchemaVersion);
 
         workflow.Id = string.IsNullOrWhiteSpace(workflow.Id)
             ? Guid.NewGuid().ToString("N")
@@ -212,6 +216,7 @@ public sealed class WorkflowService
             WorkflowDefaults.PopulateStarterDiagram(workflow);
 
         EnsureUniqueNodeIds(workflow.Nodes);
+        NormalizeNodeContent(workflow.Nodes);
         EnsureUniqueLinkIds(workflow.Links);
 
         var nodeIds = new HashSet<string>(workflow.Nodes.Select(n => n.Id), StringComparer.Ordinal);
@@ -228,6 +233,18 @@ public sealed class WorkflowService
         }
     }
 
+    private static ObservableCollection<WorkflowChecklistItem> CopyChecklistItems(IEnumerable<WorkflowChecklistItem>? items)
+    {
+        return new ObservableCollection<WorkflowChecklistItem>(
+            (items ?? Array.Empty<WorkflowChecklistItem>())
+            .Where(item => !string.IsNullOrWhiteSpace(item.Text))
+            .Select(item => new WorkflowChecklistItem
+            {
+                Text = item.Text.Trim(),
+                IsDone = item.IsDone
+            }));
+    }
+
     private static void EnsureUniqueNodeIds(IEnumerable<WorkflowDiagramNode> nodes)
     {
         var used = new HashSet<string>(StringComparer.Ordinal);
@@ -241,6 +258,18 @@ public sealed class WorkflowService
 
             if (string.IsNullOrWhiteSpace(node.Title))
                 node.Title = WorkflowDiagramNode.DefaultTitleForKind(node.Kind);
+        }
+    }
+
+    private static void NormalizeNodeContent(IEnumerable<WorkflowDiagramNode> nodes)
+    {
+        foreach (var node in nodes)
+        {
+            node.Description = node.Description;
+            node.Goal = node.Goal;
+            node.Instructions = node.Instructions;
+            node.ExpectedOutput = node.ExpectedOutput;
+            node.ChecklistItems = CopyChecklistItems(node.ChecklistItems);
         }
     }
 

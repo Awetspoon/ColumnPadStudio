@@ -6,9 +6,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
 using System.Windows.Input;
-using System.Windows.Media;
 using System.Windows.Threading;
 using ColumnPadStudio.ViewModels;
 
@@ -84,6 +82,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         _appPreferences = AppPreferencesService.Load();
         ApplyTheme(_appPreferences.ThemePreset);
         WorkspaceRenameMenuItem.Click += WorkspaceRename_Click;
+        WorkspaceAddMenuItem.Click += WorkspaceAdd_Click;
         WorkspaceTabs.PreviewMouseRightButtonDown += WorkspaceTabs_PreviewMouseRightButtonDown;
 
         if (!TryOfferAutoRecovery())
@@ -225,6 +224,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         editor.ResetWidthRequested += (_, __) => RunColumnAction(vm, column, vm.ResetActiveColumnWidth);
         editor.ResetAllWidthsRequested += (_, __) => RunColumnAction(vm, column, vm.ResetAllColumnWidths);
         editor.ResizeRequested += (_, __) => RunColumnAction(vm, column, ResizeActiveColumn);
+        editor.RightEdgeResizeDeltaRequested += (_, args) => ResizeColumnFromRightEdge(editor, vm, column, args.HorizontalChange);
         editor.SetFontFamilyRequested += (_, __) => RunColumnAction(vm, column, SetActiveColumnFontFamily);
         editor.IncreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(+1));
         editor.DecreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(-1));
@@ -233,8 +233,30 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         editor.ResetFontRequested += (_, __) => RunColumnAction(vm, column, ResetActiveColumnFont);
     }
 
-    private void Splitter_DragDelta(object? sender, DragDeltaEventArgs e) => PersistWidthsFromGrid();
-    private void Splitter_DragCompleted(object? sender, DragCompletedEventArgs e) => PersistWidthsFromGrid();
+    private void ResizeColumnFromRightEdge(ColumnEditorControl editor, MainViewModel vm, ColumnViewModel column, double horizontalChange)
+    {
+        if (column.IsWidthLocked || Math.Abs(horizontalChange) < 0.1)
+            return;
+
+        var gridCol = Grid.GetColumn(editor);
+        if (gridCol < 0 || gridCol >= ColumnsHost.ColumnDefinitions.Count)
+            return;
+
+        var columnDefinition = ColumnsHost.ColumnDefinitions[gridCol];
+        var currentWidth = columnDefinition.ActualWidth > 0
+            ? columnDefinition.ActualWidth
+            : column.WidthPx ?? DefaultColumnWidthPx;
+
+        var nextWidth = Math.Clamp(currentWidth + horizontalChange, 220.0, 5000.0);
+        columnDefinition.Width = new GridLength(nextWidth, GridUnitType.Pixel);
+        column.WidthPx = (int)Math.Round(nextWidth);
+
+        if (!string.Equals(vm.ActiveColumnId, column.Id, StringComparison.Ordinal))
+            vm.ActiveColumnId = column.Id;
+
+        vm.StatusText = $"Set {column.Title} width to {column.WidthPx}px.";
+    }
+
     private void RebuildColumns()
     {
         var vm = ActiveVm;
@@ -247,8 +269,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         ColumnsHost.ColumnDefinitions.Clear();
         ColumnsHost.Children.Clear();
         _editorsById.Clear();
-
-        var gridCol = 0;
 
         for (var i = 0; i < vm.Columns.Count; i++)
         {
@@ -278,41 +298,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             _editorsById[colVm.Id] = editor;
 
-            Grid.SetColumn(editor, gridCol);
+            Grid.SetColumn(editor, i);
             ColumnsHost.Children.Add(editor);
-            gridCol++;
-
-            if (i < vm.Columns.Count - 1)
-            {
-                var leftColumn = vm.Columns[i];
-                var rightColumn = vm.Columns[i + 1];
-                var locked = leftColumn.IsWidthLocked || rightColumn.IsWidthLocked;
-
-                ColumnsHost.ColumnDefinitions.Add(new ColumnDefinition
-                {
-                    Width = new GridLength(10),
-                    MinWidth = 6
-                });
-
-                var splitter = new GridSplitter
-                {
-                    Width = 10,
-                    HorizontalAlignment = HorizontalAlignment.Stretch,
-                    VerticalAlignment = VerticalAlignment.Stretch,
-                    Background = Brushes.Transparent,
-                    ShowsPreview = true,
-                    IsEnabled = !locked,
-                    Opacity = locked ? 0.35 : 1.0,
-                    Cursor = locked ? Cursors.Arrow : Cursors.SizeWE
-                };
-
-                splitter.DragDelta += Splitter_DragDelta;
-                splitter.DragCompleted += Splitter_DragCompleted;
-
-                Grid.SetColumn(splitter, gridCol);
-                ColumnsHost.Children.Add(splitter);
-                gridCol++;
-            }
         }
     }
 
@@ -333,19 +320,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             return;
         }
 
-        var editorIndex = 0;
-
-        for (var gridCol = 0; gridCol < ColumnsHost.ColumnDefinitions.Count; gridCol += 2)
+        for (var columnIndex = 0; columnIndex < ColumnsHost.ColumnDefinitions.Count; columnIndex++)
         {
-            if (editorIndex >= vm.Columns.Count)
+            if (columnIndex >= vm.Columns.Count)
                 break;
 
-            var def = ColumnsHost.ColumnDefinitions[gridCol];
+            var def = ColumnsHost.ColumnDefinitions[columnIndex];
             var px = (int)Math.Round(def.ActualWidth);
             if (px > 0)
-                vm.Columns[editorIndex].WidthPx = px;
-
-            editorIndex++;
+                vm.Columns[columnIndex].WidthPx = px;
         }
     }
 }

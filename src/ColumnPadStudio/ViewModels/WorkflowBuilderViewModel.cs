@@ -32,6 +32,7 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
 
     public IReadOnlyList<WorkflowTriggerType> TriggerTypes { get; } = Enum.GetValues<WorkflowTriggerType>();
     public IReadOnlyList<WorkflowNodeKind> NodeKinds { get; } = Enum.GetValues<WorkflowNodeKind>();
+    public IReadOnlyList<WorkflowNodeColor> NodeColors { get; } = Enum.GetValues<WorkflowNodeColor>();
 
     public WorkflowDefinition? SelectedWorkflow
     {
@@ -118,6 +119,8 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
     public bool HasSelectedLink => SelectedLink is not null;
     public bool HasSelectedTemplate => SelectedTemplate is not null;
     public bool CanCreateLink => SelectedWorkflow is { Nodes.Count: >= 2 };
+    public double DiagramCanvasWidth => CalculateDiagramCanvasWidth();
+    public double DiagramCanvasHeight => CalculateDiagramCanvasHeight();
 
     public string SelectedWorkflowFileLabel
     {
@@ -140,5 +143,22 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
     {
         _workflowService = workflowService;
     }
-}
 
+    private double CalculateDiagramCanvasWidth()
+    {
+        var workflow = SelectedWorkflow;
+        if (workflow is null || workflow.Nodes.Count == 0)
+            return 980;
+
+        return Math.Max(980, workflow.Nodes.Max(node => node.X + node.Width) + 96);
+    }
+
+    private double CalculateDiagramCanvasHeight()
+    {
+        var workflow = SelectedWorkflow;
+        if (workflow is null || workflow.Nodes.Count == 0)
+            return 620;
+
+        return Math.Max(620, workflow.Nodes.Max(node => node.Y + node.Height) + 96);
+    }
+}

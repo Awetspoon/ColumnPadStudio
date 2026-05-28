@@ -3,5 +3,6 @@
     <ResourceDictionary.MergedDictionaries>
         <ResourceDictionary Source="ThemeBrushes.xaml"/>
         <ResourceDictionary Source="ControlStyles.xaml"/>
+        <ResourceDictionary Source="MenuStyles.xaml"/>
     </ResourceDictionary.MergedDictionaries>
 </ResourceDictionary>

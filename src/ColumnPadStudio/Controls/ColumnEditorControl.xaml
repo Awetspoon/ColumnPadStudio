@@ -3,23 +3,23 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
              MinWidth="220"
-             Foreground="{DynamicResource ControlForegroundBrush}">
-    <Border>
-        <Border.Style>
-            <Style TargetType="Border">
-                <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
-                <Setter Property="BorderThickness" Value="0,0,1,0"/>
-                <Style.Triggers>
-                    <DataTrigger Binding="{Binding IsActive}" Value="True">
-                        <Setter Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
-                    </DataTrigger>
-                </Style.Triggers>
-            </Style>
-        </Border.Style>
-        <DockPanel>
+             Foreground="{DynamicResource ControlForegroundBrush}"
+             UseLayoutRounding="True"
+             SnapsToDevicePixels="True">
+    <Grid>
+        <Border Background="{DynamicResource EditorBackgroundBrush}"
+                SnapsToDevicePixels="True">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+                    <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                </Style>
+            </Border.Style>
+            <DockPanel>
             <Border x:Name="HeaderGrip"
                     DockPanel.Dock="Top"
-                    Padding="6,5">
+                    Padding="6,4"
+                    SnapsToDevicePixels="True">
                 <Border.Style>
                     <Style TargetType="Border">
                         <Setter Property="Background" Value="{DynamicResource ColumnHeaderBackgroundBrush}"/>
@@ -28,13 +28,13 @@
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding IsActive}" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource ColumnSelectedHeaderBackgroundBrush}"/>
-                                <Setter Property="BorderBrush" Value="{DynamicResource ControlFocusBorderBrush}"/>
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
                 <Border.ContextMenu>
-                    <ContextMenu Opened="ColumnContextMenu_Opened">
+                    <ContextMenu Opened="ColumnContextMenu_Opened"
+                                 Placement="Bottom">
                         <MenuItem Header="Rename Column" Click="ColumnMenuRename_Click"/>
                         <MenuItem Header="Delete Column" Click="ColumnMenuDelete_Click"/>
                         <MenuItem Header="Swap with Column on Left"
@@ -97,13 +97,13 @@
                                 </Style.Triggers>
                             </Style>
                         </StackPanel.Style>
-                        <Button Padding="8,2"
+                        <Button Style="{StaticResource CompactButtonStyle}"
                                 Margin="0,0,4,0"
                                 Click="ColumnMenuMoveLeft_Click"
                                 Content="Swap Left"
                                 ToolTip="Swap this column with the column on the left."
                                 IsEnabled="{Binding CanMoveLeft}"/>
-                        <Button Padding="8,2"
+                        <Button Style="{StaticResource CompactButtonStyle}"
                                 Click="ColumnMenuMoveRight_Click"
                                 Content="Swap Right"
                                 ToolTip="Swap this column with the column on the right."
@@ -112,7 +112,8 @@
                 </Grid>
             </Border>
 
-            <Grid>
+            <Grid Background="{DynamicResource EditorBackgroundBrush}"
+                  SnapsToDevicePixels="True">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{Binding LineNumberColumnWidth}"/>
                     <ColumnDefinition Width="*"/>
@@ -121,6 +122,7 @@
                 <Border Grid.Column="0"
                         BorderBrush="{DynamicResource ControlBorderBrush}"
                         BorderThickness="0,0,1,0"
+                        SnapsToDevicePixels="True"
                         Visibility="{Binding ShowLineNumbersVisibility}">
                     <Border.Style>
                         <Style TargetType="Border">
@@ -146,7 +148,7 @@
                              FontFamily="{Binding EditorFontFamily}"
                              FontSize="{Binding LineNumberFontSize}"
                              Foreground="{DynamicResource LineNumberForegroundBrush}"
-                             Padding="8,0,6,0"
+                             Padding="6,0,5,0"
                              TextAlignment="Right"
                              TextWrapping="NoWrap"
                              VerticalContentAlignment="Top"
@@ -190,6 +192,7 @@
                          VerticalScrollBarVisibility="Auto"
                          AcceptsReturn="True"
                          AcceptsTab="True"
+                         BorderThickness="0"
                          Padding="8,0,8,0"
                          TextOptions.TextFormattingMode="Display"
                          SpellCheck.IsEnabled="{Binding DataContext.ActiveVm.SpellCheckEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
@@ -245,8 +248,44 @@
                     </TextBox.ContextMenu>
                 </TextBox>
             </Grid>
-        </DockPanel>
-    </Border>
+            </DockPanel>
+        </Border>
+
+        <Thumb x:Name="RightEdgeResizeThumb"
+               Width="6"
+               HorizontalAlignment="Right"
+               VerticalAlignment="Stretch"
+               Cursor="SizeWE"
+               Focusable="False"
+               DragDelta="RightEdgeResizeThumb_DragDelta"
+               Panel.ZIndex="10">
+            <Thumb.Style>
+                <Style TargetType="{x:Type Thumb}">
+                    <Setter Property="Visibility" Value="Collapsed"/>
+                    <Setter Property="Opacity" Value="1"/>
+                    <Setter Property="IsEnabled" Value="True"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="{x:Type Thumb}">
+                                <Border Background="Transparent"
+                                        SnapsToDevicePixels="True"/>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsStandaloneDocument}" Value="False">
+                            <Setter Property="Visibility" Value="Visible"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsWidthLocked}" Value="True">
+                            <Setter Property="IsEnabled" Value="False"/>
+                            <Setter Property="Opacity" Value="0.35"/>
+                            <Setter Property="Cursor" Value="Arrow"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Thumb.Style>
+        </Thumb>
+    </Grid>
 </UserControl>
 
 

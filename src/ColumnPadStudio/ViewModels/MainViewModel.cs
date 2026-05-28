@@ -79,6 +79,10 @@ public sealed partial class MainViewModel : NotifyBase
 
     public bool CanMoveActiveColumnLeft => CanMoveActiveColumn(-1);
     public bool CanMoveActiveColumnRight => CanMoveActiveColumn(+1);
+    public bool IsDefaultThemeSelected => string.Equals(ThemePreset, ThemePresetService.DefaultPreset, StringComparison.Ordinal);
+    public bool IsLightThemeSelected => string.Equals(ThemePreset, ThemePresetService.LightPreset, StringComparison.Ordinal);
+    public bool IsDarkThemeSelected => string.Equals(ThemePreset, ThemePresetService.DarkPreset, StringComparison.Ordinal);
+    public string EditorFontSummary => $"{EditorFontFamily} {EditorFontStyleName} {EditorFontSize:0}";
 
     public bool ShowLineNumbers
     {
@@ -113,6 +117,7 @@ public sealed partial class MainViewModel : NotifyBase
             UpdateFontFaceOptionsForFamily(next, _editorFontStyleName);
             ApplyEditorFontToColumns();
             RefreshStatus();
+            NotifyEditorFontSummaryChanged();
         }
     }
 
@@ -130,6 +135,7 @@ public sealed partial class MainViewModel : NotifyBase
 
             ApplyEditorFontToColumns();
             RefreshStatus();
+            NotifyEditorFontSummaryChanged();
         }
     }
 
@@ -143,6 +149,7 @@ public sealed partial class MainViewModel : NotifyBase
 
             ApplyEditorFontToColumns();
             RefreshStatus();
+            NotifyEditorFontSummaryChanged();
         }
     }
 
@@ -153,7 +160,11 @@ public sealed partial class MainViewModel : NotifyBase
         {
             var normalized = ThemePresetService.Normalize(value);
             var next = ThemePresets.Contains(normalized) ? normalized : ThemePresets[0];
+            var previous = _themePreset;
             Set(ref _themePreset, next);
+            if (!string.Equals(previous, next, StringComparison.Ordinal))
+                NotifyThemeSelectionPropertiesChanged();
+
             RefreshStatus();
         }
     }
@@ -263,6 +274,18 @@ public sealed partial class MainViewModel : NotifyBase
             c.EditorFontStyle = _editorFontStyle;
             c.EditorFontWeight = _editorFontWeight;
         }
+    }
+
+    private void NotifyThemeSelectionPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(IsDefaultThemeSelected));
+        OnPropertyChanged(nameof(IsLightThemeSelected));
+        OnPropertyChanged(nameof(IsDarkThemeSelected));
+    }
+
+    private void NotifyEditorFontSummaryChanged()
+    {
+        OnPropertyChanged(nameof(EditorFontSummary));
     }
 
     public void RefreshStatus()

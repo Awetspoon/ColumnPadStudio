@@ -10,7 +10,7 @@ Use this before calling a build visually ready. The goal is to catch the rough e
 
 ## Themes
 - Switch to Default Mode, Light Mode, and Dark Mode.
-- In each theme, check menus, toolbar controls, tabs, dialogs, column headers, editor text, gutters, and workflow builder panels.
+- In each theme, check menus, the writing-options strip, tabs, dialogs, column headers, editor text, gutters, and workflow builder panels.
 - Open right-click menus on column headers, editor text, line gutters, workspace tabs, and workflow nodes.
 - Hover every nested menu item and confirm the text remains readable, including submenu headers while the submenu is open.
 - Check that menu hover states use the app theme colour rather than a mismatched Windows-default highlight.
@@ -28,7 +28,7 @@ Use this before calling a build visually ready. The goal is to catch the rough e
 - Add, remove, duplicate, and swap columns.
 - Try deleting a column with text and confirm the warning is clear.
 - Try clearing all columns and confirm the destructive warning appears.
-- Drag splitters and confirm locked columns cannot be resized.
+- Drag column right edges and confirm locked columns cannot be resized.
 - Switch between Single Text Mode and Column Mode.
 
 ## Files

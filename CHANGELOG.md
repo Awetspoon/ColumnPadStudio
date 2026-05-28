@@ -4,6 +4,19 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+### Changed
+- Reworked Workflow Builder into a canvas-first layout with workflow starters, a saved-workflow library, node palette, and focused inspector.
+- Expanded workflow starters with more ColumnPad-native writing, research, release, meeting, and decision workflows.
+- Reduced the main toolbar into a smaller writing-options strip for spell check, language, and lined paper.
+- Moved editor font and theme controls into the View menu so the top UI has one clearer command structure.
+- Split editor interaction code into focused keyboard, gutter, menu, and paste partial files.
+- Split shared menu and context-menu styling into its own resource dictionary.
+- Updated docs to match the current invisible right-edge column resize behavior.
+
+### Fixed
+- Fixed Markdown editorconfig line endings to match repository attributes.
+- Fixed dark-mode lined paper so the editor paper background follows the selected theme.
+
 ## [v2.1.0] - 2026-05-24
 
 ### Added
@@ -180,5 +193,4 @@ All notable changes to this project are documented in this file.
 - Consolidated dark-theme control foreground and background bindings so toolbar, menu, tab, and button text remains readable in dark mode.
 - Kept backward compatibility for legacy theme names (`Notepad Classic`, `High Contrast`, `Compact`) while using current names (`Light Mode`, `Dark Mode`, `Default Mode`).
 - Improved list handling for indented lines when toggling bullets or checklists and continuing lists on Enter.
-
 

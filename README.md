@@ -14,7 +14,7 @@ ColumnPad is a Windows desktop writing app for working in side-by-side text colu
 - Includes a workflow builder for diagramming repeatable processes without relying on paid online workflow tools.
 
 ## Core Features
-- Multi-column writing with drag-resize splitters.
+- Multi-column writing with invisible right-edge resize handles.
 - Workspace tabs for separate writing sessions.
 - Single-text mode and column mode switching.
 - Direct open/save for text and markdown documents.
@@ -65,7 +65,7 @@ The app does not use a heavy dependency injection container. Startup is delibera
 - `src/ColumnPadStudio/Services/`
   Focused helpers for file workflow, recovery storage, theme resource updates, app preferences, text search, and workflow storage.
 - `src/ColumnPadStudio/Resources/`
-  Shared WPF resources loaded by `App.xaml`. `ThemeBrushes.xaml` owns theme colours and shared geometry. `ControlStyles.xaml` owns reusable WPF control templates and hover/open states.
+  Shared WPF resources loaded by `App.xaml`. `ThemeBrushes.xaml` owns theme colours and shared geometry. `ControlStyles.xaml` owns reusable WPF control templates. `MenuStyles.xaml` owns shared menu and right-click dropdown styling.
 
 More structure detail: [`docs/REPOSITORY_STRUCTURE.md`](docs/REPOSITORY_STRUCTURE.md)
 Manual visual QA checklist: [`docs/UI_QA_CHECKLIST.md`](docs/UI_QA_CHECKLIST.md)

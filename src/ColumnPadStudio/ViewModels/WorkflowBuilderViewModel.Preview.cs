@@ -88,6 +88,7 @@ public sealed partial class WorkflowBuilderViewModel
         }
 
         OnPropertyChanged(nameof(CanCreateLink));
+        NotifyDiagramCanvasSizeChanged();
         RefreshLinkPreviews();
     }
 
@@ -110,7 +111,14 @@ public sealed partial class WorkflowBuilderViewModel
 
     private void WorkflowNode_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(WorkflowDiagramNode.X) or nameof(WorkflowDiagramNode.Y) or nameof(WorkflowDiagramNode.Width) or nameof(WorkflowDiagramNode.Height) or nameof(WorkflowDiagramNode.Title))
+        if (e.PropertyName is nameof(WorkflowDiagramNode.X) or nameof(WorkflowDiagramNode.Y) or nameof(WorkflowDiagramNode.Width) or nameof(WorkflowDiagramNode.Height))
+        {
+            NotifyDiagramCanvasSizeChanged();
+            RefreshLinkPreviews();
+            return;
+        }
+
+        if (e.PropertyName == nameof(WorkflowDiagramNode.Title))
             RefreshLinkPreviews();
     }
 
@@ -118,5 +126,11 @@ public sealed partial class WorkflowBuilderViewModel
     {
         if (e.PropertyName is nameof(WorkflowDiagramLink.FromNodeId) or nameof(WorkflowDiagramLink.ToNodeId) or nameof(WorkflowDiagramLink.Label))
             RefreshLinkPreviews();
+    }
+
+    private void NotifyDiagramCanvasSizeChanged()
+    {
+        OnPropertyChanged(nameof(DiagramCanvasWidth));
+        OnPropertyChanged(nameof(DiagramCanvasHeight));
     }
 }

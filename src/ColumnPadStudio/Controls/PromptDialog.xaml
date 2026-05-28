@@ -9,7 +9,15 @@
             Background="{DynamicResource WindowBackgroundBrush}">
         <StackPanel Width="420">
             <TextBlock Text="{Binding Message}" Margin="0,0,0,10" TextWrapping="Wrap"/>
-            <TextBox Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,12"/>
+            <TextBox x:Name="InputTextBox"
+                     Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}"
+                     Margin="0,0,0,12"/>
+            <ComboBox x:Name="InputComboBox"
+                      Visibility="Collapsed"
+                      IsTextSearchEnabled="True"
+                      MaxDropDownHeight="320"
+                      SelectedItem="{Binding InputText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                      Margin="0,0,0,12"/>
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button Content="Cancel" Width="90" Margin="0,0,8,0" IsCancel="True"/>
                 <Button Content="OK" Width="90" IsDefault="True" Click="Ok_Click"/>

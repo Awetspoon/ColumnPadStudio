@@ -6,13 +6,6 @@ using ColumnPadStudio.Domain.Lists;
 
 namespace ColumnPadStudio.ViewModels;
 
-public enum PasteListPreset
-{
-    None,
-    Bullets,
-    Checklist
-}
-
 public enum LineMarkerMode
 {
     Numbers,
@@ -22,6 +15,8 @@ public enum LineMarkerMode
 
 public sealed class ColumnViewModel : NotifyBase
 {
+    public const double VisibleLineNumberColumnWidth = 46.0;
+
     private string _title = "Column";
     private string _text = "";
     private int? _widthPx;
@@ -194,7 +189,7 @@ public sealed class ColumnViewModel : NotifyBase
     }
 
     public Visibility ShowLineNumbersVisibility => ShowLineNumbers ? Visibility.Visible : Visibility.Collapsed;
-    public GridLength LineNumberColumnWidth => ShowLineNumbers ? new GridLength(56) : new GridLength(0);
+    public GridLength LineNumberColumnWidth => ShowLineNumbers ? new GridLength(VisibleLineNumberColumnWidth) : new GridLength(0);
     public TextWrapping TextWrappingMode => WordWrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
     public ScrollBarVisibility HorizontalScrollBarMode => WordWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 

@@ -3,6 +3,11 @@ using System.Windows.Controls;
 
 namespace ColumnPadStudio.Controls;
 
+public sealed class ColumnResizeDeltaEventArgs(double horizontalChange) : EventArgs
+{
+    public double HorizontalChange { get; } = horizontalChange;
+}
+
 public partial class ColumnEditorControl : UserControl
 {
     public event EventHandler? EditorFocused;
@@ -13,6 +18,7 @@ public partial class ColumnEditorControl : UserControl
     public event EventHandler? ResetWidthRequested;
     public event EventHandler? ResetAllWidthsRequested;
     public event EventHandler? ResizeRequested;
+    public event EventHandler<ColumnResizeDeltaEventArgs>? RightEdgeResizeDeltaRequested;
     public event EventHandler? SetFontFamilyRequested;
     public event EventHandler? IncreaseFontRequested;
     public event EventHandler? DecreaseFontRequested;

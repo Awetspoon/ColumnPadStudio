@@ -1,5 +1,8 @@
+using ColumnPadStudio.Domain.Lists;
 using ColumnPadStudio.ViewModels;
 using ColumnPadStudio.Services;
+using ColumnPadStudio.Controls;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Windows;
 using System.Text.Json;
@@ -22,6 +25,10 @@ void Check(bool condition, string message)
 var vm = new MainViewModel();
 
 Check(vm.ThemePreset == "Default Mode", "Default theme should be 'Default Mode'.");
+Check(vm.IsDefaultThemeSelected && !vm.IsLightThemeSelected && !vm.IsDarkThemeSelected, "Default theme menu state should match the default preset.");
+Check(
+    vm.EditorFontSummary == $"{vm.EditorFontFamily} {vm.EditorFontStyleName} {vm.EditorFontSize:0}",
+    "Editor font summary should reflect the active global editor font settings.");
 Check(vm.Columns.Count == 3, "Default layout should start with 3 columns.");
 Check(vm.StatusText.Contains("Selected:"), "Status text should identify the selected column.");
 Check(!vm.IsDirty, "New layout should start clean.");
@@ -37,7 +44,7 @@ Thread resourceLoadThread = new(() =>
             Source = new Uri("pack://application:,,,/ColumnPadStudio;component/Resources/AppResources.xaml", UriKind.Absolute)
         };
 
-        Check(resources.MergedDictionaries.Count == 2, "App resources should stay split into theme brushes and control styles.");
+        Check(resources.MergedDictionaries.Count == 3, "App resources should stay split into theme brushes, control styles, and menu styles.");
         Check(resources["ControlPopupHighlightBrush"] is not null, "Theme brush resources should load from the app resource index.");
         Check(resources[typeof(MenuItem)] is Style, "Shared menu item style should load from the app resource index.");
         Check(resources[typeof(Button)] is Style, "Shared button style should load from the app resource index.");
@@ -54,6 +61,11 @@ Thread resourceLoadThread = new(() =>
         styledTextBox.Style = (Style)resources[typeof(TextBox)];
         styledTextBox.ApplyTemplate();
         Check(styledTextBox.Template is not null, "Shared textbox style should apply without missing resource errors.");
+
+        var workflowBuilderWindow = new WorkflowBuilderWindow();
+        workflowBuilderWindow.ApplyTemplate();
+        Check(workflowBuilderWindow.ViewModel is not null, "Workflow Builder window should initialize its view model.");
+        workflowBuilderWindow.Close();
 
         var nestedMenu = new MenuItem { Header = "Column colour" };
         nestedMenu.Style = (Style)resources[typeof(MenuItem)];
@@ -110,6 +122,7 @@ Check(vm.StatusText.Contains("first column"), "MoveActiveColumnLeft should expla
 
 vm.ThemePreset = "High Contrast";
 Check(vm.ThemePreset == "Dark Mode", "Legacy theme 'High Contrast' should normalize to 'Dark Mode'.");
+Check(vm.IsDarkThemeSelected && !vm.IsDefaultThemeSelected && !vm.IsLightThemeSelected, "Theme menu state should follow normalized dark mode.");
 Check(vm.LockActiveWidthActionLabel == "_Freeze Selected Column Width", "Unlocked selected column should advertise the freeze-width action.");
 vm.ToggleLockActiveWidth();
 Check(vm.LockActiveWidthActionLabel == "_Allow Selected Column Width to Resize", "Locked selected column should advertise the allow-resize action.");
@@ -175,14 +188,66 @@ File.Delete(preferencesPath);
 
 var workflowTemp = Path.Combine(Path.GetTempPath(), $"columnpad-workflows-{Guid.NewGuid():N}");
 var workflowService = new WorkflowService(workflowTemp);
+var emptyWorkflowVm = new WorkflowBuilderViewModel(workflowService);
+emptyWorkflowVm.Load();
+Check(emptyWorkflowVm.Workflows.Count == 1, "Workflow Builder should create one workflow when no saved workflows exist.");
+Check(WorkflowTemplateCatalog.Templates.Count >= 10, "Workflow starter catalog should provide multiple practical starters.");
+var essayStarter = WorkflowTemplateCatalog.Templates.FirstOrDefault(template => template.Id == "essay-plan");
+Check(essayStarter is not null, "Workflow starter catalog should include an essay planning starter.");
+if (essayStarter is not null)
+{
+    var essayWorkflow = essayStarter.CreateWorkflowInstance("Essay Plan Copy");
+    Check(essayWorkflow.Name == "Essay Plan Copy", "Workflow starter instances should allow a custom workflow name.");
+    Check(essayWorkflow.Nodes.Count >= 5, "Workflow starter instances should create a useful editable diagram.");
+    Check(essayWorkflow.Links.Count > 0, "Workflow starter instances should create connections between starter nodes.");
+    var thesisNode = essayWorkflow.Nodes.FirstOrDefault(node => node.Title == "Define thesis");
+    Check(!string.IsNullOrWhiteSpace(thesisNode?.Goal), "Workflow starter nodes should include a real goal, not just a box title.");
+    Check(thesisNode?.ChecklistItems.Count >= 2, "Workflow starter nodes should include useful checklist data.");
+}
+
+var workflowBuilderVm = new WorkflowBuilderViewModel(workflowService);
+workflowBuilderVm.AddWorkflow();
+workflowBuilderVm.AddNode(WorkflowNodeKind.Decision);
+Check(workflowBuilderVm.SelectedNode?.Kind == WorkflowNodeKind.Decision, "Workflow builder palette should add the requested node kind.");
+workflowBuilderVm.SelectedNode!.X = 1260;
+workflowBuilderVm.SelectedNode.Width = 220;
+Check(workflowBuilderVm.DiagramCanvasWidth >= 1576, "Workflow builder canvas should expand to include far-right nodes.");
+workflowBuilderVm.SelectedNode.Y = 780;
+workflowBuilderVm.SelectedNode.Height = 120;
+Check(workflowBuilderVm.DiagramCanvasHeight >= 996, "Workflow builder canvas should expand to include lower nodes.");
+
 var workflowDefinition = new WorkflowDefinition { Name = "Colour test" };
-workflowDefinition.Nodes.Add(new WorkflowDiagramNode { Id = "start", Kind = WorkflowNodeKind.Start, Title = "Start", Color = WorkflowNodeColor.Rose });
+workflowDefinition.Nodes.Add(new WorkflowDiagramNode
+{
+    Id = "start",
+    Kind = WorkflowNodeKind.Start,
+    Title = "Start",
+    Color = WorkflowNodeColor.Rose,
+    Goal = "Round-trip goal",
+    Instructions = "Round-trip instructions",
+    ExpectedOutput = "Round-trip output",
+    ChecklistItems = new ObservableCollection<WorkflowChecklistItem>
+    {
+        new() { Text = "First check" },
+        new() { Text = "Done check", IsDone = true }
+    }
+});
 workflowDefinition.Nodes.Add(new WorkflowDiagramNode { Id = "end", Kind = WorkflowNodeKind.End, Title = "End", Color = WorkflowNodeColor.Green });
 workflowDefinition.Links.Add(new WorkflowDiagramLink { FromNodeId = "start", ToNodeId = "end" });
 workflowService.Save(workflowDefinition);
 Check(!string.IsNullOrWhiteSpace(workflowDefinition.FilePath), "Workflow save should assign a file path.");
 Check(workflowService.TryLoad(workflowDefinition.FilePath!, out var loadedWorkflow), "Workflow service should reload saved workflow JSON.");
+Check(loadedWorkflow.SchemaVersion >= 3, "Workflow service should normalize saved workflows to the current schema.");
 Check(loadedWorkflow.Nodes[0].Color == WorkflowNodeColor.Rose, "Workflow node colour should persist through JSON save/load.");
+Check(loadedWorkflow.Nodes[0].Goal == "Round-trip goal", "Workflow node goal should persist through JSON save/load.");
+Check(loadedWorkflow.Nodes[0].Instructions == "Round-trip instructions", "Workflow node instructions should persist through JSON save/load.");
+Check(loadedWorkflow.Nodes[0].ExpectedOutput == "Round-trip output", "Workflow node expected output should persist through JSON save/load.");
+Check(loadedWorkflow.Nodes[0].ChecklistItems.Count == 2 && loadedWorkflow.Nodes[0].ChecklistItems[1].IsDone, "Workflow node checklist data should persist through JSON save/load.");
+var existingWorkflowVm = new WorkflowBuilderViewModel(workflowService);
+existingWorkflowVm.Load();
+var workflowCountBeforeAdd = existingWorkflowVm.Workflows.Count;
+existingWorkflowVm.AddWorkflow();
+Check(existingWorkflowVm.Workflows.Count == workflowCountBeforeAdd + 1, "Workflow Builder Add Workflow should add one workflow.");
 Directory.Delete(workflowTemp, recursive: true);
 
 
@@ -265,13 +330,13 @@ checklistModeMetrics.Text = "first\nsecond";
 Check(checklistModeMetrics.GetCheckedChecklistLineIndexes().Count == 0, "Checklist metadata should trim invalid checked indexes after line count shrinks.");
 
 var lineToggleVm = new MainViewModel();
-Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - 56) < 0.001), "Line-number gutter should default to visible width.");
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - ColumnViewModel.VisibleLineNumberColumnWidth) < 0.001), "Line-number gutter should default to visible width.");
 lineToggleVm.ShowLineNumbers = false;
 Check(lineToggleVm.Columns.All(c => c.ShowLineNumbersVisibility == Visibility.Collapsed), "Turning line numbers off should collapse line-number visibility for all columns.");
 Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value) < 0.001), "Turning line numbers off should collapse gutter width for all columns.");
 lineToggleVm.ShowLineNumbers = true;
 Check(lineToggleVm.Columns.All(c => c.ShowLineNumbersVisibility == Visibility.Visible), "Turning line numbers back on should restore line-number visibility for all columns.");
-Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - 56) < 0.001), "Turning line numbers back on should restore gutter width for all columns.");
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - ColumnViewModel.VisibleLineNumberColumnWidth) < 0.001), "Turning line numbers back on should restore gutter width for all columns.");
 
 var liveStatusVm = new MainViewModel();
 liveStatusVm.Columns[0].Title = "Inbox";
@@ -474,6 +539,28 @@ listModeVm.LineMarkerMode = LineMarkerMode.Checklist;
 listModeVm.ToggleChecklistLineChecked(0);
 Check(listModeVm.IsChecklistLineChecked(0), "Checklist gutter mode should toggle checks without inserting inline symbols.");
 Check(listModeVm.Text == "alpha\nbeta", "Checklist gutter mode should keep body text unchanged.");
+
+var expectedClipboardLines = string.Join(Environment.NewLine, "one", "two", "three");
+Check(
+    ClipboardTextService.NormalizeClipboardText("one\r\r\ntwo\u2028three") == expectedClipboardLines,
+    "Clipboard text normalization should collapse malformed CRCRLF and Unicode line separators.");
+
+var alternatingBlankPaste = "one\n\n two\n\nthree\n\nfour";
+Check(
+    ClipboardTextService.NormalizeClipboardText(alternatingBlankPaste) == string.Join(Environment.NewLine, "one", " two", "three", "four"),
+    "Clipboard text normalization should collapse alternating blank rows from malformed paste sources.");
+
+Check(
+    ClipboardTextService.ApplyPastePreset("alpha\n  beta", PasteListPreset.Bullets) == string.Join(Environment.NewLine, "- alpha", "  - beta"),
+    "Clipboard bullet preset should add markdown bullets while preserving indentation.");
+
+Check(
+    ClipboardTextService.ApplyPastePreset("- [x] done\nplain", PasteListPreset.Checklist) == string.Join(Environment.NewLine, "- [x] done", "- [ ] plain"),
+    "Clipboard checklist preset should preserve checked checklist rows and add unchecked markers to plain rows.");
+
+Check(
+    ClipboardTextService.ApplyPastePreset("1. ordered", PasteListPreset.Bullets) == "1. ordered",
+    "Clipboard paste presets should not rewrite ordered-list prefixes.");
 
 if (failures.Count > 0)
 {

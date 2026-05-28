@@ -20,23 +20,26 @@ public sealed partial class WorkflowBuilderViewModel
 
         if (Workflows.Count == 0)
         {
-            NewWorkflow();
-            StatusText = "No workflow files found yet. Created a new draft.";
+            AddWorkflow();
+            StatusText = "No workflow files found yet. Added a workflow.";
             return;
         }
 
         SelectedWorkflow = Workflows[0];
+
         StatusText = $"Loaded {Workflows.Count} workflow(s).";
     }
 
-    public void NewWorkflow()
+    public void AddWorkflow()
     {
         var workflow = WorkflowDefaults.CreateDefault(NextWorkflowName());
 
         Workflows.Add(workflow);
         SelectedWorkflow = workflow;
         SelectedNode = workflow.Nodes.FirstOrDefault(node => node.Kind == WorkflowNodeKind.Step);
-        StatusText = $"Created {workflow.Name}.";
+        OnPropertyChanged(nameof(DiagramCanvasWidth));
+        OnPropertyChanged(nameof(DiagramCanvasHeight));
+        StatusText = $"Added {workflow.Name}.";
     }
 
     public bool CreateWorkflowFromSelectedTemplate()
@@ -49,6 +52,8 @@ public sealed partial class WorkflowBuilderViewModel
         Workflows.Add(workflow);
         SelectedWorkflow = workflow;
         SelectedNode = workflow.Nodes.FirstOrDefault();
+        OnPropertyChanged(nameof(DiagramCanvasWidth));
+        OnPropertyChanged(nameof(DiagramCanvasHeight));
         StatusText = $"Created diagram from template: {template.Name}.";
         return true;
     }
@@ -67,6 +72,8 @@ public sealed partial class WorkflowBuilderViewModel
         Workflows.Add(draft);
         SelectedWorkflow = draft;
         SelectedNode = draft.Nodes.FirstOrDefault();
+        OnPropertyChanged(nameof(DiagramCanvasWidth));
+        OnPropertyChanged(nameof(DiagramCanvasHeight));
         StatusText = $"Imported workflow from {Path.GetFileName(filePath)}.";
         return true;
     }
@@ -105,7 +112,7 @@ public sealed partial class WorkflowBuilderViewModel
 
         if (Workflows.Count == 0)
         {
-            NewWorkflow();
+            AddWorkflow();
         }
         else
         {

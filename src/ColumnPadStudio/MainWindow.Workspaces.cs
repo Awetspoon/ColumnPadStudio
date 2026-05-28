@@ -11,6 +11,11 @@ public partial class MainWindow
 {
     private void NewWorkspaceTab_Click(object sender, RoutedEventArgs e)
     {
+        AddWorkspace();
+    }
+
+    private void AddWorkspace()
+    {
         var ws = CreateWorkspace(NextWorkspaceName());
         ActiveWorkspace = ws;
         WorkspaceTabs.SelectedItem = ws;
@@ -60,6 +65,11 @@ public partial class MainWindow
 
         ActiveWorkspace = ws;
         ws.IsRenaming = true;
+    }
+
+    private void WorkspaceAdd_Click(object sender, RoutedEventArgs e)
+    {
+        AddWorkspace();
     }
 
     private WorkspaceSession? ResolveWorkspaceFromSender(object sender)

@@ -57,12 +57,85 @@
                           IsCheckable="True"
                           IsChecked="{Binding ActiveVm.LinedPaperEnabled, Mode=TwoWay}"
                           InputGestureText="Alt+P"/>
+                <Separator/>
                 <MenuItem Header="_Single Text Mode" Click="SingleTextMode_Click" InputGestureText="Ctrl+Shift+1"/>
                 <MenuItem Header="_Column Mode" Click="ColumnMode_Click" InputGestureText="Ctrl+Shift+2"/>
                 <Separator/>
-                <MenuItem Header="_Light Mode" Click="ThemeClassic_Click"/>
-                <MenuItem Header="_Dark Mode" Click="ThemeHighContrast_Click"/>
-                <MenuItem Header="_Default Mode" Click="ThemeCompact_Click"/>
+                <MenuItem Header="_Editor Font"
+                          InputGestureText="{Binding ActiveVm.EditorFontSummary}">
+                    <MenuItem StaysOpenOnClick="True">
+                        <MenuItem.Header>
+                            <Grid Width="278">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="68"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Family:" Style="{StaticResource WritingOptionLabelTextStyle}"/>
+                                <ComboBox Grid.Column="1"
+                                          Width="190"
+                                          MaxDropDownHeight="320"
+                                          Style="{StaticResource CompactComboBoxStyle}"
+                                          PreviewKeyDown="SettingsComboBox_PreviewKeyDown"
+                                          IsTextSearchEnabled="True"
+                                          ItemsSource="{Binding ActiveVm.EditorFontFamilies}"
+                                          SelectedItem="{Binding ActiveVm.EditorFontFamily, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem StaysOpenOnClick="True">
+                        <MenuItem.Header>
+                            <Grid Width="278">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="68"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Style:" Style="{StaticResource WritingOptionLabelTextStyle}"/>
+                                <ComboBox Grid.Column="1"
+                                          Width="190"
+                                          MaxDropDownHeight="260"
+                                          Style="{StaticResource CompactComboBoxStyle}"
+                                          PreviewKeyDown="SettingsComboBox_PreviewKeyDown"
+                                          IsTextSearchEnabled="True"
+                                          ItemsSource="{Binding ActiveVm.EditorFontStyles}"
+                                          SelectedItem="{Binding ActiveVm.EditorFontStyleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <MenuItem StaysOpenOnClick="True">
+                        <MenuItem.Header>
+                            <Grid Width="278">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="68"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="Size:" Style="{StaticResource WritingOptionLabelTextStyle}"/>
+                                <ComboBox Grid.Column="1"
+                                          Width="72"
+                                          Style="{StaticResource CompactComboBoxStyle}"
+                                          PreviewKeyDown="SettingsComboBox_PreviewKeyDown"
+                                          ItemsSource="{Binding ActiveVm.EditorFontSizes}"
+                                          ItemStringFormat="F0"
+                                          SelectedItem="{Binding ActiveVm.EditorFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                        </MenuItem.Header>
+                    </MenuItem>
+                    <Separator/>
+                    <MenuItem Header="_Reset Default Font" Click="ResetEditorFont_Click"/>
+                </MenuItem>
+                <MenuItem Header="_Theme">
+                    <MenuItem Header="_Default Mode"
+                              IsCheckable="True"
+                              IsChecked="{Binding ActiveVm.IsDefaultThemeSelected, Mode=OneWay}"
+                              Click="ThemeCompact_Click"/>
+                    <MenuItem Header="_Light Mode"
+                              IsCheckable="True"
+                              IsChecked="{Binding ActiveVm.IsLightThemeSelected, Mode=OneWay}"
+                              Click="ThemeClassic_Click"/>
+                    <MenuItem Header="_Dark Mode"
+                              IsCheckable="True"
+                              IsChecked="{Binding ActiveVm.IsDarkThemeSelected, Mode=OneWay}"
+                              Click="ThemeHighContrast_Click"/>
+                </MenuItem>
             </MenuItem>
 
             <MenuItem Header="_Workflows">
@@ -92,83 +165,34 @@
         </Menu>
 
         <Border DockPanel.Dock="Top"
-                Background="{DynamicResource ToolbarBackgroundBrush}"
+                Background="{DynamicResource MenuBackgroundBrush}"
                 BorderBrush="{DynamicResource ControlBorderBrush}"
                 BorderThickness="0,0,0,1">
-            <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Disabled"
-                          Focusable="False">
-                <StackPanel Orientation="Horizontal" Margin="8,3">
-                    <TextBlock Text="Font:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <ComboBox Width="160"
-                              Margin="0,0,6,0"
-                              VerticalAlignment="Center"
-                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
-                              Foreground="{DynamicResource ControlForegroundBrush}"
-                              Background="{DynamicResource ControlBackgroundBrush}"
-                              BorderBrush="{DynamicResource ControlBorderBrush}"
-                              IsTextSearchEnabled="True"
-                              ItemsSource="{Binding ActiveVm.EditorFontFamilies}"
-                              SelectedItem="{Binding ActiveVm.EditorFontFamily, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="Style:" VerticalAlignment="Center" Margin="4,0,4,0"/>
-                    <ComboBox Width="128"
-                              Margin="0,0,6,0"
-                              VerticalAlignment="Center"
-                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
-                              Foreground="{DynamicResource ControlForegroundBrush}"
-                              Background="{DynamicResource ControlBackgroundBrush}"
-                              BorderBrush="{DynamicResource ControlBorderBrush}"
-                              IsTextSearchEnabled="True"
-                              ItemsSource="{Binding ActiveVm.EditorFontStyles}"
-                              SelectedItem="{Binding ActiveVm.EditorFontStyleName, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                    <TextBlock Text="Size:" VerticalAlignment="Center" Margin="4,0,4,0"/>
-                    <ComboBox Width="60"
-                              Margin="0,0,8,0"
-                              VerticalAlignment="Center"
-                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
-                              Foreground="{DynamicResource ControlForegroundBrush}"
-                              Background="{DynamicResource ControlBackgroundBrush}"
-                              BorderBrush="{DynamicResource ControlBorderBrush}"
-                              ItemsSource="{Binding ActiveVm.EditorFontSizes}"
-                              ItemStringFormat="F0"
-                              SelectedItem="{Binding ActiveVm.EditorFontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-
-                    <Border Width="1" Height="22" Margin="10,0" Background="{DynamicResource ControlBorderBrush}"/>
-                    <TextBlock Text="Theme:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <ComboBox Width="145"
-                              VerticalAlignment="Center"
-                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
-                              Foreground="{DynamicResource ControlForegroundBrush}"
-                              Background="{DynamicResource ControlBackgroundBrush}"
-                              BorderBrush="{DynamicResource ControlBorderBrush}"
-                              ItemsSource="{Binding ActiveVm.ThemePresets}"
-                              SelectedItem="{Binding ActiveVm.ThemePreset, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-
-                    <Border Width="1" Height="22" Margin="10,0" Background="{DynamicResource ControlBorderBrush}"/>
+            <Grid>
+                <StackPanel Orientation="Horizontal"
+                            Margin="10,4"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Left">
                     <CheckBox Content="Spell Check"
-                              VerticalAlignment="Center"
-                              Margin="0,0,8,0"
-                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Style="{StaticResource WritingOptionCheckBoxStyle}"
                               IsChecked="{Binding ActiveVm.SpellCheckEnabled, Mode=TwoWay}"/>
-                    <TextBlock Text="Language:" VerticalAlignment="Center" Margin="0,0,4,0"/>
-                    <ComboBox Width="210"
-                              VerticalAlignment="Center"
-                              PreviewKeyDown="ToolbarComboBox_PreviewKeyDown"
-                              Foreground="{DynamicResource ControlForegroundBrush}"
-                              Background="{DynamicResource ControlBackgroundBrush}"
-                              BorderBrush="{DynamicResource ControlBorderBrush}"
-                              IsTextSearchEnabled="True"
-                              ItemsSource="{Binding ActiveVm.EditorLanguages}"
-                              DisplayMemberPath="DisplayName"
-                              SelectedValuePath="Tag"
-                              SelectedValue="{Binding ActiveVm.EditorLanguageTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     <CheckBox Content="Lined Paper"
-                              VerticalAlignment="Center"
-                              Margin="8,0,0,0"
-                              Foreground="{DynamicResource ControlForegroundBrush}"
+                              Style="{StaticResource WritingOptionCheckBoxStyle}"
                               IsChecked="{Binding ActiveVm.LinedPaperEnabled, Mode=TwoWay}"/>
+                    <Border Style="{StaticResource WritingOptionDividerStyle}"/>
+                    <StackPanel Orientation="Horizontal" Margin="0,0,8,0" VerticalAlignment="Center">
+                        <TextBlock Text="Language:" Style="{StaticResource WritingOptionLabelTextStyle}"/>
+                        <ComboBox Width="226"
+                                  Style="{StaticResource CompactComboBoxStyle}"
+                                  PreviewKeyDown="SettingsComboBox_PreviewKeyDown"
+                                  IsTextSearchEnabled="True"
+                                  ItemsSource="{Binding ActiveVm.EditorLanguages}"
+                                  DisplayMemberPath="DisplayName"
+                                  SelectedValuePath="Tag"
+                                  SelectedValue="{Binding ActiveVm.EditorLanguageTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                    </StackPanel>
                 </StackPanel>
-            </ScrollViewer>
+            </Grid>
         </Border>
 
         <TabControl x:Name="WorkspaceTabs"
@@ -183,6 +207,7 @@
             <TabControl.ContextMenu>
                 <ContextMenu>
                     <MenuItem x:Name="WorkspaceRenameMenuItem" Header="Rename Workspace"/>
+                    <MenuItem x:Name="WorkspaceAddMenuItem" Header="Add Workspace"/>
                 </ContextMenu>
             </TabControl.ContextMenu>
             <TabControl.ItemTemplate>
