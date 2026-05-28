@@ -142,7 +142,8 @@ This creates a portable executable, not a signed installer. A public release sho
 - The repository currently publishes a portable `.exe`; a proper installer is a release-packaging task, not core app logic.
 
 ## Screenshot
-![ColumnPad application screenshot](docs/columnpad-screenshot.png)
+<img width="1527" height="954" alt="Screenshot 2026-05-28 214759" src="https://github.com/user-attachments/assets/a890e1db-9c52-4f8e-825b-453f2e445de3" />
+
 
 ## License
 MIT. See [LICENSE](LICENSE).
