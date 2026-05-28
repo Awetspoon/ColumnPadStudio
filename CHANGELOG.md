@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.2.0] - 2026-05-28
+
 ### Changed
 - Reworked Workflow Builder into a canvas-first layout with workflow starters, a saved-workflow library, node palette, and focused inspector.
 - Expanded workflow starters with more ColumnPad-native writing, research, release, meeting, and decision workflows.
