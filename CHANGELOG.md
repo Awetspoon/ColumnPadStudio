@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.2.1] - 2026-05-31
+
+### Changed
+- Reworked the editor line-number gutter from a second scrolling text box into a lightweight rendered gutter for smoother selection scrolling.
+- Renamed the writing-strip language control to `Proofing` so it describes spell-check/proofing language rather than translation.
+- Kept the existing proofing language range while adding clearer status/tooltip wording about Windows/WPF dictionary availability.
+- Updated README wording around ColumnPad's purpose, proofing, and single-exe releases.
+
+### Fixed
+- Restored spelling suggestions and `Ignore All` to the custom editor right-click menu.
+- Fixed line-count and checklist metadata handling for pasted or loaded text that contains standalone carriage returns.
+- Fixed gutter refresh/sync after font, wrap, style, load, paste, and line-number changes.
+- Improved inactive text-selection visibility while scrolling.
+
 ## [v2.2.0] - 2026-05-28
 
 ### Changed

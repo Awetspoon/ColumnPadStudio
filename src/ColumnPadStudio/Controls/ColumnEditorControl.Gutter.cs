@@ -10,7 +10,7 @@ public partial class ColumnEditorControl
     {
         EditorFocused?.Invoke(this, EventArgs.Empty);
 
-        var lineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumbers));
+        var lineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumberGutter));
         if (lineIndex < 0)
             return;
 
@@ -30,16 +30,17 @@ public partial class ColumnEditorControl
     private void LineNumbers_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
     {
         EditorFocused?.Invoke(this, EventArgs.Empty);
-        _gutterContextLineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumbers));
+        _gutterContextLineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumberGutter));
     }
 
     private int GetLineIndexFromGutterPoint(Point point)
     {
-        var charIndex = LineNumbers.GetCharacterIndexFromPoint(point, true);
-        if (charIndex < 0)
+        var lineHeight = VM?.EditorLineHeight ?? 23.0;
+        if (lineHeight <= 0)
             return -1;
 
-        var lineIndex = LineNumbers.GetLineIndexFromCharacterIndex(charIndex);
+        var verticalOffset = _editorScrollViewer?.VerticalOffset ?? 0;
+        var lineIndex = (int)Math.Floor((point.Y + verticalOffset) / lineHeight);
         if (lineIndex < 0)
             return -1;
 

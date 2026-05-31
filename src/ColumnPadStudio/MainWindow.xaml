@@ -181,10 +181,11 @@
                               IsChecked="{Binding ActiveVm.LinedPaperEnabled, Mode=TwoWay}"/>
                     <Border Style="{StaticResource WritingOptionDividerStyle}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,8,0" VerticalAlignment="Center">
-                        <TextBlock Text="Language:" Style="{StaticResource WritingOptionLabelTextStyle}"/>
+                        <TextBlock Text="Proofing:" Style="{StaticResource WritingOptionLabelTextStyle}"/>
                         <ComboBox Width="226"
                                   Style="{StaticResource CompactComboBoxStyle}"
                                   PreviewKeyDown="SettingsComboBox_PreviewKeyDown"
+                                  ToolTip="{Binding ActiveVm.ProofingLanguageHelpText}"
                                   IsTextSearchEnabled="True"
                                   ItemsSource="{Binding ActiveVm.EditorLanguages}"
                                   DisplayMemberPath="DisplayName"

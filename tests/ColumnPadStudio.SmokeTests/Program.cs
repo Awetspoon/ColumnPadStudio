@@ -29,6 +29,9 @@ Check(vm.IsDefaultThemeSelected && !vm.IsLightThemeSelected && !vm.IsDarkThemeSe
 Check(
     vm.EditorFontSummary == $"{vm.EditorFontFamily} {vm.EditorFontStyleName} {vm.EditorFontSize:0}",
     "Editor font summary should reflect the active global editor font settings.");
+Check(
+    vm.EditorLanguages.Select(language => language.Tag).SequenceEqual(["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "it-IT", "pt-BR", "pt-PT", "nl-NL", "sv-SE", "da-DK", "nb-NO"]),
+    "Proofing language list should keep the current supported app range.");
 Check(vm.Columns.Count == 3, "Default layout should start with 3 columns.");
 Check(vm.StatusText.Contains("Selected:"), "Status text should identify the selected column.");
 Check(!vm.IsDirty, "New layout should start clean.");
@@ -139,6 +142,8 @@ vm.Columns[0].EditorFontWeight = FontWeights.Bold;
 vm.Columns[0].UseDefaultFont = false;
 vm.SpellCheckEnabled = false;
 vm.EditorLanguageTag = "fr-FR";
+Check(vm.ProofingLanguageDisplayName.Contains("French", StringComparison.OrdinalIgnoreCase), "Proofing display name should describe the selected language.");
+Check(vm.StatusText.Contains("Proofing language:", StringComparison.Ordinal), "Changing proofing language should explain what changed.");
 vm.ActiveColumnId = vm.Columns[1].Id;
 Check(vm.IsDirty, "Changing the layout should mark the workspace dirty.");
 
@@ -308,6 +313,10 @@ var metrics = new ColumnViewModel
 };
 Check(metrics.ChecklistTotal == 4, "ChecklistTotal should count symbol and markdown checklist items.");
 Check(metrics.ChecklistDone == 2, "ChecklistDone should count checked symbol and markdown items.");
+
+var carriageReturnMetrics = new ColumnViewModel { Text = "first\rsecond\r\nthird\nfourth" };
+Check(carriageReturnMetrics.LineCount == 4, "Column metrics should count LF, CRLF, and standalone CR line breaks consistently.");
+Check(ClipboardTextService.CountLineBreaks("first\rsecond\r\nthird\nfourth") == 3, "Clipboard line-break counting should handle LF, CRLF, and standalone CR consistently.");
 
 var indentedChecklistMetrics = new ColumnViewModel
 {

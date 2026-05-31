@@ -4,13 +4,13 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Awetspoon/ColumnPadStudio)
 
-ColumnPad is a Windows desktop writing app for working in side-by-side text columns without losing structure. It combines multi-column writing, workspace tabs, saved layouts, lined-paper editing, list/checklist helpers, and a built-in workflow planner in one offline desktop app.
+ColumnPad is a Windows desktop writing app for working in side-by-side text columns without losing structure. It combines multi-column writing, workspace tabs, saved layouts, proofing-aware editing, lined-paper mode, list/checklist helpers, and a built-in workflow planner in one offline desktop app.
 
 ## What The App Does
 - Lets you write in multiple independent columns at the same time.
 - Saves full workspaces as `.columnpad.json` so projects reopen exactly as they were.
 - Supports direct opening of `.txt`, `.md`, layout JSON, and multi-workspace session JSON.
-- Keeps editing readable with line numbers, word wrap, spell check, lined paper, and theme presets.
+- Keeps editing readable with line numbers, word wrap, spell check, proofing-language selection, lined paper, and theme presets.
 - Includes a workflow builder for diagramming repeatable processes without relying on paid online workflow tools.
 
 ## Core Features
@@ -20,6 +20,7 @@ ColumnPad is a Windows desktop writing app for working in side-by-side text colu
 - Direct open/save for text and markdown documents.
 - Workspace session save/load for multiple open tabs.
 - Auto-recovery and crash restore.
+- Proofing-language selection for WPF spell checking. Availability depends on installed Windows/WPF dictionaries.
 - Built-in workflow templates, workflow JSON import/export, drag-based workflow preview, and per-node colour choices.
 - Theme persistence: once a user picks `Default Mode`, `Light Mode`, or `Dark Mode`, it stays until changed.
 
@@ -119,7 +120,7 @@ The publish profile is configured for:
 This creates a portable executable, not a signed installer. A public release should still be signed, and an installer can be added later if the app needs Start menu shortcuts, uninstall support, or automatic update plumbing.
 
 ## Release Download
-1. Download `ColumnPadStudio.exe` from the latest [GitHub Release](https://github.com/Awetspoon/ColumnPadStudio/releases).
+1. Download `ColumnPadStudio.exe` from the latest [GitHub Release](https://github.com/Awetspoon/ColumnPadStudio/releases). The app release is a single `.exe`.
 2. Place it in a permanent folder such as `C:\Apps\ColumnPad`.
 3. Run `ColumnPadStudio.exe`.
 4. If Windows SmartScreen pauses launch, use `More info -> Run anyway` for trusted builds.
@@ -142,8 +143,7 @@ This creates a portable executable, not a signed installer. A public release sho
 - The repository currently publishes a portable `.exe`; a proper installer is a release-packaging task, not core app logic.
 
 ## Screenshot
-<img width="1527" height="954" alt="Screenshot 2026-05-28 214759" src="https://github.com/user-attachments/assets/a890e1db-9c52-4f8e-825b-453f2e445de3" />
-
+![ColumnPad application screenshot](docs/columnpad-screenshot.png)
 
 ## License
 MIT. See [LICENSE](LICENSE).

@@ -326,7 +326,7 @@ public sealed class ColumnViewModel : NotifyBase
         var lines = 1;
         for (int i = 0; i < text.Length; i++)
         {
-            if (text[i] == '\n')
+            if (text[i] == '\n' || (text[i] == '\r' && (i + 1 >= text.Length || text[i + 1] != '\n')))
                 lines++;
         }
 

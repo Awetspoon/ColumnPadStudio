@@ -119,11 +119,15 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0"
+                <Border x:Name="LineNumberGutter"
+                        Grid.Column="0"
                         BorderBrush="{DynamicResource ControlBorderBrush}"
                         BorderThickness="0,0,1,0"
                         SnapsToDevicePixels="True"
-                        Visibility="{Binding ShowLineNumbersVisibility}">
+                        ClipToBounds="True"
+                        Visibility="{Binding ShowLineNumbersVisibility}"
+                        PreviewMouseLeftButtonDown="LineNumbers_PreviewMouseLeftButtonDown"
+                        PreviewMouseRightButtonDown="LineNumbers_PreviewMouseRightButtonDown">
                     <Border.Style>
                         <Style TargetType="Border">
                             <Setter Property="Background" Value="{DynamicResource LineNumberBackgroundBrush}"/>
@@ -134,42 +138,31 @@
                             </Style.Triggers>
                         </Style>
                     </Border.Style>
-                    <TextBox x:Name="LineNumbers"
-                             Style="{StaticResource EditorTextBoxStyle}"
-                             IsReadOnly="True"
-                             IsReadOnlyCaretVisible="False"
-                             IsTabStop="False"
-                             Focusable="False"
-                             IsHitTestVisible="True"
-                             PreviewMouseLeftButtonDown="LineNumbers_PreviewMouseLeftButtonDown"
-                             PreviewMouseRightButtonDown="LineNumbers_PreviewMouseRightButtonDown"
-                             BorderThickness="0"
-                             Background="Transparent"
-                             FontFamily="{Binding EditorFontFamily}"
-                             FontSize="{Binding LineNumberFontSize}"
-                             Foreground="{DynamicResource LineNumberForegroundBrush}"
-                             Padding="6,0,5,0"
-                             TextAlignment="Right"
-                             TextWrapping="NoWrap"
-                             VerticalContentAlignment="Top"
-                             TextBlock.LineHeight="{Binding EditorLineHeight}"
-                             TextBlock.LineStackingStrategy="BlockLineHeight"
-                             VerticalScrollBarVisibility="Hidden"
-                             HorizontalScrollBarVisibility="Disabled"
-                             AcceptsReturn="True"
-                             TextOptions.TextFormattingMode="Display"
-                             Text="1"
-                             Visibility="{Binding ShowLineNumbersVisibility}">
-                        <TextBox.ContextMenu>
-                            <ContextMenu Opened="LineNumbersContextMenu_Opened">
-                                <MenuItem x:Name="LineMarkerNumbersMenuItem" Header="Numbers" IsCheckable="True" Click="LineMarkerNumbers_Click"/>
-                                <MenuItem x:Name="LineMarkerBulletsMenuItem" Header="Bullets" IsCheckable="True" Click="LineMarkerBullets_Click"/>
-                                <MenuItem x:Name="LineMarkerChecklistMenuItem" Header="Checklist" IsCheckable="True" Click="LineMarkerChecklist_Click"/>
-                                <Separator/>
-                                <MenuItem x:Name="LineMarkerToggleCheckMenuItem" Header="Toggle Check" Click="LineMarkerToggleCheck_Click"/>
-                            </ContextMenu>
-                        </TextBox.ContextMenu>
-                    </TextBox>
+                    <Border.ContextMenu>
+                        <ContextMenu Opened="LineNumbersContextMenu_Opened">
+                            <MenuItem x:Name="LineMarkerNumbersMenuItem" Header="Numbers" IsCheckable="True" Click="LineMarkerNumbers_Click"/>
+                            <MenuItem x:Name="LineMarkerBulletsMenuItem" Header="Bullets" IsCheckable="True" Click="LineMarkerBullets_Click"/>
+                            <MenuItem x:Name="LineMarkerChecklistMenuItem" Header="Checklist" IsCheckable="True" Click="LineMarkerChecklist_Click"/>
+                            <Separator/>
+                            <MenuItem x:Name="LineMarkerToggleCheckMenuItem" Header="Toggle Check" Click="LineMarkerToggleCheck_Click"/>
+                        </ContextMenu>
+                    </Border.ContextMenu>
+                    <TextBlock x:Name="LineNumbers"
+                               IsHitTestVisible="False"
+                               FontFamily="{Binding EditorFontFamily}"
+                               FontSize="{Binding LineNumberFontSize}"
+                               Foreground="{DynamicResource LineNumberForegroundBrush}"
+                               Padding="6,0,5,0"
+                               TextAlignment="Right"
+                               TextWrapping="NoWrap"
+                               LineHeight="{Binding EditorLineHeight}"
+                               LineStackingStrategy="BlockLineHeight"
+                               TextOptions.TextFormattingMode="Display"
+                               Text="1">
+                        <TextBlock.RenderTransform>
+                            <TranslateTransform x:Name="LineNumbersTransform"/>
+                        </TextBlock.RenderTransform>
+                    </TextBlock>
                 </Border>
 
                 <TextBox x:Name="Editor"
@@ -182,7 +175,8 @@
                          Foreground="{DynamicResource EditorForegroundBrush}"
                          SelectionBrush="{DynamicResource EditorSelectionBrush}"
                          SelectionTextBrush="{DynamicResource EditorSelectionTextBrush}"
-                         SelectionOpacity="0.45"
+                         SelectionOpacity="0.62"
+                         IsInactiveSelectionHighlightEnabled="True"
                          CaretBrush="{DynamicResource EditorForegroundBrush}"
                          TextWrapping="{Binding TextWrappingMode}"
                          VerticalContentAlignment="Top"
@@ -201,7 +195,8 @@
                          TextChanged="Editor_TextChanged"
                          SizeChanged="Editor_SizeChanged"
                          CommandManager.PreviewExecuted="Editor_PreviewExecuted"
-                         PreviewKeyDown="Editor_PreviewKeyDown">
+                         PreviewKeyDown="Editor_PreviewKeyDown"
+                         PreviewMouseRightButtonDown="Editor_PreviewMouseRightButtonDown">
                     <TextBox.Style>
                         <Style TargetType="TextBox" BasedOn="{StaticResource EditorTextBoxStyle}">
                             <Style.Triggers>

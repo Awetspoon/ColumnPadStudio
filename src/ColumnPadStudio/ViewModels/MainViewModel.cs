@@ -83,6 +83,8 @@ public sealed partial class MainViewModel : NotifyBase
     public bool IsLightThemeSelected => string.Equals(ThemePreset, ThemePresetService.LightPreset, StringComparison.Ordinal);
     public bool IsDarkThemeSelected => string.Equals(ThemePreset, ThemePresetService.DarkPreset, StringComparison.Ordinal);
     public string EditorFontSummary => $"{EditorFontFamily} {EditorFontStyleName} {EditorFontSize:0}";
+    public string ProofingLanguageDisplayName => EditorLanguages.FirstOrDefault(language => string.Equals(language.Tag, EditorLanguageTag, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? EditorLanguageTag;
+    public string ProofingLanguageHelpText => $"Proofing language: {ProofingLanguageDisplayName}. Spell-check availability depends on installed Windows/WPF dictionaries.";
 
     public bool ShowLineNumbers
     {
@@ -185,8 +187,14 @@ public sealed partial class MainViewModel : NotifyBase
         set
         {
             var normalized = NormalizeEditorLanguageTag(value);
-            Set(ref _editorLanguageTag, normalized);
-            RefreshStatus();
+            if (Equals(_editorLanguageTag, normalized))
+                return;
+
+            _editorLanguageTag = normalized;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ProofingLanguageDisplayName));
+            OnPropertyChanged(nameof(ProofingLanguageHelpText));
+            StatusText = $"Proofing language: {ProofingLanguageDisplayName}. Availability depends on installed Windows/WPF dictionaries.";
         }
     }
 
@@ -300,7 +308,7 @@ public sealed partial class MainViewModel : NotifyBase
 
         var spellText = SpellCheckEnabled ? "On" : "Off";
         var paperText = LinedPaperEnabled ? "On" : "Off";
-        StatusText = $"Columns: {Columns.Count}    Selected: {active?.Title ?? "-"}    Line nums: {(ShowLineNumbers ? "On" : "Off")}    Wrap: {(WordWrap ? "On" : "Off")}    Font: {EditorFontFamily} {EditorFontStyleName} {EditorFontSize:0}    Theme: {ThemePreset}    Spell: {spellText}    Lang: {EditorLanguageTag}    Paper: {paperText}{checkText}";
+        StatusText = $"Columns: {Columns.Count}    Selected: {active?.Title ?? "-"}    Line nums: {(ShowLineNumbers ? "On" : "Off")}    Wrap: {(WordWrap ? "On" : "Off")}    Font: {EditorFontFamily} {EditorFontStyleName} {EditorFontSize:0}    Theme: {ThemePreset}    Spell: {spellText}    Proofing: {EditorLanguageTag}    Paper: {paperText}{checkText}";
     }
 
     public ColumnViewModel? GetActive()

@@ -27,7 +27,14 @@ public partial class ColumnEditorControl
 
     private void ObservedVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ColumnViewModel.LineMarkerMode) or nameof(ColumnViewModel.ChecklistDone) or nameof(ColumnViewModel.ShowLineNumbers))
+        if (e.PropertyName is nameof(ColumnViewModel.LineMarkerMode)
+            or nameof(ColumnViewModel.ChecklistDone)
+            or nameof(ColumnViewModel.ShowLineNumbers)
+            or nameof(ColumnViewModel.WordWrap)
+            or nameof(ColumnViewModel.EditorFontFamily)
+            or nameof(ColumnViewModel.EditorFontSize)
+            or nameof(ColumnViewModel.EditorFontStyle)
+            or nameof(ColumnViewModel.EditorFontWeight))
         {
             _lastRenderedLineNumberCount = -1;
             QueueLineNumberRefresh();
@@ -42,7 +49,6 @@ public partial class ColumnEditorControl
     private void ColumnEditorControl_Loaded(object sender, RoutedEventArgs e)
     {
         AttachEditorScrollViewer();
-        AttachLineNumberScrollViewer();
         QueueLineNumberRefresh();
         SyncLineNumberScrollWithEditor();
     }
@@ -50,7 +56,6 @@ public partial class ColumnEditorControl
     private void ColumnEditorControl_Unloaded(object sender, RoutedEventArgs e)
     {
         DetachEditorScrollViewer();
-        DetachLineNumberScrollViewer();
 
         if (_observedVm is not null)
             _observedVm.PropertyChanged -= ObservedVm_PropertyChanged;
@@ -89,19 +94,6 @@ public partial class ColumnEditorControl
         _editorScrollViewer = null;
     }
 
-    private void AttachLineNumberScrollViewer()
-    {
-        if (_lineNumberScrollViewer is not null)
-            return;
-
-        _lineNumberScrollViewer = FindDescendant<ScrollViewer>(LineNumbers);
-    }
-
-    private void DetachLineNumberScrollViewer()
-    {
-        _lineNumberScrollViewer = null;
-    }
-
     private void EditorScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
     {
         if (e.VerticalChange == 0 && e.ExtentHeightChange == 0)
@@ -116,24 +108,12 @@ public partial class ColumnEditorControl
     private void SyncLineNumberScrollWithEditor()
     {
         AttachEditorScrollViewer();
-        AttachLineNumberScrollViewer();
         SyncLineNumberScroll(_editorScrollViewer?.VerticalOffset ?? 0);
     }
 
     private void SyncLineNumberScroll(double verticalOffset)
     {
-        if (_isSyncingLineNumberScroll)
-            return;
-
-        _isSyncingLineNumberScroll = true;
-        try
-        {
-            _lineNumberScrollViewer?.ScrollToVerticalOffset(verticalOffset);
-        }
-        finally
-        {
-            _isSyncingLineNumberScroll = false;
-        }
+        LineNumbersTransform.Y = -Math.Max(0, verticalOffset);
     }
 
     private static T? FindDescendant<T>(DependencyObject parent) where T : DependencyObject
@@ -174,17 +154,24 @@ public partial class ColumnEditorControl
         var lineBreak = Environment.NewLine;
         var sb = new StringBuilder(lineCount * (lineBreak.Length + 3));
         for (var lineIndex = 0; lineIndex < lineCount; lineIndex++)
-            sb.Append(GetLineNumberLabel(markerMode, lineIndex)).Append(lineBreak);
+        {
+            if (lineIndex > 0)
+                sb.Append(lineBreak);
+
+            sb.Append(GetLineNumberLabel(markerMode, lineIndex));
+        }
 
         var renderedLineNumbers = sb.ToString();
+        VM?.SetVisibleLineCount(lineCount);
+
         if (lineCount == _lastRenderedLineNumberCount &&
             string.Equals(LineNumbers.Text, renderedLineNumbers, StringComparison.Ordinal))
         {
+            SyncLineNumberScrollWithEditor();
             return;
         }
 
         LineNumbers.Text = renderedLineNumbers;
-        VM?.SetVisibleLineCount(lineCount);
         _lastRenderedLineNumberCount = lineCount;
         SyncLineNumberScrollWithEditor();
     }

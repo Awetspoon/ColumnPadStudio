@@ -27,11 +27,10 @@ public partial class ColumnEditorControl : UserControl
     public event EventHandler? ResetFontRequested;
 
     private ScrollViewer? _editorScrollViewer;
-    private ScrollViewer? _lineNumberScrollViewer;
-    private bool _isSyncingLineNumberScroll;
     private bool _lineNumberRefreshPending;
     private int _lastRenderedLineNumberCount = -1;
     private int _gutterContextLineIndex = -1;
+    private int _editorContextMenuCharacterIndex = -1;
     private ColumnViewModel? _observedVm;
 
     public ColumnEditorControl()

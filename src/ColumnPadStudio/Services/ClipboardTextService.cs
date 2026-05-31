@@ -16,9 +16,9 @@ public static class ClipboardTextService
     public static int CountLineBreaks(string text)
     {
         var count = 0;
-        foreach (var ch in text)
+        for (var i = 0; i < text.Length; i++)
         {
-            if (ch == '\n')
+            if (text[i] == '\n' || (text[i] == '\r' && (i + 1 >= text.Length || text[i + 1] != '\n')))
                 count++;
         }
 
