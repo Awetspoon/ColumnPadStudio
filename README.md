@@ -6,6 +6,9 @@
 
 ColumnPad is a Windows desktop writing app for working in side-by-side text columns without losing structure. It combines multi-column writing, workspace tabs, saved layouts, proofing-aware editing, lined-paper mode, list/checklist helpers, and a built-in workflow planner in one offline desktop app.
 
+## Screenshot
+![ColumnPad current desktop UI](docs/columnpad-screenshot.png)
+
 ## What The App Does
 - Lets you write in multiple independent columns at the same time.
 - Saves full workspaces as `.columnpad.json` so projects reopen exactly as they were.
@@ -76,6 +79,14 @@ Manual visual QA checklist: [`docs/UI_QA_CHECKLIST.md`](docs/UI_QA_CHECKLIST.md)
 - .NET 8 SDK
 - Optional: Visual Studio with the .NET Desktop Development workload
 
+## Download
+Download the latest single-file Windows build from the [GitHub Releases page](https://github.com/Awetspoon/ColumnPadStudio/releases/latest).
+
+The release asset is:
+- `ColumnPadStudio.exe`
+
+Place the `.exe` somewhere permanent, such as `C:\Apps\ColumnPad`, then run it. If Windows SmartScreen warns on first launch, use `More info -> Run anyway` only for builds downloaded from this repository.
+
 ## Clone
 ```powershell
 git clone https://github.com/Awetspoon/ColumnPadStudio.git
@@ -119,12 +130,6 @@ The publish profile is configured for:
 
 This creates a portable executable, not a signed installer. A public release should still be signed, and an installer can be added later if the app needs Start menu shortcuts, uninstall support, or automatic update plumbing.
 
-## Release Download
-1. Download `ColumnPadStudio.exe` from the latest [GitHub Release](https://github.com/Awetspoon/ColumnPadStudio/releases). The app release is a single `.exe`.
-2. Place it in a permanent folder such as `C:\Apps\ColumnPad`.
-3. Run `ColumnPadStudio.exe`.
-4. If Windows SmartScreen pauses launch, use `More info -> Run anyway` for trusted builds.
-
 ## Project Structure
 - `src/ColumnPadStudio/` - WPF app shell, UI, services, assets, and workflow editor
 - `src/ColumnPadStudio.Domain/` - domain-only rules and parsing helpers
@@ -135,15 +140,10 @@ This creates a portable executable, not a signed installer. A public release sho
 - `CHANGELOG.md` - release history
 - `RELEASE_CHECKLIST.md` - manual release steps
 
-## Known Limitations
-- The shell still uses code-behind for some WPF coordination, by design, because the app is desktop-first and interaction-heavy.
-- The workflow builder is functional, but it is still the next area most likely to need deeper modular cleanup if new workflow features expand quickly.
-- Some local build environments may temporarily lock `bin/obj` files; a clean rebuild resolves that.
-- Published builds are not automatically code-signed. Signing requires a real Windows code-signing certificate and should be added before public distribution at scale.
-- The repository currently publishes a portable `.exe`; a proper installer is a release-packaging task, not core app logic.
-
-## Screenshot
-![ColumnPad application screenshot](docs/columnpad-screenshot.png)
+## Packaging Notes
+- Current public releases ship as a portable single `.exe`.
+- Release builds are not code-signed yet, so Windows may show a SmartScreen warning.
+- A full installer and automatic updates can be added later if the app needs Start menu shortcuts, uninstall support, or update prompts.
 
 ## License
 MIT. See [LICENSE](LICENSE).
