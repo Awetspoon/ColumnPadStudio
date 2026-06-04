@@ -85,7 +85,7 @@ public static class TextSearchService
         var line = 1;
         for (var i = 0; i < limit; i++)
         {
-            if (text[i] == '\n')
+            if (text[i] == '\n' || (text[i] == '\r' && (i + 1 >= limit || text[i + 1] != '\n')))
                 line++;
         }
 

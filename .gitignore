@@ -8,6 +8,16 @@
 *.nupkg
 *.snupkg
 
+# Local config / secrets
+.env
+.env.*
+!.env.example
+*.pfx
+*.pem
+*.key
+appsettings.Local.json
+appsettings.Development.json
+
 # IDE/session files
 .vs/
 .vscode/
@@ -22,6 +32,7 @@
 .codex/
 .codex-dotnet-home/
 .dotnet-cli/
+.playwright-mcp/
 .tmp-build/
 .tmp/
 _tmp_ui_check/
@@ -41,6 +52,10 @@ Desktop.ini
 .DS_Store
 
 # Publish output directories used by this repo
+artifacts/
 src/ColumnPadStudio/publish/
 src/ColumnPadStudio/publish-validation/
 ColumnPadStudio_Publish/
+
+# Local repo snapshots / sync scratch files
+github-repo-snapshot.md

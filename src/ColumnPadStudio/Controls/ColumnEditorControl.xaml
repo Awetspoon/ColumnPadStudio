@@ -46,9 +46,8 @@
                                   InputGestureText="Alt+Shift+Right"
                                   IsEnabled="{Binding PlacementTarget.DataContext.CanMoveRight, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                         <Separator/>
-                        <MenuItem Header="Reset Column Size" Click="ColumnMenuResetWidth_Click"/>
-                        <MenuItem Header="Reset All Column Sizes" Click="ColumnMenuResetAllWidths_Click"/>
-                        <MenuItem Header="Resize Column..." Click="ColumnMenuResize_Click"/>
+                        <MenuItem Header="Reset This Column Size" Click="ColumnMenuResetWidth_Click"/>
+                        <MenuItem Header="Resize This Column..." Click="ColumnMenuResize_Click"/>
                         <MenuItem Header="{Binding PlacementTarget.DataContext.WidthLockActionLabel, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   ToolTip="{Binding PlacementTarget.DataContext.WidthLockActionToolTip, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Click="ColumnMenuToggleWidthLock_Click"/>
@@ -66,7 +65,7 @@
                                       IsCheckable="True"
                                       Click="ColumnFontItalic_Click"/>
                             <Separator/>
-                            <MenuItem Header="Reset Font to Default" Click="ColumnFontReset_Click"/>
+                            <MenuItem Header="Use Workspace Font" Click="ColumnFontReset_Click"/>
                         </MenuItem>
                     </ContextMenu>
                 </Border.ContextMenu>
@@ -175,8 +174,8 @@
                          Foreground="{DynamicResource EditorForegroundBrush}"
                          SelectionBrush="{DynamicResource EditorSelectionBrush}"
                          SelectionTextBrush="{DynamicResource EditorSelectionTextBrush}"
-                         SelectionOpacity="0.62"
-                         IsInactiveSelectionHighlightEnabled="True"
+                         SelectionOpacity="1"
+                         IsInactiveSelectionHighlightEnabled="False"
                          CaretBrush="{DynamicResource EditorForegroundBrush}"
                          TextWrapping="{Binding TextWrappingMode}"
                          VerticalContentAlignment="Top"

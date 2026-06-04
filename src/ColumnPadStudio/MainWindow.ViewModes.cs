@@ -6,9 +6,9 @@ namespace ColumnPadStudio;
 
 public partial class MainWindow
 {
-    private void ThemeClassic_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.LightPreset);
-    private void ThemeHighContrast_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DarkPreset);
-    private void ThemeCompact_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DefaultPreset);
+    private void ThemeLight_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.LightPreset);
+    private void ThemeDark_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DarkPreset);
+    private void ThemeDefault_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DefaultPreset);
 
     private void ResetEditorFont_Click(object sender, RoutedEventArgs e)
     {

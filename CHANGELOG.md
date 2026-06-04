@@ -4,6 +4,23 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.2.2] - 2026-06-05
+
+### Changed
+- Added overflow scroll arrows to the workspace tab strip; they appear only when workspace tabs no longer fit.
+- Restored direct File menu export commands for clean `.txt` and `.md` workspace exports.
+- Simplified the column-header right-click menu so global reset-all actions stay in the main Columns menu.
+- Tidied the View menu editor-font panel so it uses a neutral embedded menu panel instead of looking like a large highlighted menu row.
+- Added a shared embedded-menu panel style for real controls hosted inside menu dropdowns.
+- Tightened repo ignore rules for local config, `.env` files, certificates, and private key files.
+- Added a cleanup phase log so audit, repair, UI, GitHub, and release-prep work is recorded plainly.
+
+### Fixed
+- Fixed duplicate-column behaviour so gutter mode and checklist checked rows are preserved.
+- Fixed search result line numbers for text containing standalone carriage returns.
+- Fixed preference saving to use the same atomic write path as other app-owned JSON storage.
+- Fixed View menu theme handlers so current theme labels map directly to the correct theme presets.
+
 ## [v2.2.1] - 2026-05-31
 
 ### Changed

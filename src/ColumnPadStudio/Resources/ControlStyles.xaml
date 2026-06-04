@@ -409,8 +409,8 @@
         <Setter Property="SelectionBrush" Value="{DynamicResource EditorSelectionBrush}"/>
         <Setter Property="SelectionTextBrush" Value="{DynamicResource EditorSelectionTextBrush}"/>
         <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}"/>
-        <Setter Property="SelectionOpacity" Value="0.45"/>
-        <Setter Property="IsInactiveSelectionHighlightEnabled" Value="True"/>
+        <Setter Property="SelectionOpacity" Value="1"/>
+        <Setter Property="IsInactiveSelectionHighlightEnabled" Value="False"/>
         <Setter Property="FocusVisualStyle" Value="{x:Null}"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -464,8 +464,8 @@
         <Setter Property="SelectionBrush" Value="{DynamicResource EditorSelectionBrush}"/>
         <Setter Property="SelectionTextBrush" Value="{DynamicResource EditorSelectionTextBrush}"/>
         <Setter Property="CaretBrush" Value="{DynamicResource EditorForegroundBrush}"/>
-        <Setter Property="SelectionOpacity" Value="0.45"/>
-        <Setter Property="IsInactiveSelectionHighlightEnabled" Value="True"/>
+        <Setter Property="SelectionOpacity" Value="1"/>
+        <Setter Property="IsInactiveSelectionHighlightEnabled" Value="False"/>
         <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}"/>
         <Setter Property="Foreground" Value="{DynamicResource EditorForegroundBrush}"/>
     </Style>

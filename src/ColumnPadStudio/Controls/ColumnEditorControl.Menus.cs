@@ -55,11 +55,6 @@ public partial class ColumnEditorControl
         ResetWidthRequested?.Invoke(this, EventArgs.Empty);
     }
 
-    private void ColumnMenuResetAllWidths_Click(object sender, RoutedEventArgs e)
-    {
-        ResetAllWidthsRequested?.Invoke(this, EventArgs.Empty);
-    }
-
     private void ColumnMenuResize_Click(object sender, RoutedEventArgs e)
     {
         ResizeRequested?.Invoke(this, EventArgs.Empty);

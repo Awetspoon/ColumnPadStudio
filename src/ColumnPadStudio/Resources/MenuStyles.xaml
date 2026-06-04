@@ -207,4 +207,26 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <Style x:Key="EmbeddedMenuPanelItemStyle"
+           TargetType="{x:Type MenuItem}"
+           BasedOn="{StaticResource {x:Type MenuItem}}">
+        <Setter Property="Padding" Value="10,8,12,8"/>
+        <Setter Property="MinWidth" Value="0"/>
+        <Setter Property="MinHeight" Value="0"/>
+        <Setter Property="Background" Value="{DynamicResource ControlPopupBackgroundBrush}"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="{x:Type MenuItem}">
+                    <Border Background="{TemplateBinding Background}"
+                            Padding="{TemplateBinding Padding}"
+                            SnapsToDevicePixels="True">
+                        <ContentPresenter ContentSource="Header"
+                                          RecognizesAccessKey="False"
+                                          TextElement.Foreground="{DynamicResource ControlPopupForegroundBrush}"/>
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
 </ResourceDictionary>

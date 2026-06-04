@@ -197,6 +197,8 @@ public sealed partial class MainViewModel
         copy.WidthPx = a.WidthPx;
         copy.IsWidthLocked = a.IsWidthLocked;
         copy.PastePreset = a.PastePreset;
+        copy.LineMarkerMode = a.LineMarkerMode;
+        copy.SetCheckedChecklistLineIndexes(a.GetCheckedChecklistLineIndexes());
         copy.EditorFontFamily = a.EditorFontFamily;
         copy.EditorFontSize = a.EditorFontSize;
         copy.EditorFontStyle = a.EditorFontStyle;

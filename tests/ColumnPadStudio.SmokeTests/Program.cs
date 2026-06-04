@@ -50,6 +50,7 @@ Thread resourceLoadThread = new(() =>
         Check(resources.MergedDictionaries.Count == 3, "App resources should stay split into theme brushes, control styles, and menu styles.");
         Check(resources["ControlPopupHighlightBrush"] is not null, "Theme brush resources should load from the app resource index.");
         Check(resources[typeof(MenuItem)] is Style, "Shared menu item style should load from the app resource index.");
+        Check(resources["EmbeddedMenuPanelItemStyle"] is Style, "Embedded menu panel style should load from the app resource index.");
         Check(resources[typeof(Button)] is Style, "Shared button style should load from the app resource index.");
         Check(resources[typeof(TextBox)] is Style, "Shared textbox style should load from the app resource index.");
 
@@ -122,6 +123,11 @@ vm.ActiveColumnId = vm.Columns[0].Id;
 Check(!vm.CanMoveActiveColumnLeft, "First selected column should not advertise a left swap.");
 Check(!vm.MoveActiveColumnLeft(), "MoveActiveColumnLeft should refuse to swap the first column further left.");
 Check(vm.StatusText.Contains("first column"), "MoveActiveColumnLeft should explain when the selected column is already first.");
+vm.Columns[0].LineMarkerMode = LineMarkerMode.Checklist;
+vm.Columns[0].SetCheckedChecklistLineIndexes([0]);
+vm.DuplicateActive();
+Check(vm.Columns[^1].LineMarkerMode == LineMarkerMode.Checklist, "DuplicateActive should preserve the duplicated column gutter marker mode.");
+Check(vm.Columns[^1].IsChecklistLineChecked(0), "DuplicateActive should preserve duplicated column checklist metadata.");
 
 vm.ThemePreset = "High Contrast";
 Check(vm.ThemePreset == "Dark Mode", "Legacy theme 'High Contrast' should normalize to 'Dark Mode'.");
@@ -353,6 +359,18 @@ Check(liveStatusVm.StatusText.Contains("Selected: Inbox"), "Status text should r
 liveStatusVm.Columns[0].Text = "\u2610 one\n\u2611 two";
 Check(liveStatusVm.StatusText.Contains("Done: 1/2"), "Status text should refresh when active-column checklist progress changes.");
 
+var cleanExportVm = new MainViewModel();
+cleanExportVm.SetColumnCount(2);
+cleanExportVm.Columns[0].Title = "Alpha\r\nPlan";
+cleanExportVm.Columns[0].Text = "one\r\ntwo\n\n";
+cleanExportVm.Columns[1].Title = "Beta";
+cleanExportVm.Columns[1].Text = "three";
+var cleanTextExport = cleanExportVm.BuildExportText().Replace("\r\n", "\n", StringComparison.Ordinal);
+Check(cleanTextExport == "===== Alpha Plan =====\n\none\ntwo\n\n===== Beta =====\n\nthree\n", "Text export should use clean readable sections without trailing blank blocks.");
+Check(!cleanTextExport.Contains("\\n", StringComparison.Ordinal), "Text export should write real line breaks, not escaped JSON-style line breaks.");
+var cleanMarkdownExport = cleanExportVm.BuildExportMarkdown().Replace("\r\n", "\n", StringComparison.Ordinal);
+Check(cleanMarkdownExport == "## Alpha Plan\n\none\ntwo\n\n## Beta\n\nthree\n", "Markdown export should stay available and use clean readable sections.");
+
 var exportedText = "===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
 var importedFromText = new MainViewModel();
 importedFromText.LoadFromExportText(exportedText, "export.txt");
@@ -478,6 +496,15 @@ Check(WorkspaceSessionFileService.TryParseSession(workspaceSessionJson, out var 
 Check(parsedSession.Workspaces.Count == 1 && parsedSession.Workspaces[0].Name == "Workspace 1", "Session service should preserve workspace entries when parsing.");
 var roundTripSessionJson = WorkspaceSessionFileService.SerializeSession(parsedSession.Workspaces.ToList(), parsedSession.ActiveWorkspaceIndex);
 Check(WorkspaceSessionFileService.IsWorkspaceSessionJson(roundTripSessionJson), "Session service should emit valid workspace session JSON.");
+var roundTripSessionRoot = JsonNode.Parse(roundTripSessionJson)!.AsObject();
+var roundTripSessionWorkspaces = roundTripSessionRoot["Workspaces"]!.AsArray();
+var roundTripSessionWorkspace = roundTripSessionWorkspaces[0]!.AsObject();
+Check(roundTripSessionRoot["FileType"]?.GetValue<string>() == "ColumnPadWorkspaceSession", "Session service should label saved session JSON for external readers.");
+Check(roundTripSessionRoot["Version"]?.GetValue<int>() == 2, "Session service should save the cleaned workspace-session schema version.");
+Check(roundTripSessionWorkspace["Layout"] is JsonObject, "Session service should save workspace layout as nested JSON instead of escaped JSON text.");
+Check(roundTripSessionWorkspace["LayoutJson"] is null, "Session service should not emit legacy escaped LayoutJson when saving.");
+Check(WorkspaceSessionFileService.TryParseSession(roundTripSessionJson, out var parsedCleanSession), "Session service should parse its cleaned session JSON.");
+Check(parsedCleanSession.Workspaces[0].LayoutJson.Contains("\"Columns\"", StringComparison.Ordinal), "Cleaned session JSON should preserve the nested layout content.");
 
 var tempSessionPath = Path.Combine(Path.GetTempPath(), $"ColumnPadSession-{Guid.NewGuid():N}.columnpad.json");
 File.WriteAllText(tempSessionPath, workspaceSessionJson);
@@ -537,6 +564,7 @@ var (replacedTextByService, replacementCountByService) = TextSearchService.Repla
 Check(replacementCountByService == 3, "Text search service replace should count all case-insensitive hits.");
 Check(replacedTextByService == "two two two", "Text search service replace should substitute all hits in order.");
 Check(TextSearchService.ComputeLineNumber("a\nb\nc", 4) == 3, "Text search service should compute 1-based line numbers from character index.");
+Check(TextSearchService.ComputeLineNumber("a\rb\r\nc", 5) == 3, "Text search service should count LF, CRLF, and standalone CR line breaks consistently.");
 
 var listModeVm = new ColumnViewModel
 {

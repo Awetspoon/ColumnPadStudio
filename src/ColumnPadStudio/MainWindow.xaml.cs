@@ -84,6 +84,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         WorkspaceRenameMenuItem.Click += WorkspaceRename_Click;
         WorkspaceAddMenuItem.Click += WorkspaceAdd_Click;
         WorkspaceTabs.PreviewMouseRightButtonDown += WorkspaceTabs_PreviewMouseRightButtonDown;
+        Workspaces.CollectionChanged += Workspaces_CollectionChanged;
 
         if (!TryOfferAutoRecovery())
             InitializeDefaultWorkspace();
@@ -222,7 +223,6 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         editor.MoveRightRequested += (_, __) => RunColumnAction(vm, column, () => MoveActiveRight_Click(this, new RoutedEventArgs()));
         editor.DeleteRequested += (_, __) => RunColumnAction(vm, column, RemoveActiveWithConfirmation);
         editor.ResetWidthRequested += (_, __) => RunColumnAction(vm, column, vm.ResetActiveColumnWidth);
-        editor.ResetAllWidthsRequested += (_, __) => RunColumnAction(vm, column, vm.ResetAllColumnWidths);
         editor.ResizeRequested += (_, __) => RunColumnAction(vm, column, ResizeActiveColumn);
         editor.RightEdgeResizeDeltaRequested += (_, args) => ResizeColumnFromRightEdge(editor, vm, column, args.HorizontalChange);
         editor.SetFontFamilyRequested += (_, __) => RunColumnAction(vm, column, SetActiveColumnFontFamily);

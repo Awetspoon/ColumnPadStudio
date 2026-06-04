@@ -12,7 +12,7 @@ ColumnPad is a Windows desktop writing app for working in side-by-side text colu
 ## What The App Does
 - Lets you write in multiple independent columns at the same time.
 - Saves full workspaces as `.columnpad.json` so projects reopen exactly as they were.
-- Supports direct opening of `.txt`, `.md`, layout JSON, and multi-workspace session JSON.
+- Supports direct opening and clean export of `.txt`, `.md`, layout JSON, and multi-workspace session JSON.
 - Keeps editing readable with line numbers, word wrap, spell check, proofing-language selection, lined paper, and theme presets.
 - Includes a workflow builder for diagramming repeatable processes without relying on paid online workflow tools.
 
@@ -20,7 +20,7 @@ ColumnPad is a Windows desktop writing app for working in side-by-side text colu
 - Multi-column writing with invisible right-edge resize handles.
 - Workspace tabs for separate writing sessions.
 - Single-text mode and column mode switching.
-- Direct open/save for text and markdown documents.
+- Direct open/save/export for text and markdown documents.
 - Workspace session save/load for multiple open tabs.
 - Auto-recovery and crash restore.
 - Proofing-language selection for WPF spell checking. Availability depends on installed Windows/WPF dictionaries.
@@ -83,7 +83,7 @@ Manual visual QA checklist: [`docs/UI_QA_CHECKLIST.md`](docs/UI_QA_CHECKLIST.md)
 Download the latest single-file Windows build from the [GitHub Releases page](https://github.com/Awetspoon/ColumnPadStudio/releases/latest).
 
 The release asset is:
-- `ColumnPadStudio.exe`
+- `ColumnPadStudio-v2.2.2-win-x64.exe`
 
 Place the `.exe` somewhere permanent, such as `C:\Apps\ColumnPad`, then run it. If Windows SmartScreen warns on first launch, use `More info -> Run anyway` only for builds downloaded from this repository.
 

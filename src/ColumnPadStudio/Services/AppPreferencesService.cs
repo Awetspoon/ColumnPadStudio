@@ -38,7 +38,7 @@ public static class AppPreferencesService
         Directory.CreateDirectory(Path.GetDirectoryName(resolvedPath)!);
 
         var normalized = preferences with { ThemePreset = ThemePresetService.Normalize(preferences.ThemePreset) };
-        File.WriteAllText(resolvedPath, JsonSerializer.Serialize(normalized, JsonOptions));
+        AtomicFileWriter.WriteText(resolvedPath, JsonSerializer.Serialize(normalized, JsonOptions));
     }
 
     private static string ResolvePath(string? path)

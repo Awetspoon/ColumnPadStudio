@@ -16,7 +16,6 @@ public partial class ColumnEditorControl : UserControl
     public event EventHandler? MoveRightRequested;
     public event EventHandler? DeleteRequested;
     public event EventHandler? ResetWidthRequested;
-    public event EventHandler? ResetAllWidthsRequested;
     public event EventHandler? ResizeRequested;
     public event EventHandler<ColumnResizeDeltaEventArgs>? RightEdgeResizeDeltaRequested;
     public event EventHandler? SetFontFamilyRequested;

@@ -1,6 +1,7 @@
 using System.IO;
 using System.Linq;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using ColumnPadStudio.Domain.Workspaces;
 using ColumnPadStudio.ViewModels;
 
@@ -90,11 +91,15 @@ public static class WorkspaceSessionFileService
         {
             var workspace = workspaces[i];
             var name = string.IsNullOrWhiteSpace(workspace.Name) ? $"Workspace {i + 1}" : workspace.Name.Trim();
-            normalized.Add(new WorkspaceSessionFileEntry(name, workspace.LayoutJson ?? string.Empty, workspace.LastMultiColumnCount));
+            normalized.Add(new WorkspaceSessionFileEntry(
+                Name: name,
+                Layout: ParseLayoutNode(workspace.LayoutJson),
+                LastMultiColumnCount: workspace.LastMultiColumnCount));
         }
 
         var session = new WorkspaceSessionFile(
-            Version: 1,
+            FileType: "ColumnPadWorkspaceSession",
+            Version: 2,
             ActiveWorkspaceIndex: Math.Clamp(activeWorkspaceIndex, 0, normalized.Count - 1),
             Workspaces: normalized);
 
@@ -108,46 +113,90 @@ public static class WorkspaceSessionFileService
         if (string.IsNullOrWhiteSpace(json))
             return false;
 
-        WorkspaceSessionFile? parsed;
+        JsonObject? parsed;
         try
         {
-            parsed = JsonSerializer.Deserialize<WorkspaceSessionFile>(json);
+            parsed = JsonNode.Parse(json) as JsonObject;
         }
         catch (JsonException)
         {
             return false;
         }
 
-        if (parsed?.Workspaces is null || parsed.Workspaces.Count == 0)
+        if (parsed?["Workspaces"] is not JsonArray workspaceNodes || workspaceNodes.Count == 0)
             return false;
 
-        var workspaces = new List<WorkspaceSessionEntryData>(parsed.Workspaces.Count);
-        for (var i = 0; i < parsed.Workspaces.Count; i++)
+        var workspaces = new List<WorkspaceSessionEntryData>(workspaceNodes.Count);
+        for (var i = 0; i < workspaceNodes.Count; i++)
         {
-            var entry = parsed.Workspaces[i];
-            if (string.IsNullOrWhiteSpace(entry.LayoutJson))
+            if (workspaceNodes[i] is not JsonObject entry)
                 return false;
 
-            var name = string.IsNullOrWhiteSpace(entry.Name) ? $"Workspace {i + 1}" : entry.Name.Trim();
+            var layoutJson = GetLayoutJson(entry);
+            if (string.IsNullOrWhiteSpace(layoutJson))
+                return false;
+
+            var name = GetString(entry, "Name", $"Workspace {i + 1}");
             workspaces.Add(new WorkspaceSessionEntryData(
-                Name: name,
-                LayoutJson: entry.LayoutJson,
-                LastMultiColumnCount: Math.Max(2, entry.LastMultiColumnCount)));
+                Name: string.IsNullOrWhiteSpace(name) ? $"Workspace {i + 1}" : name.Trim(),
+                LayoutJson: layoutJson,
+                LastMultiColumnCount: Math.Max(2, GetInt(entry, "LastMultiColumnCount", 2))));
         }
 
         session = new WorkspaceSessionData(
-            ActiveWorkspaceIndex: Math.Clamp(parsed.ActiveWorkspaceIndex, 0, workspaces.Count - 1),
+            ActiveWorkspaceIndex: Math.Clamp(GetInt(parsed, "ActiveWorkspaceIndex", 0), 0, workspaces.Count - 1),
             Workspaces: workspaces);
         return true;
     }
 
+    private static JsonNode ParseLayoutNode(string? layoutJson)
+    {
+        if (string.IsNullOrWhiteSpace(layoutJson))
+            throw new ArgumentException("Workspace layout JSON cannot be empty.", nameof(layoutJson));
+
+        try
+        {
+            return JsonNode.Parse(layoutJson) ??
+                   throw new ArgumentException("Workspace layout JSON cannot be empty.", nameof(layoutJson));
+        }
+        catch (JsonException ex)
+        {
+            throw new ArgumentException("Workspace layout JSON must be valid JSON.", nameof(layoutJson), ex);
+        }
+    }
+
+    private static string? GetLayoutJson(JsonObject entry)
+    {
+        if (entry["Layout"] is JsonNode layoutNode)
+            return layoutNode.ToJsonString(JsonOptions);
+
+        return GetString(entry, "LayoutJson", null);
+    }
+
+    private static string? GetString(JsonObject node, string propertyName, string? fallback)
+    {
+        return node[propertyName] is JsonValue valueNode &&
+               valueNode.TryGetValue<string>(out var parsed)
+            ? parsed
+            : fallback;
+    }
+
+    private static int GetInt(JsonObject node, string propertyName, int fallback)
+    {
+        return node[propertyName] is JsonValue valueNode &&
+               valueNode.TryGetValue<int>(out var parsed)
+            ? parsed
+            : fallback;
+    }
+
     private sealed record WorkspaceSessionFile(
+        string FileType,
         int Version,
         int ActiveWorkspaceIndex,
         List<WorkspaceSessionFileEntry> Workspaces);
 
     private sealed record WorkspaceSessionFileEntry(
         string Name,
-        string LayoutJson,
+        JsonNode Layout,
         int LastMultiColumnCount);
 }

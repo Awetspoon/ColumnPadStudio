@@ -13,31 +13,62 @@ public sealed partial class MainViewModel
     public string BuildExportText()
     {
         var sb = new StringBuilder();
-        foreach (var c in Columns)
+        for (var i = 0; i < Columns.Count; i++)
         {
-            sb.Append("===== ").Append(c.Title).AppendLine(" =====");
-            sb.AppendLine(c.Text ?? string.Empty);
-            sb.AppendLine();
+            var column = Columns[i];
+            var title = BuildExportTitle(column.Title, i);
+            AppendExportSection(sb, $"===== {title} =====", column.Text, i < Columns.Count - 1);
         }
+
         return sb.ToString();
     }
 
     public string BuildExportMarkdown()
     {
         var sb = new StringBuilder();
-        foreach (var c in Columns)
+        for (var i = 0; i < Columns.Count; i++)
         {
-            sb.Append("## ").AppendLine(c.Title);
-            sb.AppendLine();
-            sb.AppendLine(c.Text ?? string.Empty);
-            sb.AppendLine();
+            var column = Columns[i];
+            var title = BuildExportTitle(column.Title, i);
+            AppendExportSection(sb, $"## {title}", column.Text, i < Columns.Count - 1);
         }
+
         return sb.ToString();
     }
 
     public string BuildSingleDocumentText()
     {
         return Columns.FirstOrDefault()?.Text ?? string.Empty;
+    }
+
+    private static void AppendExportSection(StringBuilder sb, string header, string? body, bool appendSectionBreak)
+    {
+        sb.AppendLine(header);
+
+        var normalizedBody = NormalizeExportText(body);
+        if (normalizedBody.Length > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine(normalizedBody);
+        }
+
+        if (appendSectionBreak)
+            sb.AppendLine();
+    }
+
+    private static string BuildExportTitle(string? title, int index)
+    {
+        var normalized = NormalizeExportText(title).Replace(Environment.NewLine, " ", StringComparison.Ordinal).Trim();
+        return string.IsNullOrWhiteSpace(normalized) ? $"Column {index + 1}" : normalized;
+    }
+
+    private static string NormalizeExportText(string? value)
+    {
+        return (value ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .TrimEnd('\n')
+            .Replace("\n", Environment.NewLine, StringComparison.Ordinal);
     }
 
     public void LoadTextDocument(string text, string? sourceLabel = null, string? sourcePath = null, SaveFileKind kind = SaveFileKind.TextDocument)
