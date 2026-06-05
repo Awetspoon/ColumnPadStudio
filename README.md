@@ -4,146 +4,131 @@
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Awetspoon/ColumnPadStudio)
 
-ColumnPad is a Windows desktop writing app for working in side-by-side text columns without losing structure. It combines multi-column writing, workspace tabs, saved layouts, proofing-aware editing, lined-paper mode, list/checklist helpers, and a built-in workflow planner in one offline desktop app.
+ColumnPad is a Windows writing app for drafting notes, plans, prompts, checklists, and structured text in side-by-side columns. It is built for people who want a simple offline writing surface with columns, workspaces, line numbers, proofing, export, and a built-in workflow planner.
+
+## Download For Windows
+
+Download the latest portable Windows build from the [GitHub Releases page](https://github.com/Awetspoon/ColumnPadStudio/releases/latest).
+
+Latest release asset:
+- `ColumnPadStudio-v2.2.2-win-x64.exe`
+
+For normal use, download the `.exe` and run it. You do not need Visual Studio or the .NET SDK to use the released app.
+
+The app is currently shipped as a portable single-file executable, not an installer. Place it somewhere permanent, such as `C:\Apps\ColumnPad`, then run it from there.
+
+Note: the EXE is not code-signed yet, so Windows SmartScreen may show a warning on first launch. Only run builds downloaded from this repository.
 
 ## Screenshot
+
 ![ColumnPad current desktop UI](docs/columnpad-screenshot.png)
 
-## What The App Does
-- Lets you write in multiple independent columns at the same time.
-- Saves full workspaces as `.columnpad.json` so projects reopen exactly as they were.
-- Supports direct opening and clean export of `.txt`, `.md`, layout JSON, and multi-workspace session JSON.
-- Keeps editing readable with line numbers, word wrap, spell check, proofing-language selection, lined paper, and theme presets.
-- Includes a workflow builder for diagramming repeatable processes without relying on paid online workflow tools.
+## What ColumnPad Is For
 
-## Core Features
+- Writing in multiple independent columns without losing structure.
+- Keeping separate workspace tabs for different notes or projects.
+- Drafting app prompts, checklists, release notes, plans, comparisons, and structured writing.
+- Opening and exporting clean `.txt` and `.md` documents.
+- Saving full ColumnPad workspaces so the same columns, titles, settings, and content reopen later.
+- Sketching repeatable workflows with the built-in workflow builder.
+
+## Main Features
+
 - Multi-column writing with invisible right-edge resize handles.
 - Workspace tabs for separate writing sessions.
 - Single-text mode and column mode switching.
-- Direct open/save/export for text and markdown documents.
-- Workspace session save/load for multiple open tabs.
+- Clean `.txt` and `.md` open, save, and export.
+- `.columnpad.json` workspace save/load.
+- Multi-workspace session save/load.
 - Auto-recovery and crash restore.
-- Proofing-language selection for WPF spell checking. Availability depends on installed Windows/WPF dictionaries.
-- Built-in workflow templates, workflow JSON import/export, drag-based workflow preview, and per-node colour choices.
-- Theme persistence: once a user picks `Default Mode`, `Light Mode`, or `Dark Mode`, it stays until changed.
+- Line numbers, word wrap, spell check, proofing-language selection, and lined-paper mode.
+- Default, light, and dark theme modes with preference saving.
+- Bullet/checklist paste helpers and checklist gutter support.
+- Built-in workflow templates, workflow JSON import/export, draggable workflow preview, and per-node colours.
 
-## Architecture At A Glance
-The codebase is intentionally split into simple layers:
+## Current Release
 
-- `src/ColumnPadStudio/`
-  The WPF desktop app: windows, controls, view-models, services, assets, and app startup.
-- `src/ColumnPadStudio.Domain/`
-  Pure domain rules for list markers, checklist metrics, workspace import detection, and workspace constraints.
-- `tests/ColumnPadStudio.SmokeTests/`
-  Broad app-level behaviour checks for the main view-model and file/session flows.
-- `tests/ColumnPadStudio.Domain.Tests/`
-  Focused domain-rule checks.
+ColumnPad v2.2.2 includes:
 
-The app does not use a heavy dependency injection container. Startup is deliberately simple:
+- Workspace tab overflow arrows.
+- Cleaner File menu `.txt` and `.md` export commands.
+- Tidier column right-click menus.
+- Better editor/font/menu styling consistency.
+- Cleaner app preference and JSON saving paths.
+- Updated README, release notes, and repo hygiene.
 
-1. `App.xaml` loads shared theme/style resources.
-2. `MainWindow` starts the app shell.
-3. `MainWindow` loads persisted app preferences.
-4. `MainWindow` offers auto-recovery if recovery data exists.
-5. If nothing is recovered, a default workspace is created.
+Full notes: [docs/releases/v2.2.2.md](docs/releases/v2.2.2.md)
 
-## Key Source Areas
-- `src/ColumnPadStudio/MainWindow.xaml`
-  Main shell UI: menus, toolbar, workspace tabs, status bar, and column host.
-- `src/ColumnPadStudio/MainWindow.xaml.cs`
-  Shell core and column host wiring.
-- `src/ColumnPadStudio/MainWindow.FileSession.cs` plus related `MainWindow.*.cs` shell partials
-  File open/save/export/print, recovery lifecycle, workspace sessions, exit-save prompts, view modes, shortcuts, and workspace-tab wiring.
-- `src/ColumnPadStudio/MainWindow.EditorSurface.cs`
-  Editor commands, search, mode switching, theme switching, and shortcuts.
-- `src/ColumnPadStudio/MainWindow.Workspaces.cs`
-  Workspace-tab lifecycle and rename wiring.
-- `src/ColumnPadStudio/ViewModels/MainViewModel.cs`
-  Core workspace/editor state and column operations.
-- `src/ColumnPadStudio/ViewModels/MainViewModel*.cs`
-  Workspace/editor state split across core properties, column actions, file-state tracking, document persistence, font/language setup, layout migration, JSON helpers, and schema records.
-- `src/ColumnPadStudio/Controls/ColumnEditorControl.xaml` plus `ColumnEditorControl.*.cs`
-  Column editor UI, line-number/lined-paper rendering, paste/list handling, and column context menus.
-- `src/ColumnPadStudio/ViewModels/WorkflowBuilderViewModel.cs` plus `WorkflowBuilderViewModel.*.cs`
-  Workflow builder state split into core selection, library/template actions, node/link editing, and preview wiring.
-- `src/ColumnPadStudio/Services/`
-  Focused helpers for file workflow, recovery storage, theme resource updates, app preferences, text search, and workflow storage.
-- `src/ColumnPadStudio/Resources/`
-  Shared WPF resources loaded by `App.xaml`. `ThemeBrushes.xaml` owns theme colours and shared geometry. `ControlStyles.xaml` owns reusable WPF control templates. `MenuStyles.xaml` owns shared menu and right-click dropdown styling.
+## User Requirements
 
-More structure detail: [`docs/REPOSITORY_STRUCTURE.md`](docs/REPOSITORY_STRUCTURE.md)
-Manual visual QA checklist: [`docs/UI_QA_CHECKLIST.md`](docs/UI_QA_CHECKLIST.md)
+- Windows 10 or Windows 11.
+- No account required.
+- No internet required after download.
+- No .NET SDK required for the released EXE.
 
-## Requirements
-- Windows 10 or Windows 11
-- .NET 8 SDK
-- Optional: Visual Studio with the .NET Desktop Development workload
+## For Developers
 
-## Download
-Download the latest single-file Windows build from the [GitHub Releases page](https://github.com/Awetspoon/ColumnPadStudio/releases/latest).
+Developer requirements:
 
-The release asset is:
-- `ColumnPadStudio-v2.2.2-win-x64.exe`
+- Windows 10 or Windows 11.
+- .NET 8 SDK or newer SDK capable of building `net8.0-windows`.
+- Optional: Visual Studio with the .NET Desktop Development workload.
 
-Place the `.exe` somewhere permanent, such as `C:\Apps\ColumnPad`, then run it. If Windows SmartScreen warns on first launch, use `More info -> Run anyway` only for builds downloaded from this repository.
+Clone the repo:
 
-## Clone
 ```powershell
 git clone https://github.com/Awetspoon/ColumnPadStudio.git
 cd ColumnPadStudio
 ```
 
-## Run The App
+Run from source:
+
 ```powershell
 dotnet run --project .\src\ColumnPadStudio\ColumnPadStudio.csproj -c Release
 ```
 
-## Build
+Build:
+
 ```powershell
 dotnet build .\ColumnPadStudio.sln -c Release
 ```
 
-## Tests
-### Domain tests
+Run tests:
+
 ```powershell
 dotnet run --project .\tests\ColumnPadStudio.Domain.Tests\ColumnPadStudio.Domain.Tests.csproj -c Release
-```
-
-### Smoke tests
-```powershell
 dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release
 ```
 
-## Publish A Single EXE
+Publish a single EXE:
+
 ```powershell
 dotnet publish .\src\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=FolderProfile
 ```
 
 Publish output:
+
 - `src/ColumnPadStudio/publish/ColumnPadStudio.exe`
 
-The publish profile is configured for:
-- self-contained Windows x64 build
-- single-file output
-- no trimming
-- no compression in the bundle
-
-This creates a portable executable, not a signed installer. A public release should still be signed, and an installer can be added later if the app needs Start menu shortcuts, uninstall support, or automatic update plumbing.
+The publish profile is configured for a self-contained Windows x64 single-file build with trimming and bundle compression disabled.
 
 ## Project Structure
-- `src/ColumnPadStudio/` - WPF app shell, UI, services, assets, and workflow editor
-- `src/ColumnPadStudio.Domain/` - domain-only rules and parsing helpers
-- `tests/ColumnPadStudio.SmokeTests/` - app-level smoke checks
-- `tests/ColumnPadStudio.Domain.Tests/` - domain logic checks
-- `docs/` - repository notes and screenshots
-- `tools/` - helper scripts such as branding asset generation
-- `CHANGELOG.md` - release history
-- `RELEASE_CHECKLIST.md` - manual release steps
+
+- `src/ColumnPadStudio/` - WPF app shell, UI, services, assets, resources, and workflow builder.
+- `src/ColumnPadStudio.Domain/` - domain-only rules for lists, checklist metrics, and workspace import constraints.
+- `tests/ColumnPadStudio.SmokeTests/` - app-level smoke checks for view-model and file/session flows.
+- `tests/ColumnPadStudio.Domain.Tests/` - focused domain-rule checks.
+- `docs/` - repository notes, release notes, screenshots, and QA checklists.
+- `tools/` - helper scripts such as branding asset generation.
+
+More structure detail: [docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md)
 
 ## Packaging Notes
-- Current public releases ship as a portable single `.exe`.
-- Release builds are not code-signed yet, so Windows may show a SmartScreen warning.
-- A full installer and automatic updates can be added later if the app needs Start menu shortcuts, uninstall support, or update prompts.
+
+- Current releases ship as a portable single `.exe`.
+- The app is not code-signed yet.
+- A full installer, Start menu shortcuts, uninstall support, and automatic updates can be added later.
 
 ## License
+
 MIT. See [LICENSE](LICENSE).
