@@ -60,6 +60,44 @@ public partial class ColumnEditorControl
         ResizeRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void InsertPicture_Click(object sender, RoutedEventArgs e)
+    {
+        InsertImageRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ImageRemove_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is ColumnImageViewModel image)
+            RemoveImageRequested?.Invoke(this, new ColumnImageEventArgs(image));
+    }
+
+    private void ImageWidthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (!IsLoaded)
+            return;
+
+        if ((sender as FrameworkElement)?.Tag is ColumnImageViewModel image)
+            ImageWidthChangedRequested?.Invoke(this, new ColumnImageEventArgs(image));
+    }
+
+    private void ImageShrink_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not ColumnImageViewModel image)
+            return;
+
+        image.Width -= 40;
+        ImageWidthChangedRequested?.Invoke(this, new ColumnImageEventArgs(image));
+    }
+
+    private void ImageGrow_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is not ColumnImageViewModel image)
+            return;
+
+        image.Width += 40;
+        ImageWidthChangedRequested?.Invoke(this, new ColumnImageEventArgs(image));
+    }
+
     private void ColumnMenuToggleWidthLock_Click(object sender, RoutedEventArgs e)
     {
         LockWidthRequested?.Invoke(this, EventArgs.Empty);

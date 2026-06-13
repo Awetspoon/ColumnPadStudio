@@ -13,7 +13,10 @@ This repository uses a clean `src / tests / docs / tools` layout so application 
 |   |-- ColumnPadStudio.SmokeTests/
 |   `-- ColumnPadStudio.Domain.Tests/
 |-- docs/
-|   `-- releases/
+|   |-- APP_BUILDING_STANDARD.md
+|   |-- UI_QA_CHECKLIST.md
+|   |-- releases/
+|   `-- workflows/
 |-- tools/
 |-- ColumnPadStudio.sln
 |-- README.md
@@ -60,6 +63,8 @@ Pure rules and parsing helpers with no WPF UI code.
 Current sub-areas:
 - `Lists/`
   Checklist metrics and list marker parsing.
+- `Text/`
+  Shared display-text cleanup rules for labels, names, and titles.
 - `Workspaces/`
   Workspace import detection and workspace constraints.
 
@@ -70,7 +75,17 @@ Broad tests for shell-facing behavior like layout save/load, recovery, export/im
 Smaller focused tests for domain rules.
 
 ### `docs/`
-Repository notes and screenshots.
+App standards, repository notes, screenshots, workflow maps, and release notes.
+
+Important docs:
+- `APP_BUILDING_STANDARD.md`
+  ColumnPad-specific version of the app-building order: idea, purpose, scope, structure, UI, storage, safety, testing, release, maintenance, upgrade, and migration.
+- `UI_QA_CHECKLIST.md`
+  Manual visual and interaction checks for themes, editing, columns, files, workflow builder, and release smoke testing.
+- `releases/`
+  Version-specific release notes.
+- `workflows/`
+  Importable workflow maps, including a high-level map of the ColumnPadStudio program structure.
 
 ### `tools/`
 Helper scripts that support maintenance or asset generation.
@@ -105,3 +120,4 @@ The app is intentionally lightweight:
 - Put new app-facing helpers under `src/ColumnPadStudio/Services/` only if they have one clear job.
 - Put pure parsing/rule logic under `src/ColumnPadStudio.Domain/` when it does not need WPF types.
 - Avoid growing `MainWindow` or `MainViewModel` into single-file catch-alls again; add new partial files or focused helpers instead.
+- Check `docs/APP_BUILDING_STANDARD.md` before larger feature work or release prep so changes stay inside the app's purpose, scope, structure, storage, testing, and release standards.

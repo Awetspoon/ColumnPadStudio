@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Text.Json;
 using System.Windows;
 using ColumnPadStudio.Services;
@@ -51,6 +52,10 @@ public sealed partial class MainViewModel : NotifyBase
 
     public string? CurrentFilePath { get; private set; }
     public SaveFileKind CurrentFileKind { get; private set; } = SaveFileKind.Layout;
+    public string CurrentFileDisplayName => string.IsNullOrWhiteSpace(CurrentFilePath)
+        ? "Untitled"
+        : Path.GetFileName(CurrentFilePath);
+
     public bool CanSaveCurrentFileDirectly => !string.IsNullOrWhiteSpace(CurrentFilePath) && !_requiresSaveAsBeforeOverwrite;
     public bool RequiresSaveAsBeforeOverwrite => _requiresSaveAsBeforeOverwrite;
     public bool IsDirty => _forceDirty || !string.Equals(_cleanStateSignature, CaptureDirtyState(), StringComparison.Ordinal);

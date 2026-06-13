@@ -38,12 +38,15 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             if (ReferenceEquals(_activeWorkspace, value))
                 return;
 
+            var previousWorkspace = _activeWorkspace;
             var previousVm = _activeWorkspace?.Vm;
             if (previousVm is not null)
             {
                 previousVm.RequestRebuildColumns -= Vm_RequestRebuildColumns;
                 previousVm.PropertyChanged -= Vm_PropertyChanged;
             }
+            if (previousWorkspace is not null)
+                previousWorkspace.PropertyChanged -= Workspace_PropertyChanged;
 
             _activeWorkspace = value;
             RaisePropertyChanged(nameof(ActiveWorkspace));
@@ -51,14 +54,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             var vm = _activeWorkspace?.Vm;
             if (vm is null)
+            {
+                UpdateWindowTitle();
                 return;
+            }
 
+            _activeWorkspace!.PropertyChanged += Workspace_PropertyChanged;
             vm.RequestRebuildColumns += Vm_RequestRebuildColumns;
             vm.PropertyChanged += Vm_PropertyChanged;
             ApplyTheme(vm.ThemePreset);
             ResetFindCursor();
             RebuildColumns();
             vm.RefreshStatus();
+            UpdateWindowTitle();
         }
     }
 
@@ -176,11 +184,32 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (e.PropertyName == nameof(MainViewModel.ThemePreset))
             SyncThemePreference(ActiveVm.ThemePreset, sender as MainViewModel);
 
+        if (e.PropertyName is nameof(MainViewModel.CurrentFilePath)
+            or nameof(MainViewModel.CurrentFileKind)
+            or nameof(MainViewModel.CurrentFileDisplayName))
+        {
+            UpdateWindowTitle();
+        }
+
         if (e.PropertyName == nameof(MainViewModel.ActiveColumnId))
         {
             SyncActiveColumnVisualState(ActiveVm);
             ClearSelectionsExcept(ActiveVm.ActiveColumnId);
         }
+    }
+
+    private void Workspace_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (ReferenceEquals(sender, ActiveWorkspace) && e.PropertyName == nameof(WorkspaceSession.Name))
+            UpdateWindowTitle();
+    }
+
+    private void UpdateWindowTitle()
+    {
+        var documentName = ActiveWorkspace?.Vm.CurrentFileDisplayName;
+        Title = string.IsNullOrWhiteSpace(documentName)
+            ? "ColumnPad"
+            : $"{documentName} - ColumnPad";
     }
 
     private void SyncActiveColumnVisualState(MainViewModel vm)
@@ -225,6 +254,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         editor.ResetWidthRequested += (_, __) => RunColumnAction(vm, column, vm.ResetActiveColumnWidth);
         editor.ResizeRequested += (_, __) => RunColumnAction(vm, column, ResizeActiveColumn);
         editor.RightEdgeResizeDeltaRequested += (_, args) => ResizeColumnFromRightEdge(editor, vm, column, args.HorizontalChange);
+        editor.InsertImageRequested += (_, __) => RunColumnAction(vm, column, InsertImageIntoActiveColumn);
+        editor.RemoveImageRequested += (_, args) => RunColumnAction(vm, column, () => RemoveImageFromActiveColumn(args.Image));
+        editor.ImageWidthChangedRequested += (_, args) => RunColumnAction(vm, column, () => EnsureColumnFitsImage(column, args.Image));
         editor.SetFontFamilyRequested += (_, __) => RunColumnAction(vm, column, SetActiveColumnFontFamily);
         editor.IncreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(+1));
         editor.DecreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(-1));

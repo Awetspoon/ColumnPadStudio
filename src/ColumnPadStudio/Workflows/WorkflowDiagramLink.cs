@@ -14,7 +14,7 @@ public sealed class WorkflowDiagramLink : NotifyBase
     public string Id
     {
         get => _id;
-        set => Set(ref _id, string.IsNullOrWhiteSpace(value) ? Guid.NewGuid().ToString("N") : value.Trim());
+        set => Set(ref _id, WorkflowIdentityRules.NormalizeId(value));
     }
 
     public string FromNodeId

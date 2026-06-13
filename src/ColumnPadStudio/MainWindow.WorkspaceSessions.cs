@@ -49,7 +49,7 @@ public partial class MainWindow
 
         var activeIndex = ActiveWorkspace is null ? 0 : Math.Max(0, Workspaces.IndexOf(ActiveWorkspace));
         var json = WorkspaceSessionFileService.SerializeSession(workspaces, activeIndex);
-        File.WriteAllText(path, json, Encoding.UTF8);
+        AtomicFileWriter.WriteText(path, json, Encoding.UTF8);
 
         foreach (var workspace in Workspaces)
             workspace.Vm.SetExternalFileReference(path, SaveFileKind.Layout, requiresSaveAs: false, markClean: true);

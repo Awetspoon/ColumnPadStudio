@@ -16,15 +16,17 @@ public partial class WorkflowBuilderWindow : Window
     private Point _dragStartPoint;
     private double _dragStartX;
     private double _dragStartY;
+    private string? _pendingImportFilePath;
 
     public WorkflowBuilderViewModel ViewModel { get; }
 
-    public WorkflowBuilderWindow()
+    public WorkflowBuilderWindow(string? importFilePath = null)
     {
         InitializeComponent();
 
         ViewModel = new WorkflowBuilderViewModel(new WorkflowService());
         DataContext = ViewModel;
+        _pendingImportFilePath = importFilePath;
 
         Loaded += WorkflowBuilderWindow_Loaded;
     }
@@ -33,6 +35,13 @@ public partial class WorkflowBuilderWindow : Window
     {
         Loaded -= WorkflowBuilderWindow_Loaded;
         ViewModel.Load();
+
+        if (!string.IsNullOrWhiteSpace(_pendingImportFilePath))
+        {
+            var filePath = _pendingImportFilePath;
+            _pendingImportFilePath = null;
+            ImportWorkflowJsonFromPath(filePath);
+        }
     }
 
     private void AddWorkflow_Click(object sender, RoutedEventArgs e)
@@ -167,9 +176,20 @@ public partial class WorkflowBuilderWindow : Window
         if (dialog.ShowDialog(this) != true)
             return;
 
+        ImportWorkflowJsonFromPath(dialog.FileName);
+    }
+
+    public void ImportWorkflowJsonFromPath(string filePath)
+    {
+        if (!IsLoaded)
+        {
+            _pendingImportFilePath = filePath;
+            return;
+        }
+
         try
         {
-            if (ViewModel.ImportWorkflowFromFile(dialog.FileName))
+            if (ViewModel.ImportWorkflowFromFile(filePath))
                 return;
 
             MessageBox.Show(
@@ -192,17 +212,47 @@ public partial class WorkflowBuilderWindow : Window
 
     private void ExportWorkflowJson_Click(object sender, RoutedEventArgs e)
     {
+        ExportWorkflow(
+            ".workflow.json",
+            "Workflow JSON (*.workflow.json)|*.workflow.json|JSON (*.json)|*.json|All files (*.*)|*.*",
+            "workflow JSON",
+            ViewModel.ExportSelectedWorkflowToFile);
+    }
+
+    private void ExportWorkflowText_Click(object sender, RoutedEventArgs e)
+    {
+        ExportWorkflow(
+            ".workflow.txt",
+            "Workflow text (*.workflow.txt)|*.workflow.txt|Text (*.txt)|*.txt|All files (*.*)|*.*",
+            "workflow text",
+            ViewModel.ExportSelectedWorkflowTextToFile);
+    }
+
+    private void ExportWorkflowMarkdown_Click(object sender, RoutedEventArgs e)
+    {
+        ExportWorkflow(
+            ".workflow.md",
+            "Workflow markdown (*.workflow.md)|*.workflow.md|Markdown (*.md)|*.md|All files (*.*)|*.*",
+            "workflow markdown",
+            ViewModel.ExportSelectedWorkflowMarkdownToFile);
+    }
+
+    private void ExportWorkflow(
+        string defaultExtension,
+        string filter,
+        string exportLabel,
+        Func<string, bool> exportAction)
+    {
         var selected = ViewModel.SelectedWorkflow;
         if (selected is null)
             return;
 
-        var suggestedName = BuildWorkflowExportFileName(selected.Name);
         var dialog = new SaveFileDialog
         {
-            FileName = suggestedName,
-            Filter = "Workflow JSON (*.workflow.json)|*.workflow.json|JSON (*.json)|*.json|All files (*.*)|*.*",
+            FileName = BuildWorkflowExportFileName(selected.Name, defaultExtension),
+            Filter = filter,
             FilterIndex = 1,
-            DefaultExt = ".workflow.json",
+            DefaultExt = defaultExtension,
             AddExtension = true
         };
 
@@ -211,13 +261,13 @@ public partial class WorkflowBuilderWindow : Window
 
         try
         {
-            ViewModel.ExportSelectedWorkflowToFile(dialog.FileName);
+            exportAction(dialog.FileName);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
             MessageBox.Show(
                 this,
-                $"Could not export workflow JSON.\n\n{ex.Message}",
+                $"Could not export {exportLabel}.\n\n{ex.Message}",
                 "Workflow Export Failed",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -275,7 +325,7 @@ public partial class WorkflowBuilderWindow : Window
         e.Handled = true;
     }
 
-    private static string BuildWorkflowExportFileName(string? workflowName)
+    private static string BuildWorkflowExportFileName(string? workflowName, string extension)
     {
         var baseName = string.IsNullOrWhiteSpace(workflowName)
             ? "workflow"
@@ -286,8 +336,8 @@ public partial class WorkflowBuilderWindow : Window
         sanitized = string.IsNullOrWhiteSpace(sanitized) ? "workflow" : sanitized;
 
         if (sanitized.EndsWith(".workflow", StringComparison.OrdinalIgnoreCase))
-            return $"{sanitized}.json";
+            return $"{sanitized}{extension[".workflow".Length..]}";
 
-        return $"{sanitized}.workflow.json";
+        return $"{sanitized}{extension}";
     }
 }

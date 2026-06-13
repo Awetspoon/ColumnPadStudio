@@ -25,11 +25,19 @@ public sealed partial class MainViewModel
         string PastePreset,
         string LineMarkerMode,
         List<int> CheckedChecklistLineIndexes,
+        List<LayoutImage> Images,
         string FontFamily,
         double FontSize,
         string FontStyle,
         string FontWeight,
         bool UseDefaultFont);
+
+    private sealed record LayoutImage(
+        string FilePath,
+        string OriginalFileName,
+        double Width,
+        int PixelWidth,
+        int PixelHeight);
 
     private sealed record DirtyWorkspaceState(
         bool ShowLineNumbers,
@@ -51,6 +59,7 @@ public sealed partial class MainViewModel
         string PastePreset,
         string LineMarkerMode,
         List<int> CheckedChecklistLineIndexes,
+        List<LayoutImage> Images,
         string FontFamily,
         double FontSize,
         string FontStyle,

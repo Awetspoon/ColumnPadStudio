@@ -1,4 +1,5 @@
 ﻿using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Domain.Text;
 using ColumnPadStudio.Domain.Workspaces;
 
 var failures = new List<string>();
@@ -39,21 +40,26 @@ var metrics = ChecklistMetricsCalculator.Compute("\u2610 one\n\u2611 two\n- [ ] 
 Check(metrics.Total == 4, "ChecklistMetrics should count all supported checklist styles.");
 Check(metrics.Done == 2, "ChecklistMetrics should count checked items across styles.");
 
+Check(DisplayTextRules.CleanSingleLineLabel("  Column\r\nOne\tName  ", "Column") == "Column One Name", "Display text rules should normalize pasted line breaks and tabs in labels.");
+Check(DisplayTextRules.CleanSingleLineLabel(" \r\n\t ", "Fallback") == "Fallback", "Display text rules should fall back when labels are blank after cleanup.");
+
 Check(WorkspaceConstraints.ClampColumnCount(-1) == WorkspaceConstraints.MinColumns, "WorkspaceConstraints should clamp low column counts.");
 Check(WorkspaceConstraints.ClampColumnCount(100000) == WorkspaceConstraints.MaxColumns, "WorkspaceConstraints should clamp high column counts.");
 Check(WorkspaceConstraints.ClampColumnCount(3) == 3, "WorkspaceConstraints should keep valid counts unchanged.");
-var textExport = "===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
-Check(WorkspaceImportRules.LooksLikeTextExport(textExport), "Text-export detection should recognize section headers.");
+var textExport = $"{WorkspaceImportRules.TextExportMarker}\n{WorkspaceImportRules.TextExportFormatLine}\n\n===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
+Check(WorkspaceImportRules.LooksLikeTextExport(textExport), "Text-export detection should recognize marked ColumnPad exports.");
 Check(!WorkspaceImportRules.LooksLikeTextExport("plain note\nline two"), "Text-export detection should reject plain text.");
+Check(!WorkspaceImportRules.LooksLikeTextExport("===== Alpha =====\n\nplain note"), "Text-export detection should reject unmarked divider-like text.");
 
 var parsedTextExport = WorkspaceImportRules.ParseTextExportColumns(textExport);
 Check(parsedTextExport.Count == 2, "Text-export parser should return one column per section header.");
 Check(parsedTextExport[0].Title == "Alpha" && parsedTextExport[0].Text == "one", "Text-export parser should preserve first section content.");
 Check(parsedTextExport[1].Title == "Beta" && parsedTextExport[1].Text == ".", "Text-export parser should preserve second section content.");
 
-var markdownExport = "## Red\n\nleft\n\n## Blue\n\nright\n";
-Check(WorkspaceImportRules.LooksLikeMarkdownExport(markdownExport), "Markdown-export detection should recognize heading-based exports.");
+var markdownExport = $"{WorkspaceImportRules.MarkdownExportMarker}\n\n## Red\n\nleft\n\n## Blue\n\nright\n";
+Check(WorkspaceImportRules.LooksLikeMarkdownExport(markdownExport), "Markdown-export detection should recognize marked ColumnPad markdown exports.");
 Check(!WorkspaceImportRules.LooksLikeMarkdownExport("intro paragraph\n## later heading"), "Markdown-export detection should reject inline heading text exports.");
+Check(!WorkspaceImportRules.LooksLikeMarkdownExport("## Red\n\nleft\n\n## Blue\n\nright\n"), "Markdown-export detection should reject unmarked ordinary markdown headings.");
 
 var parsedMarkdownExport = WorkspaceImportRules.ParseMarkdownExportColumns(markdownExport);
 Check(parsedMarkdownExport.Count == 2, "Markdown-export parser should return one column per heading.");

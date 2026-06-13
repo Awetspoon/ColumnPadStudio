@@ -1,0 +1,466 @@
+{
+  "SchemaVersion": 3,
+  "Id": "columnpadstudio-program-map",
+  "Name": "ColumnPadStudio Program Map",
+  "Category": "App Architecture",
+  "Description": "A high-level workflow map of how ColumnPadStudio is organised, how the main features connect, and what must stay clean when the app is changed.",
+  "Trigger": 0,
+  "Nodes": [
+    {
+      "Id": "start",
+      "Kind": 0,
+      "Title": "Start app",
+      "Description": "The app launches into the WPF shell and restores usable state before the user starts writing.",
+      "Goal": "Open ColumnPadStudio with the right theme, preferences, recovery state, and default workspace.",
+      "Instructions": "Start in App.xaml/App.xaml.cs and MainWindow.xaml/MainWindow.xaml.cs. Keep startup light, keep crash handling clear, and avoid hiding feature wiring in unrelated files.",
+      "ExpectedOutput": "A stable main window with one active workspace and a ready editor surface.",
+      "ChecklistItems": [
+        {
+          "Text": "Load app resources and theme dictionaries without missing resource errors.",
+          "IsDone": false
+        },
+        {
+          "Text": "Restore preferences before the user sees the main editor.",
+          "IsDone": false
+        },
+        {
+          "Text": "Offer recovery only when a real recovery snapshot exists.",
+          "IsDone": false
+        }
+      ],
+      "X": 60,
+      "Y": 100,
+      "Width": 160,
+      "Height": 74,
+      "Color": 2
+    },
+    {
+      "Id": "workspace-shell",
+      "Kind": 1,
+      "Title": "Workspace shell",
+      "Description": "Workspace tabs hold separate MainViewModel instances and control what the main window is editing.",
+      "Goal": "Keep workspace creation, rename, delete, scroll buttons, active state, and save-before-close behaviour consistent.",
+      "Instructions": "Use MainWindow.Workspaces.cs, WorkspaceSession.cs, MainWindow.WorkspaceSessions.cs, MainWindow.SaveBeforeExit.cs, and WorkspaceLifecycleService.cs as the single workspace path.",
+      "ExpectedOutput": "Multiple workspaces behave like separate documents without clashing with column actions.",
+      "ChecklistItems": [
+        {
+          "Text": "Workspace right-click actions affect only the workspace tab.",
+          "IsDone": false
+        },
+        {
+          "Text": "Workspace overflow uses tab scroll controls only when needed.",
+          "IsDone": false
+        },
+        {
+          "Text": "Multi-workspace save creates a workspace-session file, not a fake single layout.",
+          "IsDone": false
+        }
+      ],
+      "X": 300,
+      "Y": 70,
+      "Width": 220,
+      "Height": 94,
+      "Color": 1
+    },
+    {
+      "Id": "editor-viewmodel",
+      "Kind": 1,
+      "Title": "Editor view model",
+      "Description": "MainViewModel owns the editable layout state: columns, global editor settings, file state, and layout JSON.",
+      "Goal": "Keep the app state readable and split by responsibility instead of rebuilding one huge view model file.",
+      "Instructions": "Use MainViewModel.cs plus the partial files for columns, fonts, file state, persistence, schema, migration, and JSON helpers. New state should live in the matching partial file.",
+      "ExpectedOutput": "Column count, selected column, font settings, proofing language, theme, save state, and status text all update from one reliable source.",
+      "ChecklistItems": [
+        {
+          "Text": "Do not duplicate save/load state outside MainViewModel file-state and persistence partials.",
+          "IsDone": false
+        },
+        {
+          "Text": "Keep migration code separate from normal save code.",
+          "IsDone": false
+        },
+        {
+          "Text": "New layout fields must round-trip through the layout schema.",
+          "IsDone": false
+        }
+      ],
+      "X": 580,
+      "Y": 70,
+      "Width": 230,
+      "Height": 94,
+      "Color": 1
+    },
+    {
+      "Id": "column-editor-control",
+      "Kind": 1,
+      "Title": "Column editor control",
+      "Description": "ColumnEditorControl is the repeated editor surface for each column, including text editing, gutters, context menus, paste behaviour, spell check, and image UI.",
+      "Goal": "Keep every column visually and behaviourally consistent, including columns added later.",
+      "Instructions": "Use ColumnEditorControl.xaml and the partial files for lifecycle, menus, gutter, paste, and interactions. Fix column behaviour here when it belongs to every column.",
+      "ExpectedOutput": "All columns share the same resize behaviour, line-number gutter, context menu style, proofing behaviour, and attachment controls.",
+      "ChecklistItems": [
+        {
+          "Text": "Context menus should not duplicate main menu defaults.",
+          "IsDone": false
+        },
+        {
+          "Text": "Spell-check suggestions should appear where the spelling error is clicked.",
+          "IsDone": false
+        },
+        {
+          "Text": "Line number and checklist metadata should stay aligned after paste, load, and scroll.",
+          "IsDone": false
+        }
+      ],
+      "X": 860,
+      "Y": 70,
+      "Width": 250,
+      "Height": 100,
+      "Color": 1
+    },
+    {
+      "Id": "file-routing",
+      "Kind": 2,
+      "Title": "Choose file route",
+      "Description": "Opening or saving must decide whether the user is working with raw text, markdown, layout JSON, workspace-session JSON, or an export.",
+      "Goal": "Send each file format through the right path without overwriting source files unexpectedly.",
+      "Instructions": "Use FileWorkflowService, WorkspaceImportRules, MainWindow.FileSession.cs, MainViewModel.FileState.cs, and MainViewModel.Persistence.cs. Keep app-native files separate from human-readable exports.",
+      "ExpectedOutput": "The app knows whether to load plain text, import an export, restore a layout, or restore multiple workspaces.",
+      "ChecklistItems": [
+        {
+          "Text": "Plain .txt and .md files must not be auto-split unless they contain ColumnPad export markers.",
+          "IsDone": false
+        },
+        {
+          "Text": "Source text and markdown files require Save As before overwrite.",
+          "IsDone": false
+        },
+        {
+          "Text": ".columnpad.json remains the full app layout format.",
+          "IsDone": false
+        }
+      ],
+      "X": 1180,
+      "Y": 70,
+      "Width": 230,
+      "Height": 104,
+      "Color": 3
+    },
+    {
+      "Id": "layout-session-storage",
+      "Kind": 1,
+      "Title": "Layout and session storage",
+      "Description": "The app saves one workspace as layout JSON and multiple workspaces as a workspace-session JSON.",
+      "Goal": "Preserve text, column widths, line modes, checklist metadata, images, theme, language, and file references cleanly.",
+      "Instructions": "Use MainViewModel.Persistence.cs, MainViewModel.LayoutSchema.cs, WorkspaceSessionFileService.cs, WorkspaceRecoveryStore.cs, and AtomicFileWriter.cs. Use atomic writes for anything saved to disk.",
+      "ExpectedOutput": "Saved files can be loaded again without losing layout or confusing external readers.",
+      "ChecklistItems": [
+        {
+          "Text": "Save JSON as real nested JSON, not escaped JSON strings.",
+          "IsDone": false
+        },
+        {
+          "Text": "Recovery snapshots should restore only valid layout data.",
+          "IsDone": false
+        },
+        {
+          "Text": "Text and markdown exports stay human-readable and marked.",
+          "IsDone": false
+        }
+      ],
+      "X": 1180,
+      "Y": 250,
+      "Width": 240,
+      "Height": 100,
+      "Color": 2
+    },
+    {
+      "Id": "image-attachments",
+      "Kind": 1,
+      "Title": "Image attachments",
+      "Description": "Images are attached to columns and saved as part of the native layout format.",
+      "Goal": "Let users add and resize pictures without pretending pictures are plain text.",
+      "Instructions": "Use MainWindow.Images.cs, ColumnImageFileService.cs, ColumnImageViewModel.cs, ColumnEditorControl.xaml, and layout persistence. Keep image storage linked to native layout JSON.",
+      "ExpectedOutput": "Images appear inside the right column, can be resized, and round-trip with app layout files.",
+      "ChecklistItems": [
+        {
+          "Text": "Auto-grow the column only when the image needs more width.",
+          "IsDone": false
+        },
+        {
+          "Text": "Remove image files safely when attachments are deleted.",
+          "IsDone": false
+        },
+        {
+          "Text": "Do not place image data inside plain .txt or .md exports.",
+          "IsDone": false
+        }
+      ],
+      "X": 860,
+      "Y": 250,
+      "Width": 240,
+      "Height": 98,
+      "Color": 5
+    },
+    {
+      "Id": "proofing-settings",
+      "Kind": 1,
+      "Title": "Proofing and settings",
+      "Description": "The toolbar and menus control editor font, theme, spell check, language, line paper, wrap, and line numbers.",
+      "Goal": "Keep settings in one visible, consistent place and avoid duplicated settings in right-click menus.",
+      "Instructions": "Use MainWindow.xaml, MainWindow.ViewModes.cs, MainViewModel.Fonts.cs, AppPreferencesService.cs, ThemePresetService.cs, ThemeResourceService.cs, and resources under Resources.",
+      "ExpectedOutput": "Settings apply to all relevant columns and persist cleanly without a bolted-on toolbar feel.",
+      "ChecklistItems": [
+        {
+          "Text": "Toolbar highlights and spacing should match normal app controls.",
+          "IsDone": false
+        },
+        {
+          "Text": "Spell check language follows the selected proofing language when Windows dictionaries exist.",
+          "IsDone": false
+        },
+        {
+          "Text": "Dark and light modes should use the same control structure with different resources.",
+          "IsDone": false
+        }
+      ],
+      "X": 580,
+      "Y": 250,
+      "Width": 240,
+      "Height": 98,
+      "Color": 5
+    },
+    {
+      "Id": "workflow-builder",
+      "Kind": 1,
+      "Title": "Workflow builder",
+      "Description": "The workflow builder lets users create reusable process maps with starters, nodes, links, JSON import/export, and human-readable TXT/MD exports.",
+      "Goal": "Make workflows useful as app data and readable outside the app.",
+      "Instructions": "Use WorkflowBuilderWindow.xaml/.cs, WorkflowBuilderViewModel partials, WorkflowService.cs, WorkflowDefinition.cs, node/link/checklist models, and WorkflowTemplateCatalog.cs.",
+      "ExpectedOutput": "Users can create, save, import, export, and read workflows without confusing JSON data with plain documentation.",
+      "ChecklistItems": [
+        {
+          "Text": "Keep .workflow.json as the editable/importable workflow format.",
+          "IsDone": false
+        },
+        {
+          "Text": "Keep TXT and MD exports human-readable and one-way.",
+          "IsDone": false
+        },
+        {
+          "Text": "Workflow nodes should include goal, instructions, expected output, and checklist data.",
+          "IsDone": false
+        }
+      ],
+      "X": 300,
+      "Y": 250,
+      "Width": 240,
+      "Height": 104,
+      "Color": 1
+    },
+    {
+      "Id": "domain-rules",
+      "Kind": 1,
+      "Title": "Domain rules",
+      "Description": "Small domain helpers keep list markers, checklist metrics, paste presets, workspace constraints, and import detection out of UI code.",
+      "Goal": "Keep reusable rules testable and independent from WPF controls.",
+      "Instructions": "Use ColumnPadStudio.Domain for list and workspace rules. Put logic here when it does not need WPF objects or window state.",
+      "ExpectedOutput": "Paste, checklist, import detection, and constraint rules can be tested without launching the app.",
+      "ChecklistItems": [
+        {
+          "Text": "Do not copy parser logic into controls.",
+          "IsDone": false
+        },
+        {
+          "Text": "Keep marker parsing and import rules covered by domain tests.",
+          "IsDone": false
+        },
+        {
+          "Text": "Only UI-specific code should stay in the WPF project.",
+          "IsDone": false
+        }
+      ],
+      "X": 60,
+      "Y": 250,
+      "Width": 220,
+      "Height": 96,
+      "Color": 1
+    },
+    {
+      "Id": "qa-checks",
+      "Kind": 1,
+      "Title": "Quality checks",
+      "Description": "Build, domain tests, smoke tests, and UI sanity checks protect the app after cleanup or feature work.",
+      "Goal": "Catch broken wiring before upload or release.",
+      "Instructions": "Use tests/ColumnPadStudio.Domain.Tests and tests/ColumnPadStudio.SmokeTests. Run release build and targeted app checks before publishing.",
+      "ExpectedOutput": "The app builds, core behaviour passes tests, and obvious UI wiring still works.",
+      "ChecklistItems": [
+        {
+          "Text": "Run release build with NuGet audit disabled only when needed for local SDK noise.",
+          "IsDone": false
+        },
+        {
+          "Text": "Run domain tests for pure logic changes.",
+          "IsDone": false
+        },
+        {
+          "Text": "Run smoke tests for WPF wiring, persistence, workflow, and UI resource checks.",
+          "IsDone": false
+        }
+      ],
+      "X": 580,
+      "Y": 450,
+      "Width": 240,
+      "Height": 94,
+      "Color": 3
+    },
+    {
+      "Id": "release",
+      "Kind": 1,
+      "Title": "Release package",
+      "Description": "Publishing creates the single EXE release asset and updates documentation so the GitHub page looks like a real app.",
+      "Goal": "Ship only needed files, release notes, README updates, and a clean one-EXE build.",
+      "Instructions": "Use README.md, CHANGELOG.md, docs/releases, RELEASE_CHECKLIST.md, the publish profile, and GitHub release assets. Keep repo cleanup separate from app feature changes.",
+      "ExpectedOutput": "GitHub shows a clear app page, current release notes, and a downloadable single EXE.",
+      "ChecklistItems": [
+        {
+          "Text": "Update README and screenshot when UI meaningfully changes.",
+          "IsDone": false
+        },
+        {
+          "Text": "Do not upload build junk, temporary files, or local recovery data.",
+          "IsDone": false
+        },
+        {
+          "Text": "Attach the current single EXE to the release.",
+          "IsDone": false
+        }
+      ],
+      "X": 860,
+      "Y": 450,
+      "Width": 240,
+      "Height": 96,
+      "Color": 4
+    },
+    {
+      "Id": "end",
+      "Kind": 3,
+      "Title": "Healthy app",
+      "Description": "The app remains understandable, useful, and ready for future work.",
+      "Goal": "Keep ColumnPadStudio professional without redesigning it into a different product.",
+      "Instructions": "When changing the app, follow this map: preserve useful features, remove dead or duplicated systems, and rebuild only the areas that are safer to rebuild than patch.",
+      "ExpectedOutput": "A clean multi-column writing app with reliable workspaces, save/load, proofing, image attachments, workflow tools, and release process.",
+      "ChecklistItems": [
+        {
+          "Text": "No fake screens or dead systems remain connected.",
+          "IsDone": false
+        },
+        {
+          "Text": "No feature has two competing sources of truth.",
+          "IsDone": false
+        },
+        {
+          "Text": "Another developer can follow the structure without guessing.",
+          "IsDone": false
+        }
+      ],
+      "X": 1180,
+      "Y": 450,
+      "Width": 220,
+      "Height": 88,
+      "Color": 2
+    }
+  ],
+  "Links": [
+    {
+      "Id": "link-start-workspace",
+      "FromNodeId": "start",
+      "ToNodeId": "workspace-shell",
+      "Label": "opens"
+    },
+    {
+      "Id": "link-workspace-editor",
+      "FromNodeId": "workspace-shell",
+      "ToNodeId": "editor-viewmodel",
+      "Label": "owns"
+    },
+    {
+      "Id": "link-editor-control",
+      "FromNodeId": "editor-viewmodel",
+      "ToNodeId": "column-editor-control",
+      "Label": "renders"
+    },
+    {
+      "Id": "link-control-file",
+      "FromNodeId": "column-editor-control",
+      "ToNodeId": "file-routing",
+      "Label": "content"
+    },
+    {
+      "Id": "link-file-storage",
+      "FromNodeId": "file-routing",
+      "ToNodeId": "layout-session-storage",
+      "Label": "save/load"
+    },
+    {
+      "Id": "link-control-images",
+      "FromNodeId": "column-editor-control",
+      "ToNodeId": "image-attachments",
+      "Label": "attachments"
+    },
+    {
+      "Id": "link-editor-settings",
+      "FromNodeId": "editor-viewmodel",
+      "ToNodeId": "proofing-settings",
+      "Label": "settings"
+    },
+    {
+      "Id": "link-settings-control",
+      "FromNodeId": "proofing-settings",
+      "ToNodeId": "column-editor-control",
+      "Label": "applies to"
+    },
+    {
+      "Id": "link-workspace-workflow",
+      "FromNodeId": "workspace-shell",
+      "ToNodeId": "workflow-builder",
+      "Label": "tools"
+    },
+    {
+      "Id": "link-domain-editor",
+      "FromNodeId": "domain-rules",
+      "ToNodeId": "editor-viewmodel",
+      "Label": "rules"
+    },
+    {
+      "Id": "link-domain-file",
+      "FromNodeId": "domain-rules",
+      "ToNodeId": "file-routing",
+      "Label": "classifies"
+    },
+    {
+      "Id": "link-storage-qa",
+      "FromNodeId": "layout-session-storage",
+      "ToNodeId": "qa-checks",
+      "Label": "verify"
+    },
+    {
+      "Id": "link-workflow-qa",
+      "FromNodeId": "workflow-builder",
+      "ToNodeId": "qa-checks",
+      "Label": "verify"
+    },
+    {
+      "Id": "link-qa-release",
+      "FromNodeId": "qa-checks",
+      "ToNodeId": "release",
+      "Label": "passes"
+    },
+    {
+      "Id": "link-release-end",
+      "FromNodeId": "release",
+      "ToNodeId": "end",
+      "Label": "ships"
+    }
+  ]
+}

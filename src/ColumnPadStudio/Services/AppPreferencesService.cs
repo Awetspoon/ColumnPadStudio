@@ -35,8 +35,6 @@ public static class AppPreferencesService
         ArgumentNullException.ThrowIfNull(preferences);
 
         var resolvedPath = ResolvePath(path);
-        Directory.CreateDirectory(Path.GetDirectoryName(resolvedPath)!);
-
         var normalized = preferences with { ThemePreset = ThemePresetService.Normalize(preferences.ThemePreset) };
         AtomicFileWriter.WriteText(resolvedPath, JsonSerializer.Serialize(normalized, JsonOptions));
     }
@@ -45,5 +43,4 @@ public static class AppPreferencesService
     {
         return string.IsNullOrWhiteSpace(path) ? PreferencesPath : path;
     }
-
 }

@@ -13,6 +13,10 @@ public sealed partial class MainViewModel
     public string BuildExportText()
     {
         var sb = new StringBuilder();
+        sb.AppendLine(WorkspaceImportRules.TextExportMarker);
+        sb.AppendLine(WorkspaceImportRules.TextExportFormatLine);
+        sb.AppendLine();
+
         for (var i = 0; i < Columns.Count; i++)
         {
             var column = Columns[i];
@@ -26,6 +30,9 @@ public sealed partial class MainViewModel
     public string BuildExportMarkdown()
     {
         var sb = new StringBuilder();
+        sb.AppendLine(WorkspaceImportRules.MarkdownExportMarker);
+        sb.AppendLine();
+
         for (var i = 0; i < Columns.Count; i++)
         {
             var column = Columns[i];
@@ -131,6 +138,12 @@ public sealed partial class MainViewModel
                 c.PastePreset.ToString(),
                 c.LineMarkerMode.ToString(),
                 c.GetCheckedChecklistLineIndexes().ToList(),
+                c.Images.Select(image => new LayoutImage(
+                    image.FilePath,
+                    image.OriginalFileName,
+                    image.Width,
+                    image.PixelWidth,
+                    image.PixelHeight)).ToList(),
                 c.EditorFontFamily,
                 c.EditorFontSize,
                 c.EditorFontStyle.ToString(),
@@ -216,6 +229,7 @@ public sealed partial class MainViewModel
             text = markerMigration.Text;
             markerMode = markerMigration.Mode;
             checkedChecklistLineIndexes = markerMigration.CheckedChecklistLineIndexes;
+            var images = ReadLayoutImages(obj);
 
             parsedColumns.Add(new LayoutColumn(
                 title,
@@ -225,6 +239,7 @@ public sealed partial class MainViewModel
                 pastePreset.ToString(),
                 markerMode.ToString(),
                 checkedChecklistLineIndexes,
+                images,
                 columnFontFamily,
                 columnFontSize,
                 columnFontStyle,
@@ -253,6 +268,16 @@ public sealed partial class MainViewModel
             vm.PastePreset = ParsePastePreset(column.PastePreset);
             vm.LineMarkerMode = ParseLineMarkerMode(column.LineMarkerMode);
             vm.SetCheckedChecklistLineIndexes(column.CheckedChecklistLineIndexes);
+            vm.Images.Clear();
+            foreach (var image in column.Images)
+            {
+                vm.Images.Add(new ColumnImageViewModel(
+                    image.FilePath,
+                    image.OriginalFileName,
+                    image.Width,
+                    image.PixelWidth,
+                    image.PixelHeight));
+            }
             vm.EditorFontFamily = string.IsNullOrWhiteSpace(column.FontFamily) ? EditorFontFamily : column.FontFamily;
             vm.EditorFontSize = column.FontSize <= 0 ? EditorFontSize : column.FontSize;
             vm.EditorFontStyle = ParseFontStyle(column.FontStyle, _editorFontStyle);
@@ -298,16 +323,16 @@ public sealed partial class MainViewModel
         {
             case SaveFileKind.TextDocument:
             case SaveFileKind.MarkdownDocument:
-                File.WriteAllText(path, BuildSingleDocumentText(), Encoding.UTF8);
+                AtomicFileWriter.WriteText(path, BuildSingleDocumentText(), Encoding.UTF8);
                 break;
             case SaveFileKind.TextExport:
-                File.WriteAllText(path, BuildExportText(), Encoding.UTF8);
+                AtomicFileWriter.WriteText(path, BuildExportText(), Encoding.UTF8);
                 break;
             case SaveFileKind.MarkdownExport:
-                File.WriteAllText(path, BuildExportMarkdown(), Encoding.UTF8);
+                AtomicFileWriter.WriteText(path, BuildExportMarkdown(), Encoding.UTF8);
                 break;
             default:
-                File.WriteAllText(path, ToLayoutJson());
+                AtomicFileWriter.WriteText(path, ToLayoutJson(), Encoding.UTF8);
                 break;
         }
 
@@ -370,6 +395,7 @@ public sealed partial class MainViewModel
             column.PastePreset = PasteListPreset.None;
             column.LineMarkerMode = LineMarkerMode.Numbers;
             column.SetCheckedChecklistLineIndexes(null);
+            column.ClearImages();
             column.EditorFontFamily = EditorFontFamily;
             column.EditorFontSize = EditorFontSize;
             column.EditorFontStyle = _editorFontStyle;

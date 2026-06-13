@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Text.Json.Serialization;
+using ColumnPadStudio.Domain.Text;
 using ColumnPadStudio.ViewModels;
 
 namespace ColumnPadStudio.Workflows;
@@ -24,19 +25,19 @@ public sealed class WorkflowDefinition : NotifyBase
     public string Id
     {
         get => _id;
-        set => Set(ref _id, string.IsNullOrWhiteSpace(value) ? Guid.NewGuid().ToString("N") : value);
+        set => Set(ref _id, WorkflowIdentityRules.NormalizeId(value));
     }
 
     public string Name
     {
         get => _name;
-        set => Set(ref _name, string.IsNullOrWhiteSpace(value) ? "New Workflow" : value.Trim());
+        set => Set(ref _name, DisplayTextRules.CleanSingleLineLabel(value, "New Workflow"));
     }
 
     public string Category
     {
         get => _category;
-        set => Set(ref _category, string.IsNullOrWhiteSpace(value) ? "Custom" : value.Trim());
+        set => Set(ref _category, DisplayTextRules.CleanSingleLineLabel(value, "Custom"));
     }
 
     public string Description

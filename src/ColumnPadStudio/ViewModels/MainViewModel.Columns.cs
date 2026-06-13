@@ -181,7 +181,12 @@ public sealed partial class MainViewModel
 
     public void ClearAll()
     {
-        foreach (var c in Columns) c.Text = string.Empty;
+        foreach (var c in Columns)
+        {
+            c.Text = string.Empty;
+            c.ClearImages();
+        }
+
         StatusText = "Cleared.";
     }
 
@@ -199,6 +204,9 @@ public sealed partial class MainViewModel
         copy.PastePreset = a.PastePreset;
         copy.LineMarkerMode = a.LineMarkerMode;
         copy.SetCheckedChecklistLineIndexes(a.GetCheckedChecklistLineIndexes());
+        foreach (var image in a.Images)
+            copy.Images.Add(image.Duplicate());
+
         copy.EditorFontFamily = a.EditorFontFamily;
         copy.EditorFontSize = a.EditorFontSize;
         copy.EditorFontStyle = a.EditorFontStyle;

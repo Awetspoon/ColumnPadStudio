@@ -10,6 +10,9 @@ public sealed partial class MainViewModel
         CurrentFilePath = string.IsNullOrWhiteSpace(path) ? null : path;
         CurrentFileKind = kind;
         _requiresSaveAsBeforeOverwrite = CurrentFilePath is not null && requiresSaveAs;
+        OnPropertyChanged(nameof(CurrentFilePath));
+        OnPropertyChanged(nameof(CurrentFileKind));
+        OnPropertyChanged(nameof(CurrentFileDisplayName));
         OnPropertyChanged(nameof(CanSaveCurrentFileDirectly));
         OnPropertyChanged(nameof(RequiresSaveAsBeforeOverwrite));
     }
@@ -57,6 +60,12 @@ public sealed partial class MainViewModel
                     c.PastePreset.ToString(),
                     c.LineMarkerMode.ToString(),
                     c.GetCheckedChecklistLineIndexes().ToList(),
+                    c.Images.Select(image => new LayoutImage(
+                        image.FilePath,
+                        image.OriginalFileName,
+                        image.Width,
+                        image.PixelWidth,
+                        image.PixelHeight)).ToList(),
                     c.EditorFontFamily,
                     c.EditorFontSize,
                     c.EditorFontStyle.ToString(),

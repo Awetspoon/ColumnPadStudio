@@ -98,6 +98,9 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(column.Text))
             return true;
 
+        if (column.Images.Count > 0)
+            return true;
+
         if (column.WidthPx.HasValue)
             return true;
 

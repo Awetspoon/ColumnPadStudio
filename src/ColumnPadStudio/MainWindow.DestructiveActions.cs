@@ -46,7 +46,7 @@ public partial class MainWindow
             action();
             return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or InvalidDataException)
         {
             MessageBox.Show(
                 this,

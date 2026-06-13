@@ -38,9 +38,12 @@ dotnet publish .\src\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=Fo
 
 Expected output:
 - `src\ColumnPadStudio\publish\ColumnPadStudio.exe`
+- No `.pdb`, `.dll`, `.json`, or loose runtime files should remain beside the EXE for the public release asset.
+
+Note: the publish profile pins the self-contained runtime pack to the cached .NET 8 patch version used for release builds. If this version is changed, restore the matching `win-x64` runtime packs before publishing.
 
 ## 6. Manual UI sanity checks
-Run the fuller UI checklist in `docs\UI_QA_CHECKLIST.md`, then at minimum confirm:
+Run the fuller UI checklist in `docs\UI_QA_CHECKLIST.md` and check the app-building standard in `docs\APP_BUILDING_STANDARD.md`, then at minimum confirm:
 
 1. Launch `ColumnPadStudio.exe`.
 2. Open a saved layout or text document.
@@ -54,9 +57,10 @@ Run the fuller UI checklist in `docs\UI_QA_CHECKLIST.md`, then at minimum confir
 
 ## 7. Release metadata
 1. Update `CHANGELOG.md`.
-2. Tag the version.
-3. Attach `ColumnPadStudio.exe` to the GitHub release.
-4. Refresh the repo screenshot if the UI changed meaningfully.
+2. Confirm `README.md`, `docs\REPOSITORY_STRUCTURE.md`, and `docs\APP_BUILDING_STANDARD.md` still match the app.
+3. Tag the version.
+4. Attach `ColumnPadStudio.exe` to the GitHub release.
+5. Refresh the repo screenshot if the UI changed meaningfully.
 
 ## 8. Download verification
 1. Download the published `ColumnPadStudio.exe` from GitHub Releases to a clean folder.

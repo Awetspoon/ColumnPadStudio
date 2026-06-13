@@ -1,4 +1,5 @@
 using System.Text.Json.Nodes;
+using System.IO;
 using System.Windows;
 using System.Windows.Media;
 
@@ -103,5 +104,34 @@ public sealed partial class MainViewModel
         }
 
         return NormalizeCheckedChecklistLineIndexes(parsed);
+    }
+
+    private static List<LayoutImage> ReadLayoutImages(JsonObject? node)
+    {
+        if (node is null || node[nameof(LayoutColumn.Images)] is not JsonArray values)
+            return [];
+
+        var parsed = new List<LayoutImage>(values.Count);
+        foreach (var value in values)
+        {
+            if (value is not JsonObject imageNode)
+                continue;
+
+            var filePath = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.FilePath), string.Empty);
+            if (string.IsNullOrWhiteSpace(filePath))
+                continue;
+
+            var originalFileName = GetJsonValueOrDefault(
+                imageNode,
+                nameof(LayoutImage.OriginalFileName),
+                Path.GetFileName(filePath));
+            var width = GetJsonDoubleOrDefault(imageNode, nameof(LayoutImage.Width), 320.0);
+            var pixelWidth = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.PixelWidth), 0);
+            var pixelHeight = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.PixelHeight), 0);
+
+            parsed.Add(new LayoutImage(filePath, originalFileName, width, pixelWidth, pixelHeight));
+        }
+
+        return parsed;
     }
 }

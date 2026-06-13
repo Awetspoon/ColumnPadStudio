@@ -35,6 +35,14 @@ Check(
 Check(vm.Columns.Count == 3, "Default layout should start with 3 columns.");
 Check(vm.StatusText.Contains("Selected:"), "Status text should identify the selected column.");
 Check(!vm.IsDirty, "New layout should start clean.");
+vm.Columns[0].Title = "  Column\r\nOne\tName  ";
+Check(vm.Columns[0].Title == "Column One Name", "Column titles should be normalized to a clean single-line label.");
+var cleanedWorkspace = new WorkspaceSession("  Workspace\r\nAlpha\tDraft  ", vm);
+Check(cleanedWorkspace.Name == "Workspace Alpha Draft", "Workspace names should be normalized to a clean single-line label.");
+var cleanedWorkflow = new WorkflowDefinition { Name = "  Workflow\r\nAlpha  ", Category = "  Research\tPlan  " };
+Check(cleanedWorkflow.Name == "Workflow Alpha" && cleanedWorkflow.Category == "Research Plan", "Workflow names and categories should be normalized to clean single-line labels.");
+var cleanedWorkflowNode = new WorkflowDiagramNode { Kind = WorkflowNodeKind.Decision, Title = "  Choose\r\nPath  " };
+Check(cleanedWorkflowNode.Title == "Choose Path", "Workflow node titles should be normalized to clean single-line labels.");
 
 Exception? resourceLoadException = null;
 Thread resourceLoadThread = new(() =>
@@ -125,9 +133,12 @@ Check(!vm.MoveActiveColumnLeft(), "MoveActiveColumnLeft should refuse to swap th
 Check(vm.StatusText.Contains("first column"), "MoveActiveColumnLeft should explain when the selected column is already first.");
 vm.Columns[0].LineMarkerMode = LineMarkerMode.Checklist;
 vm.Columns[0].SetCheckedChecklistLineIndexes([0]);
+vm.Columns[0].Images.Add(new ColumnImageViewModel("C:\\images\\diagram.png", "diagram.png", 420, 800, 600));
 vm.DuplicateActive();
 Check(vm.Columns[^1].LineMarkerMode == LineMarkerMode.Checklist, "DuplicateActive should preserve the duplicated column gutter marker mode.");
 Check(vm.Columns[^1].IsChecklistLineChecked(0), "DuplicateActive should preserve duplicated column checklist metadata.");
+Check(vm.Columns[^1].Images.Count == 1, "DuplicateActive should preserve duplicated column image attachments.");
+Check(Math.Abs(vm.Columns[^1].Images[0].Width - 420) < 0.001, "DuplicateActive should preserve duplicated image display width.");
 
 vm.ThemePreset = "High Contrast";
 Check(vm.ThemePreset == "Dark Mode", "Legacy theme 'High Contrast' should normalize to 'Dark Mode'.");
@@ -164,6 +175,9 @@ Check(loaded.Columns[0].LineMarkerMode == LineMarkerMode.Checklist, "JSON round-
 Check(loaded.Columns[0].Text == "task one\ntask two", "JSON round-trip should keep checklist text clean without inline markers.");
 Check(loaded.Columns[0].IsChecklistLineChecked(1), "JSON round-trip should preserve checked checklist line indexes.");
 Check(loaded.Columns[0].WidthPx == 444, "JSON round-trip should preserve per-column width.");
+Check(loaded.Columns[0].Images.Count == 1, "JSON round-trip should preserve column image attachments.");
+Check(loaded.Columns[0].Images[0].OriginalFileName == "diagram.png", "JSON round-trip should preserve image display names.");
+Check(Math.Abs(loaded.Columns[0].Images[0].Width - 420) < 0.001, "JSON round-trip should preserve image display width.");
 Check(!loaded.Columns[0].UseDefaultFont, "JSON round-trip should preserve per-column default-font toggle.");
 Check(loaded.Columns[0].EditorFontFamily == "Consolas", "JSON round-trip should preserve per-column font family.");
 Check(Math.Abs(loaded.Columns[0].EditorFontSize - 17) < 0.001, "JSON round-trip should preserve per-column font size.");
@@ -197,6 +211,26 @@ File.WriteAllText(preferencesPath, "{not valid json");
 Check(AppPreferencesService.Load(preferencesPath).ThemePreset == "Default Mode", "Invalid app preferences should fall back to the default theme.");
 File.Delete(preferencesPath);
 
+Check(
+    AppStoragePaths.CrashLogsDirectory == Path.Combine(AppStoragePaths.RootDirectory, "CrashLogs"),
+    "App storage paths should expose the crash-log directory as a single source of truth.");
+
+var atomicRoot = Path.Combine(Path.GetTempPath(), $"columnpad-atomic-{Guid.NewGuid():N}");
+try
+{
+    var atomicPath = Path.Combine(atomicRoot, "nested", "note.txt");
+    AtomicFileWriter.WriteText(atomicPath, "first");
+    Check(File.ReadAllText(atomicPath) == "first", "Atomic writer should create missing target directories.");
+    AtomicFileWriter.WriteText(atomicPath, "second");
+    Check(File.ReadAllText(atomicPath) == "second", "Atomic writer should replace existing files cleanly.");
+    Check(Directory.GetFiles(Path.GetDirectoryName(atomicPath)!, "*.tmp").Length == 0, "Atomic writer should clean up temporary files after a successful write.");
+}
+finally
+{
+    if (Directory.Exists(atomicRoot))
+        Directory.Delete(atomicRoot, recursive: true);
+}
+
 var workflowTemp = Path.Combine(Path.GetTempPath(), $"columnpad-workflows-{Guid.NewGuid():N}");
 var workflowService = new WorkflowService(workflowTemp);
 var emptyWorkflowVm = new WorkflowBuilderViewModel(workflowService);
@@ -228,9 +262,11 @@ workflowBuilderVm.SelectedNode.Height = 120;
 Check(workflowBuilderVm.DiagramCanvasHeight >= 996, "Workflow builder canvas should expand to include lower nodes.");
 
 var workflowDefinition = new WorkflowDefinition { Name = "Colour test" };
+workflowDefinition.Id = "  workflow id with spaces  ";
+Check(workflowDefinition.Id == "workflow id with spaces", "Workflow IDs should trim outer whitespace without applying display-label cleanup.");
 workflowDefinition.Nodes.Add(new WorkflowDiagramNode
 {
-    Id = "start",
+    Id = " start ",
     Kind = WorkflowNodeKind.Start,
     Title = "Start",
     Color = WorkflowNodeColor.Rose,
@@ -244,6 +280,7 @@ workflowDefinition.Nodes.Add(new WorkflowDiagramNode
     }
 });
 workflowDefinition.Nodes.Add(new WorkflowDiagramNode { Id = "end", Kind = WorkflowNodeKind.End, Title = "End", Color = WorkflowNodeColor.Green });
+Check(workflowDefinition.Nodes[0].Id == "start", "Workflow node IDs should use identity cleanup, not display-label cleanup.");
 workflowDefinition.Links.Add(new WorkflowDiagramLink { FromNodeId = "start", ToNodeId = "end" });
 workflowService.Save(workflowDefinition);
 Check(!string.IsNullOrWhiteSpace(workflowDefinition.FilePath), "Workflow save should assign a file path.");
@@ -254,6 +291,25 @@ Check(loadedWorkflow.Nodes[0].Goal == "Round-trip goal", "Workflow node goal sho
 Check(loadedWorkflow.Nodes[0].Instructions == "Round-trip instructions", "Workflow node instructions should persist through JSON save/load.");
 Check(loadedWorkflow.Nodes[0].ExpectedOutput == "Round-trip output", "Workflow node expected output should persist through JSON save/load.");
 Check(loadedWorkflow.Nodes[0].ChecklistItems.Count == 2 && loadedWorkflow.Nodes[0].ChecklistItems[1].IsDone, "Workflow node checklist data should persist through JSON save/load.");
+var readableWorkflowText = workflowService.BuildTextExport(workflowDefinition);
+Check(readableWorkflowText.StartsWith(WorkflowService.TextExportMarker), "Workflow text export should include a clear ColumnPad marker.");
+Check(readableWorkflowText.Contains("Workflow: Colour test"), "Workflow text export should include the workflow name.");
+Check(readableWorkflowText.Contains("1. [Start] Start"), "Workflow text export should list readable node steps.");
+Check(readableWorkflowText.Contains("Round-trip goal"), "Workflow text export should include node goals.");
+Check(readableWorkflowText.Contains("- [x] Done check"), "Workflow text export should include checklist completion state.");
+Check(readableWorkflowText.Contains("1. Start -> 2. End"), "Workflow text export should show connections using node names.");
+var readableWorkflowMarkdown = workflowService.BuildMarkdownExport(workflowDefinition);
+Check(readableWorkflowMarkdown.StartsWith(WorkflowService.MarkdownExportMarker), "Workflow markdown export should include a clear ColumnPad marker.");
+Check(readableWorkflowMarkdown.Contains("# Colour test"), "Workflow markdown export should include the workflow name as a heading.");
+Check(readableWorkflowMarkdown.Contains("### 1. Start: Start"), "Workflow markdown export should list readable node steps.");
+Check(readableWorkflowMarkdown.Contains("Round-trip instructions"), "Workflow markdown export should include node instructions.");
+Check(readableWorkflowMarkdown.Contains("- [x] Done check"), "Workflow markdown export should include checklist completion state.");
+var readableWorkflowTextPath = Path.Combine(workflowTemp, "colour-test.workflow.txt");
+workflowService.ExportTextToPath(workflowDefinition, readableWorkflowTextPath);
+Check(File.Exists(readableWorkflowTextPath), "Workflow text export should write a text file.");
+var readableWorkflowMarkdownPath = Path.Combine(workflowTemp, "colour-test.workflow.md");
+workflowService.ExportMarkdownToPath(workflowDefinition, readableWorkflowMarkdownPath);
+Check(File.Exists(readableWorkflowMarkdownPath), "Workflow markdown export should write a markdown file.");
 var existingWorkflowVm = new WorkflowBuilderViewModel(workflowService);
 existingWorkflowVm.Load();
 var workflowCountBeforeAdd = existingWorkflowVm.Workflows.Count;
@@ -366,12 +422,12 @@ cleanExportVm.Columns[0].Text = "one\r\ntwo\n\n";
 cleanExportVm.Columns[1].Title = "Beta";
 cleanExportVm.Columns[1].Text = "three";
 var cleanTextExport = cleanExportVm.BuildExportText().Replace("\r\n", "\n", StringComparison.Ordinal);
-Check(cleanTextExport == "===== Alpha Plan =====\n\none\ntwo\n\n===== Beta =====\n\nthree\n", "Text export should use clean readable sections without trailing blank blocks.");
+Check(cleanTextExport == "ColumnPad Export\nFormat: Text\n\n===== Alpha Plan =====\n\none\ntwo\n\n===== Beta =====\n\nthree\n", "Text export should use a clear marker and readable sections without trailing blank blocks.");
 Check(!cleanTextExport.Contains("\\n", StringComparison.Ordinal), "Text export should write real line breaks, not escaped JSON-style line breaks.");
 var cleanMarkdownExport = cleanExportVm.BuildExportMarkdown().Replace("\r\n", "\n", StringComparison.Ordinal);
-Check(cleanMarkdownExport == "## Alpha Plan\n\none\ntwo\n\n## Beta\n\nthree\n", "Markdown export should stay available and use clean readable sections.");
+Check(cleanMarkdownExport == "<!-- ColumnPad Export: Markdown -->\n\n## Alpha Plan\n\none\ntwo\n\n## Beta\n\nthree\n", "Markdown export should stay available with a clear marker and readable sections.");
 
-var exportedText = "===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
+var exportedText = "ColumnPad Export\nFormat: Text\n\n===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
 var importedFromText = new MainViewModel();
 importedFromText.LoadFromExportText(exportedText, "export.txt");
 Check(importedFromText.Columns.Count == 2, "Text import should create one column per export section.");
@@ -441,7 +497,7 @@ finally
         Directory.Delete(tempRoot, true);
 }
 
-var exportedMarkdown = "## Red\n\nleft\n\n## Blue\n\nright\n";
+var exportedMarkdown = "<!-- ColumnPad Export: Markdown -->\n\n## Red\n\nleft\n\n## Blue\n\nright\n";
 var importedFromMarkdown = new MainViewModel();
 importedFromMarkdown.LoadFromExportMarkdown(exportedMarkdown, "export.md");
 Check(importedFromMarkdown.Columns.Count == 2, "Markdown import should create one column per heading.");
@@ -471,10 +527,14 @@ Check(!WorkspaceSessionFileService.IsWorkspaceSessionJson(singleLayoutJson), "Se
 
 Check(FileWorkflowService.ClassifyOpenFile(".txt", exportedText) == OpenFileLoadKind.TextExport, "File workflow service should classify exported text as text-export load kind.");
 Check(FileWorkflowService.ClassifyOpenFile(".txt", "plain note") == OpenFileLoadKind.TextDocument, "File workflow service should classify plain text as text-document load kind.");
+Check(FileWorkflowService.ClassifyOpenFile(".txt", "===== Alpha =====\n\nplain note") == OpenFileLoadKind.TextDocument, "File workflow service should not auto-split normal text files that contain divider-like lines.");
 Check(FileWorkflowService.ClassifyOpenFile(".md", exportedMarkdown) == OpenFileLoadKind.MarkdownExport, "File workflow service should classify exported markdown as markdown-export load kind.");
 Check(FileWorkflowService.ClassifyOpenFile(".md", "# note") == OpenFileLoadKind.MarkdownDocument, "File workflow service should classify plain markdown as markdown-document load kind.");
+Check(FileWorkflowService.ClassifyOpenFile(".md", "## Heading\n\nplain note") == OpenFileLoadKind.MarkdownDocument, "File workflow service should not auto-split normal markdown heading files.");
 Check(FileWorkflowService.ClassifyOpenFile(".json", workspaceSessionJson) == OpenFileLoadKind.WorkspaceSession, "File workflow service should classify workspace-session JSON correctly.");
 Check(FileWorkflowService.ClassifyOpenFile(".json", singleLayoutJson) == OpenFileLoadKind.LayoutJson, "File workflow service should classify single-layout JSON as layout load kind.");
+var workflowJson = JsonSerializer.Serialize(workflowDefinition, new JsonSerializerOptions { WriteIndented = true });
+Check(FileWorkflowService.ClassifyOpenFile(".workflow.json", workflowJson) == OpenFileLoadKind.WorkflowJson, "File workflow service should classify workflow JSON so File Open can route it to Workflow Builder.");
 
 var saveDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.TextDocument, "C:\\temp\\notes.txt", requiresSaveAsBeforeOverwrite: true);
 Check(saveDialogDefinition.FileName == "notes-copy.txt", "File workflow service should suggest copy-suffixed names when Save As is required.");

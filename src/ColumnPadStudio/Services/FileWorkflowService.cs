@@ -13,6 +13,7 @@ public enum OpenFileLoadKind
     TextExport,
     MarkdownExport,
     WorkspaceSession,
+    WorkflowJson,
     LayoutJson
 }
 
@@ -32,10 +33,18 @@ public static class FileWorkflowService
             ".md" => WorkspaceImportRules.LooksLikeMarkdownExport(content)
                 ? OpenFileLoadKind.MarkdownExport
                 : OpenFileLoadKind.MarkdownDocument,
-            _ => WorkspaceSessionFileService.IsWorkspaceSessionJson(content)
-                ? OpenFileLoadKind.WorkspaceSession
-                : OpenFileLoadKind.LayoutJson
+            _ => ClassifyJsonFile(content)
         };
+    }
+
+    private static OpenFileLoadKind ClassifyJsonFile(string? content)
+    {
+        if (WorkspaceSessionFileService.IsWorkspaceSessionJson(content))
+            return OpenFileLoadKind.WorkspaceSession;
+
+        return WorkflowService.IsWorkflowDefinitionJson(content)
+            ? OpenFileLoadKind.WorkflowJson
+            : OpenFileLoadKind.LayoutJson;
     }
 
     public static FileDialogDefinition BuildWorkspaceSessionSaveDialog(string? preferredPath)

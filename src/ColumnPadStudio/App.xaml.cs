@@ -81,7 +81,7 @@ public partial class App : Application
 
     private static IEnumerable<string> GetCrashLogCandidates()
     {
-        yield return Path.Combine(AppStoragePaths.RootDirectory, "CrashLogs", "crash.log");
+        yield return Path.Combine(AppStoragePaths.CrashLogsDirectory, "crash.log");
         yield return Path.Combine(Path.GetTempPath(), "ColumnPadStudio", "crash.log");
     }
 }

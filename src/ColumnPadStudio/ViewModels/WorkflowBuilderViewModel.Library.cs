@@ -88,6 +88,26 @@ public sealed partial class WorkflowBuilderViewModel
         return true;
     }
 
+    public bool ExportSelectedWorkflowTextToFile(string filePath)
+    {
+        if (SelectedWorkflow is null || string.IsNullOrWhiteSpace(filePath))
+            return false;
+
+        _workflowService.ExportTextToPath(SelectedWorkflow, filePath);
+        StatusText = $"Exported workflow text to {Path.GetFileName(filePath)}.";
+        return true;
+    }
+
+    public bool ExportSelectedWorkflowMarkdownToFile(string filePath)
+    {
+        if (SelectedWorkflow is null || string.IsNullOrWhiteSpace(filePath))
+            return false;
+
+        _workflowService.ExportMarkdownToPath(SelectedWorkflow, filePath);
+        StatusText = $"Exported workflow markdown to {Path.GetFileName(filePath)}.";
+        return true;
+    }
+
     public void SaveSelectedWorkflow()
     {
         if (SelectedWorkflow is null)

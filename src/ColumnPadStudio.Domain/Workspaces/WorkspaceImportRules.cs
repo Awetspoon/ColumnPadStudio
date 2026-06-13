@@ -7,6 +7,10 @@ public readonly record struct ImportedColumn(string Title, string Text);
 
 public static class WorkspaceImportRules
 {
+    public const string TextExportMarker = "ColumnPad Export";
+    public const string TextExportFormatLine = "Format: Text";
+    public const string MarkdownExportMarker = "<!-- ColumnPad Export: Markdown -->";
+
     private const string TextExportHeaderPrefix = "===== ";
     private const string TextExportHeaderSuffix = " =====";
     private const string MarkdownHeaderPrefix = "## ";
@@ -36,8 +40,8 @@ public static class WorkspaceImportRules
         if (string.IsNullOrWhiteSpace(content))
             return false;
 
-        var lines = content.Replace("\r\n", "\n", StringComparison.Ordinal).Split('\n');
-        return lines.Any(line => TryParseTextExportHeader(line, out _));
+        var lines = NormalizeLineEndings(content).Split('\n');
+        return lines.Take(4).Any(line => string.Equals(line.Trim(), TextExportMarker, StringComparison.Ordinal));
     }
 
     public static bool LooksLikeMarkdownExport(string? content)
@@ -45,18 +49,15 @@ public static class WorkspaceImportRules
         if (string.IsNullOrWhiteSpace(content))
             return false;
 
-        var normalized = content.Replace("\r\n", "\n", StringComparison.Ordinal);
-        if (!normalized.TrimStart().StartsWith(MarkdownHeaderPrefix, StringComparison.Ordinal))
-            return false;
-
-        var lines = normalized.Split('\n');
-        return lines.Any(line => line.StartsWith(MarkdownHeaderPrefix, StringComparison.Ordinal) && line.Length > MarkdownHeaderPrefix.Length);
+        var lines = NormalizeLineEndings(content).Split('\n');
+        return lines.Take(4).Any(line => string.Equals(line.Trim(), MarkdownExportMarker, StringComparison.Ordinal));
     }
 
     public static List<ImportedColumn> ParseTextExportColumns(string? text)
     {
-        var normalized = (text ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal);
-        var lines = normalized.Split('\n');
+        var normalized = NormalizeLineEndings(text);
+        var lines = StripTextExportPreamble(normalized.Split('\n'));
+        var bodyFallback = string.Join('\n', lines);
         var parsed = new List<ImportedColumn>();
 
         string? currentTitle = null;
@@ -97,15 +98,16 @@ public static class WorkspaceImportRules
         Flush();
 
         if (parsed.Count == 0)
-            parsed.Add(new ImportedColumn("Column 1", normalized.TrimEnd('\n')));
+            parsed.Add(new ImportedColumn("Column 1", bodyFallback.TrimEnd('\n')));
 
         return parsed;
     }
 
     public static List<ImportedColumn> ParseMarkdownExportColumns(string? markdown)
     {
-        var normalized = (markdown ?? string.Empty).Replace("\r\n", "\n", StringComparison.Ordinal);
-        var lines = normalized.Split('\n');
+        var normalized = NormalizeLineEndings(markdown);
+        var lines = StripMarkdownExportPreamble(normalized.Split('\n'));
+        var bodyFallback = string.Join('\n', lines);
         var parsed = new List<ImportedColumn>();
 
         string? currentTitle = null;
@@ -147,9 +149,43 @@ public static class WorkspaceImportRules
         Flush();
 
         if (parsed.Count == 0)
-            parsed.Add(new ImportedColumn("Column 1", normalized.TrimEnd('\n')));
+            parsed.Add(new ImportedColumn("Column 1", bodyFallback.TrimEnd('\n')));
 
         return parsed;
+    }
+
+    private static string NormalizeLineEndings(string? value)
+    {
+        return (value ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n');
+    }
+
+    private static string[] StripTextExportPreamble(string[] lines)
+    {
+        if (lines.Length == 0 || !string.Equals(lines[0].Trim(), TextExportMarker, StringComparison.Ordinal))
+            return lines;
+
+        var index = 1;
+        if (index < lines.Length && string.Equals(lines[index].Trim(), TextExportFormatLine, StringComparison.Ordinal))
+            index++;
+
+        while (index < lines.Length && lines[index].Length == 0)
+            index++;
+
+        return lines[index..];
+    }
+
+    private static string[] StripMarkdownExportPreamble(string[] lines)
+    {
+        if (lines.Length == 0 || !string.Equals(lines[0].Trim(), MarkdownExportMarker, StringComparison.Ordinal))
+            return lines;
+
+        var index = 1;
+        while (index < lines.Length && lines[index].Length == 0)
+            index++;
+
+        return lines[index..];
     }
 
     private static bool TryParseTextExportHeader(string line, out string title)

@@ -94,16 +94,18 @@ public partial class MainWindow
         OpenWorkflowBuilder();
     }
 
-    private void OpenWorkflowBuilder()
+    private void OpenWorkflowBuilder(string? importFilePath = null)
     {
         if (_workflowBuilderWindow is not null)
         {
             _workflowBuilderWindow.Activate();
             _workflowBuilderWindow.Focus();
+            if (!string.IsNullOrWhiteSpace(importFilePath))
+                _workflowBuilderWindow.ImportWorkflowJsonFromPath(importFilePath);
             return;
         }
 
-        var window = new WorkflowBuilderWindow
+        var window = new WorkflowBuilderWindow(importFilePath)
         {
             Owner = this
         };

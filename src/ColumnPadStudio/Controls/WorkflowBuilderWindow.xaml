@@ -166,9 +166,15 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
                         <Button Content="Save" Margin="0,0,4,0" Click="SaveWorkflow_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
-                        <Button Grid.Column="1" Content="Export" Margin="4,0" Click="ExportWorkflowJson_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
+                        <Button Grid.Column="1" Content="Export JSON" Margin="4,0" Click="ExportWorkflowJson_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
                         <Button Grid.Column="2" Content="Delete" Margin="4,0,0,0" Click="DeleteWorkflow_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
+                        <Button Grid.Row="1" Content="Export TXT" Margin="0,6,4,0" Click="ExportWorkflowText_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
+                        <Button Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Content="Export MD" Margin="4,6,0,0" Click="ExportWorkflowMarkdown_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
                     </Grid>
                 </StackPanel>
             </Grid>

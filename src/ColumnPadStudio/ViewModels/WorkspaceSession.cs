@@ -1,3 +1,5 @@
+using ColumnPadStudio.Domain.Text;
+
 namespace ColumnPadStudio.ViewModels;
 
 public sealed class WorkspaceSession : NotifyBase
@@ -7,14 +9,14 @@ public sealed class WorkspaceSession : NotifyBase
 
     public WorkspaceSession(string name, MainViewModel vm)
     {
-        _name = name;
+        _name = DisplayTextRules.CleanSingleLineLabel(name, "Workspace");
         Vm = vm;
     }
 
     public string Name
     {
         get => _name;
-        set => Set(ref _name, string.IsNullOrWhiteSpace(value) ? "Workspace" : value.Trim());
+        set => Set(ref _name, DisplayTextRules.CleanSingleLineLabel(value, "Workspace"));
     }
 
     public bool IsRenaming

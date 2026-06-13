@@ -11,4 +11,8 @@ public static class AppStoragePaths
     public static string RecoveryDirectory => Path.Combine(RootDirectory, "Recovery");
 
     public static string WorkflowsDirectory => Path.Combine(RootDirectory, "Workflows");
+
+    public static string ImagesDirectory => Path.Combine(RootDirectory, "Images");
+
+    public static string CrashLogsDirectory => Path.Combine(RootDirectory, "CrashLogs");
 }

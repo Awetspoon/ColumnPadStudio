@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
 using System.Text.Json.Serialization;
+using ColumnPadStudio.Domain.Text;
 using ColumnPadStudio.ViewModels;
 
 namespace ColumnPadStudio.Workflows;
@@ -30,7 +31,7 @@ public sealed class WorkflowDiagramNode : NotifyBase
     public string Id
     {
         get => _id;
-        set => Set(ref _id, string.IsNullOrWhiteSpace(value) ? Guid.NewGuid().ToString("N") : value.Trim());
+        set => Set(ref _id, WorkflowIdentityRules.NormalizeId(value));
     }
 
     public WorkflowNodeKind Kind
@@ -48,7 +49,7 @@ public sealed class WorkflowDiagramNode : NotifyBase
         get => _title;
         set
         {
-            Set(ref _title, string.IsNullOrWhiteSpace(value) ? DefaultTitleForKind(Kind) : value.Trim());
+            Set(ref _title, DisplayTextRules.CleanSingleLineLabel(value, DefaultTitleForKind(Kind)));
             OnPropertyChanged(nameof(Summary));
         }
     }

@@ -48,6 +48,7 @@
                         <Separator/>
                         <MenuItem Header="Reset This Column Size" Click="ColumnMenuResetWidth_Click"/>
                         <MenuItem Header="Resize This Column..." Click="ColumnMenuResize_Click"/>
+                        <MenuItem Header="Insert Picture..." Click="InsertPicture_Click"/>
                         <MenuItem Header="{Binding PlacementTarget.DataContext.WidthLockActionLabel, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   ToolTip="{Binding PlacementTarget.DataContext.WidthLockActionToolTip, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Click="ColumnMenuToggleWidthLock_Click"/>
@@ -113,12 +114,17 @@
 
             <Grid Background="{DynamicResource EditorBackgroundBrush}"
                   SnapsToDevicePixels="True">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{Binding LineNumberColumnWidth}"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="LineNumberGutter"
+                        Grid.Row="0"
                         Grid.Column="0"
                         BorderBrush="{DynamicResource ControlBorderBrush}"
                         BorderThickness="0,0,1,0"
@@ -165,6 +171,7 @@
                 </Border>
 
                 <TextBox x:Name="Editor"
+                         Grid.Row="0"
                          Grid.Column="1"
                          Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
                          FontFamily="{Binding EditorFontFamily}"
@@ -220,6 +227,7 @@
                             <MenuItem Header="Paste"
                                       Command="ApplicationCommands.Paste"
                                       CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                            <MenuItem Header="Insert Picture..." Click="InsertPicture_Click"/>
                             <MenuItem Header="Delete"
                                       Command="ApplicationCommands.Delete"
                                       CommandTarget="{Binding PlacementTarget, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -241,6 +249,77 @@
                         </ContextMenu>
                     </TextBox.ContextMenu>
                 </TextBox>
+
+                <ItemsControl Grid.Row="1"
+                              Grid.Column="1"
+                              Margin="8,6,8,8"
+                              ItemsSource="{Binding Images}">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasImages}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.Style>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="0,0,0,8"
+                                    Padding="8"
+                                    Background="{DynamicResource ColumnHeaderBackgroundBrush}"
+                                    BorderBrush="{DynamicResource ControlBorderBrush}"
+                                    BorderThickness="1"
+                                    CornerRadius="4">
+                                <StackPanel>
+                                    <DockPanel Margin="0,0,0,6">
+                                        <Button DockPanel.Dock="Right"
+                                                Style="{StaticResource CompactButtonStyle}"
+                                                Content="Remove"
+                                                Tag="{Binding}"
+                                                Click="ImageRemove_Click"/>
+                                        <TextBlock Margin="0,0,8,0"
+                                                   VerticalAlignment="Center"
+                                                   FontWeight="SemiBold"
+                                                   Foreground="{DynamicResource ControlForegroundBrush}"
+                                                   Text="{Binding DisplayName}"
+                                                   TextTrimming="CharacterEllipsis"/>
+                                    </DockPanel>
+                                    <Image Width="{Binding Width}"
+                                           HorizontalAlignment="Left"
+                                           Source="{Binding FilePath}"
+                                           Stretch="Uniform"
+                                           SnapsToDevicePixels="True"/>
+                                    <DockPanel Margin="0,7,0,0">
+                                        <Button DockPanel.Dock="Left"
+                                                Style="{StaticResource CompactButtonStyle}"
+                                                Content="-"
+                                                Tag="{Binding}"
+                                                Click="ImageShrink_Click"/>
+                                        <Button DockPanel.Dock="Right"
+                                                Style="{StaticResource CompactButtonStyle}"
+                                                Content="+"
+                                                Tag="{Binding}"
+                                                Click="ImageGrow_Click"/>
+                                        <TextBlock DockPanel.Dock="Right"
+                                                   Margin="8,0,0,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="11"
+                                                   Foreground="{DynamicResource LineNumberForegroundBrush}"
+                                                   Text="{Binding SizeText}"/>
+                                        <Slider Margin="6,0"
+                                                Minimum="80"
+                                                Maximum="2000"
+                                                Value="{Binding Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                Tag="{Binding}"
+                                                ValueChanged="ImageWidthSlider_ValueChanged"/>
+                                    </DockPanel>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
             </Grid>
             </DockPanel>
         </Border>

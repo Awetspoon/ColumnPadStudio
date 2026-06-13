@@ -32,16 +32,32 @@ public partial class MainWindow
         if (dlg.ShowDialog() != true)
             return;
 
+        var extension = Path.GetExtension(dlg.FileName).ToLowerInvariant();
+        var fileName = Path.GetFileName(dlg.FileName);
+        var content = string.Empty;
+        var loadKind = OpenFileLoadKind.LayoutJson;
+
+        if (!TryRunFileAction("Open Failed", $"open {fileName}", () =>
+        {
+            content = File.ReadAllText(dlg.FileName);
+            loadKind = FileWorkflowService.ClassifyOpenFile(extension, content);
+        }))
+        {
+            return;
+        }
+
+        if (loadKind == OpenFileLoadKind.WorkflowJson)
+        {
+            OpenWorkflowBuilder(dlg.FileName);
+            ActiveVm.StatusText = $"Opened workflow in builder: {fileName}";
+            return;
+        }
+
         if (!ConfirmWorkspaceDestructiveAction(ActiveWorkspace, "Open File", "Opening a file"))
             return;
 
-        var extension = Path.GetExtension(dlg.FileName).ToLowerInvariant();
-        var fileName = Path.GetFileName(dlg.FileName);
         if (!TryRunFileAction("Open Failed", $"open {fileName}", () =>
         {
-            var content = File.ReadAllText(dlg.FileName);
-            var loadKind = FileWorkflowService.ClassifyOpenFile(extension, content);
-
             switch (loadKind)
             {
                 case OpenFileLoadKind.TextExport:
@@ -161,7 +177,7 @@ public partial class MainWindow
 
         TryRunFileAction("Export Failed", $"export {Path.GetFileName(dlg.FileName)}", () =>
         {
-            File.WriteAllText(dlg.FileName, ActiveVm.BuildExportText(), Encoding.UTF8);
+            AtomicFileWriter.WriteText(dlg.FileName, ActiveVm.BuildExportText(), Encoding.UTF8);
             ActiveVm.StatusText = $"Exported: {Path.GetFileName(dlg.FileName)}";
         });
     }
@@ -174,7 +190,7 @@ public partial class MainWindow
 
         TryRunFileAction("Export Failed", $"export {Path.GetFileName(dlg.FileName)}", () =>
         {
-            File.WriteAllText(dlg.FileName, ActiveVm.BuildExportMarkdown(), Encoding.UTF8);
+            AtomicFileWriter.WriteText(dlg.FileName, ActiveVm.BuildExportMarkdown(), Encoding.UTF8);
             ActiveVm.StatusText = $"Exported: {Path.GetFileName(dlg.FileName)}";
         });
     }

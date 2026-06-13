@@ -11,7 +11,7 @@ ColumnPad is a Windows writing app for drafting notes, plans, prompts, checklist
 Download the latest portable Windows build from the [GitHub Releases page](https://github.com/Awetspoon/ColumnPadStudio/releases/latest).
 
 Latest release asset:
-- `ColumnPadStudio-v2.2.2-win-x64.exe`
+- `ColumnPadStudio-v2.2.3-win-x64.exe`
 
 For normal use, download the `.exe` and run it. You do not need Visual Studio or the .NET SDK to use the released app.
 
@@ -44,20 +44,19 @@ Note: the EXE is not code-signed yet, so Windows SmartScreen may show a warning 
 - Line numbers, word wrap, spell check, proofing-language selection, and lined-paper mode.
 - Default, light, and dark theme modes with preference saving.
 - Bullet/checklist paste helpers and checklist gutter support.
-- Built-in workflow templates, workflow JSON import/export, draggable workflow preview, and per-node colours.
+- Column picture attachments that save with native `.columnpad.json` layouts.
+- Built-in workflow templates, workflow JSON import/export, human-readable workflow `.txt`/`.md` export, draggable workflow preview, and per-node colours.
 
 ## Current Release
 
-ColumnPad v2.2.2 includes:
+ColumnPad v2.2.3 includes:
 
-- Workspace tab overflow arrows.
-- Cleaner File menu `.txt` and `.md` export commands.
-- Tidier column right-click menus.
-- Better editor/font/menu styling consistency.
-- Cleaner app preference and JSON saving paths.
-- Updated README, release notes, and repo hygiene.
+- Workflow JSON opened from File now routes to Workflow Builder.
+- Cleaner workflow normalization code.
+- Release build, tests, publish output, and startup probe rechecked.
+- Existing `v2.2.2` UI polish, workspace scrolling, export, and repo hygiene work carried forward.
 
-Full notes: [docs/releases/v2.2.2.md](docs/releases/v2.2.2.md)
+Full notes: [docs/releases/v2.2.3.md](docs/releases/v2.2.3.md)
 
 ## User Requirements
 
@@ -118,10 +117,13 @@ The publish profile is configured for a self-contained Windows x64 single-file b
 - `src/ColumnPadStudio.Domain/` - domain-only rules for lists, checklist metrics, and workspace import constraints.
 - `tests/ColumnPadStudio.SmokeTests/` - app-level smoke checks for view-model and file/session flows.
 - `tests/ColumnPadStudio.Domain.Tests/` - focused domain-rule checks.
-- `docs/` - repository notes, release notes, screenshots, and QA checklists.
+- `docs/` - app-building standard, repository notes, release notes, screenshots, workflow maps, and QA checklists.
 - `tools/` - helper scripts such as branding asset generation.
 
 More structure detail: [docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md)
+
+Development and release decisions should also follow the ColumnPad-specific app-building standard:
+[docs/APP_BUILDING_STANDARD.md](docs/APP_BUILDING_STANDARD.md)
 
 ## Packaging Notes
 

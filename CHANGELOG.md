@@ -4,6 +4,28 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.2.3] - 2026-06-13
+
+### Added
+- Added a ColumnPad-specific app-building standard that maps the app's idea, scope, structure, storage, safety, testing, release, maintenance, upgrade, and migration rules.
+- Added a small workflow identity rule so workflow, node, and link IDs are normalized separately from visible labels.
+
+### Changed
+- Updated public documentation so image attachments, readable workflow exports, and the new app-building standard are reflected.
+- Centralised the crash-log storage folder through `AppStoragePaths`.
+- Pinned the release publish profile to the cached .NET 8 runtime pack so self-contained publishing does not fail when NuGet cannot reach the latest runtime patch online.
+- Documented the `Domain/Text` rule layer in the repository structure guide.
+- Routed workflow JSON opened from the main File menu into the existing Workflow Builder import path instead of treating it as an invalid layout.
+
+### Fixed
+- Hardened atomic text saving so app-owned saves create missing target folders and clean up temporary files.
+- Fixed Release publishing so the domain project does not place a loose `.pdb` beside the single EXE release asset.
+- Fixed workflow ID cleanup so internal IDs are trimmed without being treated like user-facing names.
+- Removed no-op workflow normalization lines so workflow cleanup code only does real work.
+
+### Removed
+- Removed the stale root cleanup diary so the repo keeps only current app docs and release notes.
+
 ## [v2.2.2] - 2026-06-05
 
 ### Changed
@@ -13,7 +35,6 @@ All notable changes to this project are documented in this file.
 - Tidied the View menu editor-font panel so it uses a neutral embedded menu panel instead of looking like a large highlighted menu row.
 - Added a shared embedded-menu panel style for real controls hosted inside menu dropdowns.
 - Tightened repo ignore rules for local config, `.env` files, certificates, and private key files.
-- Added a cleanup phase log so audit, repair, UI, GitHub, and release-prep work is recorded plainly.
 
 ### Fixed
 - Fixed duplicate-column behaviour so gutter mode and checklist checked rows are preserved.

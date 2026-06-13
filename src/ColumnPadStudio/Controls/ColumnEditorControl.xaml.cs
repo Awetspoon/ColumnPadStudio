@@ -8,6 +8,11 @@ public sealed class ColumnResizeDeltaEventArgs(double horizontalChange) : EventA
     public double HorizontalChange { get; } = horizontalChange;
 }
 
+public sealed class ColumnImageEventArgs(ColumnImageViewModel image) : EventArgs
+{
+    public ColumnImageViewModel Image { get; } = image;
+}
+
 public partial class ColumnEditorControl : UserControl
 {
     public event EventHandler? EditorFocused;
@@ -18,6 +23,9 @@ public partial class ColumnEditorControl : UserControl
     public event EventHandler? ResetWidthRequested;
     public event EventHandler? ResizeRequested;
     public event EventHandler<ColumnResizeDeltaEventArgs>? RightEdgeResizeDeltaRequested;
+    public event EventHandler? InsertImageRequested;
+    public event EventHandler<ColumnImageEventArgs>? RemoveImageRequested;
+    public event EventHandler<ColumnImageEventArgs>? ImageWidthChangedRequested;
     public event EventHandler? SetFontFamilyRequested;
     public event EventHandler? IncreaseFontRequested;
     public event EventHandler? DecreaseFontRequested;

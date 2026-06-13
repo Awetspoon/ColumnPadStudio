@@ -1,8 +1,12 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Collections.Specialized;
+using System.ComponentModel;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Domain.Text;
 
 namespace ColumnPadStudio.ViewModels;
 
@@ -47,10 +51,19 @@ public sealed class ColumnViewModel : NotifyBase
 
     public string Id { get; } = Guid.NewGuid().ToString("N");
 
+    public ObservableCollection<ColumnImageViewModel> Images { get; } = new();
+
+    public bool HasImages => Images.Count > 0;
+
+    public ColumnViewModel()
+    {
+        Images.CollectionChanged += Images_CollectionChanged;
+    }
+
     public string Title
     {
         get => _title;
-        set => Set(ref _title, value);
+        set => Set(ref _title, DisplayTextRules.CleanSingleLineLabel(value, "Column"));
     }
 
     public string Text
@@ -310,12 +323,43 @@ public sealed class ColumnViewModel : NotifyBase
         UpdateMetricsText();
     }
 
+    public void ClearImages()
+    {
+        if (Images.Count == 0)
+            return;
+
+        Images.Clear();
+    }
+
     private void UpdateMetricsText()
     {
         var displayedLines = _visibleLineCount ?? LineCount;
         MetricsText = ChecklistTotal > 0
             ? $"{WordCount} words | {displayedLines} lines | {ChecklistDone}/{ChecklistTotal} done"
             : $"{WordCount} words | {displayedLines} lines";
+    }
+
+    private void Images_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        if (e.OldItems is not null)
+        {
+            foreach (ColumnImageViewModel image in e.OldItems)
+                image.PropertyChanged -= Image_PropertyChanged;
+        }
+
+        if (e.NewItems is not null)
+        {
+            foreach (ColumnImageViewModel image in e.NewItems)
+                image.PropertyChanged += Image_PropertyChanged;
+        }
+
+        OnPropertyChanged(nameof(HasImages));
+        OnPropertyChanged(nameof(Images));
+    }
+
+    private void Image_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        OnPropertyChanged(nameof(Images));
     }
 
     private void RecomputeDerivedMetrics()
