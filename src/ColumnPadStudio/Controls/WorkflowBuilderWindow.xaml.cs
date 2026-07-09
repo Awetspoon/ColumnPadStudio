@@ -210,6 +210,15 @@ public partial class WorkflowBuilderWindow : Window
         }
     }
 
+    private void ExportWorkflowMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { ContextMenu: { } menu } button)
+            return;
+
+        menu.PlacementTarget = button;
+        menu.IsOpen = true;
+    }
+
     private void ExportWorkflowJson_Click(object sender, RoutedEventArgs e)
     {
         ExportWorkflow(

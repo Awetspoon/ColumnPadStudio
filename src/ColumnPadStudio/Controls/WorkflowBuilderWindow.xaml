@@ -6,7 +6,8 @@
         Height="820"
         MinWidth="1180"
         MinHeight="660"
-        WindowStartupLocation="CenterOwner"
+        WindowStartupLocation="CenterScreen"
+        ShowInTaskbar="True"
         Background="{DynamicResource WindowBackgroundBrush}"
         Foreground="{DynamicResource ControlForegroundBrush}"
         UseLayoutRounding="True"
@@ -104,14 +105,7 @@
 
                 <StackPanel>
                     <TextBlock Text="Workflow Library" Style="{StaticResource WorkflowSectionTitleStyle}"/>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <Button Content="Add Workflow" Margin="0,0,4,0" Click="AddWorkflow_Click"/>
-                        <Button Grid.Column="1" Content="Import JSON" Margin="4,0,0,0" Click="ImportWorkflowJson_Click"/>
-                    </Grid>
+                    <Button Content="Add Workflow" Click="AddWorkflow_Click"/>
                 </StackPanel>
 
                 <StackPanel Grid.Row="1" Margin="0,10,0,0">
@@ -164,17 +158,28 @@
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
                         <Button Content="Save" Margin="0,0,4,0" Click="SaveWorkflow_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
-                        <Button Grid.Column="1" Content="Export JSON" Margin="4,0" Click="ExportWorkflowJson_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
-                        <Button Grid.Column="2" Content="Delete" Margin="4,0,0,0" Click="DeleteWorkflow_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
-                        <Button Grid.Row="1" Content="Export TXT" Margin="0,6,4,0" Click="ExportWorkflowText_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
-                        <Button Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Content="Export MD" Margin="4,6,0,0" Click="ExportWorkflowMarkdown_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
+                        <Button Grid.Column="1" Content="Import JSON" Margin="4,0,0,0" Click="ImportWorkflowJson_Click"/>
+                        <Button x:Name="ExportWorkflowButton"
+                                Grid.Row="1"
+                                Content="Export..."
+                                Margin="0,6,4,0"
+                                Click="ExportWorkflowMenuButton_Click"
+                                IsEnabled="{Binding HasSelectedWorkflow}">
+                            <Button.ContextMenu>
+                                <ContextMenu>
+                                    <MenuItem Header="JSON workflow file" Click="ExportWorkflowJson_Click"/>
+                                    <MenuItem Header="Readable text file" Click="ExportWorkflowText_Click"/>
+                                    <MenuItem Header="Readable markdown file" Click="ExportWorkflowMarkdown_Click"/>
+                                </ContextMenu>
+                            </Button.ContextMenu>
+                        </Button>
+                        <Button Grid.Row="1" Grid.Column="1" Content="Delete" Margin="4,6,0,0" Click="DeleteWorkflow_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
                     </Grid>
                 </StackPanel>
             </Grid>
@@ -333,7 +338,13 @@
         </Grid>
 
         <Border Grid.Column="4" Style="{StaticResource WorkflowPanelBorderStyle}" IsEnabled="{Binding HasSelectedWorkflow}">
-            <TabControl>
+            <TabControl HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+                <TabControl.Resources>
+                    <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <Setter Property="VerticalContentAlignment" Value="Stretch"/>
+                    </Style>
+                </TabControl.Resources>
                 <TabItem Header="Workflow">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="6">
                         <StackPanel>

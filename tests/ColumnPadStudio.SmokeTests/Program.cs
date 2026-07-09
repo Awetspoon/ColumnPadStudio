@@ -77,6 +77,10 @@ Thread resourceLoadThread = new(() =>
         var workflowBuilderWindow = new WorkflowBuilderWindow();
         workflowBuilderWindow.ApplyTemplate();
         Check(workflowBuilderWindow.ViewModel is not null, "Workflow Builder window should initialize its view model.");
+        Check(workflowBuilderWindow.Owner is null, "Workflow Builder should stay independent from the main window so minimizing ColumnPad does not minimize it.");
+        Check(workflowBuilderWindow.ShowInTaskbar, "Workflow Builder should have its own taskbar entry.");
+        Check(workflowBuilderWindow.WindowStartupLocation == WindowStartupLocation.CenterScreen, "Workflow Builder should open as an independent window, not as an owned child.");
+        Check(workflowBuilderWindow.FindName("ExportWorkflowButton") is Button, "Workflow Builder should expose one grouped export action instead of separate export buttons.");
         workflowBuilderWindow.Close();
 
         var nestedMenu = new MenuItem { Header = "Column colour" };
@@ -237,6 +241,10 @@ var emptyWorkflowVm = new WorkflowBuilderViewModel(workflowService);
 emptyWorkflowVm.Load();
 Check(emptyWorkflowVm.Workflows.Count == 1, "Workflow Builder should create one workflow when no saved workflows exist.");
 Check(WorkflowTemplateCatalog.Templates.Count >= 10, "Workflow starter catalog should provide multiple practical starters.");
+var workflowTemplateIds = WorkflowTemplateCatalog.Templates.Select(template => template.Id).ToList();
+Check(workflowTemplateIds.Count == workflowTemplateIds.Distinct(StringComparer.OrdinalIgnoreCase).Count(), "Workflow starter catalog should not contain duplicate IDs.");
+Check(WorkflowTemplateCatalog.Templates.All(template => template.Nodes.Count > 0), "Workflow starter catalog should not contain empty starter diagrams.");
+Check(WorkflowTemplateCatalog.Templates.All(template => template.Connections.Count > 0), "Workflow starter catalog should wire starter nodes together.");
 var essayStarter = WorkflowTemplateCatalog.Templates.FirstOrDefault(template => template.Id == "essay-plan");
 Check(essayStarter is not null, "Workflow starter catalog should include an essay planning starter.");
 if (essayStarter is not null)

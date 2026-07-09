@@ -98,6 +98,9 @@ public partial class MainWindow
     {
         if (_workflowBuilderWindow is not null)
         {
+            if (_workflowBuilderWindow.WindowState == WindowState.Minimized)
+                _workflowBuilderWindow.WindowState = WindowState.Normal;
+
             _workflowBuilderWindow.Activate();
             _workflowBuilderWindow.Focus();
             if (!string.IsNullOrWhiteSpace(importFilePath))
@@ -105,10 +108,7 @@ public partial class MainWindow
             return;
         }
 
-        var window = new WorkflowBuilderWindow(importFilePath)
-        {
-            Owner = this
-        };
+        var window = new WorkflowBuilderWindow(importFilePath);
 
         window.Closed += (_, __) => _workflowBuilderWindow = null;
         _workflowBuilderWindow = window;

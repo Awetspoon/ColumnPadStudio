@@ -61,6 +61,9 @@ public partial class MainWindow
 
     private void MainWindow_Closed(object? sender, EventArgs e)
     {
+        _workflowBuilderWindow?.Close();
+        _workflowBuilderWindow = null;
+
         try
         {
             WorkspaceRecoveryStore.Clear();

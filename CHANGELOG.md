@@ -4,6 +4,21 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.2.4] - 2026-07-09
+
+### Changed
+- Cleaned Workflow Builder file actions so saved library workflows, JSON import, and readable exports are grouped more clearly.
+- Moved workflow readable export formatting into a focused service file while keeping the same public workflow export behavior.
+- Split workflow starter template definitions and builder helpers into clearer workflow files.
+- Reworked the README into a download-first app page for normal users.
+
+### Fixed
+- Fixed Workflow Builder window ownership so minimizing ColumnPad no longer minimizes Workflow Builder.
+- Fixed the Workflow Builder inspector panel so details align at the top instead of floating halfway down the right panel.
+
+### Tested
+- Added smoke checks for Workflow Builder independence, the grouped export action, unique workflow starter IDs, starter node presence, and starter connection wiring.
+
 ## [v2.2.3] - 2026-06-13
 
 ### Added

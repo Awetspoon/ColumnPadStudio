@@ -127,9 +127,9 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
         get
         {
             if (SelectedWorkflow is null || string.IsNullOrWhiteSpace(SelectedWorkflow.FilePath))
-                return "Not yet saved";
+                return "Library file: not saved";
 
-            return Path.GetFileName(SelectedWorkflow.FilePath);
+            return $"Library file: {Path.GetFileName(SelectedWorkflow.FilePath)}";
         }
     }
 
