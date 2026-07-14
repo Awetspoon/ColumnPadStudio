@@ -1,4 +1,4 @@
-﻿using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Domain.Lists;
 using ColumnPadStudio.Domain.Text;
 using ColumnPadStudio.Domain.Workspaces;
 

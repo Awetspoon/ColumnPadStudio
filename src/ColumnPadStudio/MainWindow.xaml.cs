@@ -25,6 +25,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private int _lastFoundCharIndex = -1;
     private WorkflowBuilderWindow? _workflowBuilderWindow;
     private AppPreferences _appPreferences;
+    private bool _autoRecoveryWarningShown;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
@@ -247,7 +248,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 vm.RefreshStatus();
         };
 
-        editor.LockWidthRequested += (_, __) => RunColumnAction(vm, column, vm.ToggleLockActiveWidth);
+        editor.LockWidthRequested += (_, __) => RunColumnAction(vm, column, () => ToggleColumnWidthLock(editor, vm, column));
         editor.MoveLeftRequested += (_, __) => RunColumnAction(vm, column, () => MoveActiveLeft_Click(this, new RoutedEventArgs()));
         editor.MoveRightRequested += (_, __) => RunColumnAction(vm, column, () => MoveActiveRight_Click(this, new RoutedEventArgs()));
         editor.DeleteRequested += (_, __) => RunColumnAction(vm, column, RemoveActiveWithConfirmation);
@@ -255,8 +256,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         editor.ResizeRequested += (_, __) => RunColumnAction(vm, column, ResizeActiveColumn);
         editor.RightEdgeResizeDeltaRequested += (_, args) => ResizeColumnFromRightEdge(editor, vm, column, args.HorizontalChange);
         editor.InsertImageRequested += (_, __) => RunColumnAction(vm, column, InsertImageIntoActiveColumn);
+        editor.ImageFileDropped += (_, args) => RunColumnAction(vm, column, () => ImportImageIntoActiveColumn(args.FilePath, args.Left, args.Top));
         editor.RemoveImageRequested += (_, args) => RunColumnAction(vm, column, () => RemoveImageFromActiveColumn(args.Image));
-        editor.ImageWidthChangedRequested += (_, args) => RunColumnAction(vm, column, () => EnsureColumnFitsImage(column, args.Image));
         editor.SetFontFamilyRequested += (_, __) => RunColumnAction(vm, column, SetActiveColumnFontFamily);
         editor.IncreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(+1));
         editor.DecreaseFontRequested += (_, __) => RunColumnAction(vm, column, () => AdjustActiveColumnFontSize(-1));
@@ -282,11 +283,20 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         var nextWidth = Math.Clamp(currentWidth + horizontalChange, 220.0, 5000.0);
         columnDefinition.Width = new GridLength(nextWidth, GridUnitType.Pixel);
         column.WidthPx = (int)Math.Round(nextWidth);
+        UpdateColumnsHostWidth(vm);
 
         if (!string.Equals(vm.ActiveColumnId, column.Id, StringComparison.Ordinal))
             vm.ActiveColumnId = column.Id;
 
         vm.StatusText = $"Set {column.Title} width to {column.WidthPx}px.";
+    }
+
+    private static void ToggleColumnWidthLock(ColumnEditorControl editor, MainViewModel vm, ColumnViewModel column)
+    {
+        if (!column.IsWidthLocked && !column.WidthPx.HasValue && editor.ActualWidth > 0)
+            column.WidthPx = (int)Math.Round(editor.ActualWidth);
+
+        vm.ToggleLockActiveWidth();
     }
 
     private void RebuildColumns()
@@ -309,14 +319,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             colVm.CanMoveRight = i < vm.Columns.Count - 1;
             colVm.IsStandaloneDocument = vm.Columns.Count == 1;
 
-            var useFillWidth = vm.Columns.Count == 1 && (!colVm.WidthPx.HasValue || colVm.WidthPx.Value <= 0);
             ColumnsHost.ColumnDefinitions.Add(new ColumnDefinition
             {
-                Width = useFillWidth
-                    ? new GridLength(1, GridUnitType.Star)
-                    : (colVm.WidthPx.HasValue && colVm.WidthPx.Value > 0)
-                        ? new GridLength(colVm.WidthPx.Value, GridUnitType.Pixel)
-                        : new GridLength(DefaultColumnWidthPx, GridUnitType.Pixel),
+                Width = colVm.WidthPx.HasValue && colVm.WidthPx.Value > 0
+                    ? new GridLength(colVm.WidthPx.Value, GridUnitType.Pixel)
+                    : new GridLength(1, GridUnitType.Star),
                 MinWidth = 220
             });
 
@@ -333,6 +340,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             Grid.SetColumn(editor, i);
             ColumnsHost.Children.Add(editor);
         }
+
+        UpdateColumnsHostWidth(vm);
     }
 
     private void UpdateColumnsHostScrollState(MainViewModel vm)
@@ -342,15 +351,29 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             : ScrollBarVisibility.Auto;
     }
 
+    private void ColumnsScrollViewer_SizeChanged(object sender, SizeChangedEventArgs e)
+    {
+        if (Workspaces.Count > 0)
+            UpdateColumnsHostWidth(ActiveVm);
+    }
+
+    private void UpdateColumnsHostWidth(MainViewModel vm)
+    {
+        const double minimumColumnWidth = 220.0;
+        var minimumContentWidth = vm.Columns.Sum(column =>
+            column.WidthPx.HasValue && column.WidthPx.Value > 0
+                ? column.WidthPx.Value
+                : minimumColumnWidth);
+        var viewportWidth = ColumnsScrollViewer.ViewportWidth > 0
+            ? ColumnsScrollViewer.ViewportWidth
+            : ColumnsScrollViewer.ActualWidth;
+
+        ColumnsHost.Width = Math.Max(minimumContentWidth, viewportWidth);
+    }
+
     private void PersistWidthsFromGrid()
     {
         var vm = ActiveVm;
-
-        if (vm.Columns.Count == 1 && !vm.Columns[0].IsWidthLocked)
-        {
-            vm.Columns[0].WidthPx = null;
-            return;
-        }
 
         for (var columnIndex = 0; columnIndex < ColumnsHost.ColumnDefinitions.Count; columnIndex++)
         {
@@ -358,6 +381,9 @@ public partial class MainWindow : Window, INotifyPropertyChanged
                 break;
 
             var def = ColumnsHost.ColumnDefinitions[columnIndex];
+            if (!vm.Columns[columnIndex].WidthPx.HasValue)
+                continue;
+
             var px = (int)Math.Round(def.ActualWidth);
             if (px > 0)
                 vm.Columns[columnIndex].WidthPx = px;

@@ -13,6 +13,13 @@ public sealed class ColumnImageEventArgs(ColumnImageViewModel image) : EventArgs
     public ColumnImageViewModel Image { get; } = image;
 }
 
+public sealed class ColumnImageFileEventArgs(string filePath, double left, double top) : EventArgs
+{
+    public string FilePath { get; } = filePath;
+    public double Left { get; } = left;
+    public double Top { get; } = top;
+}
+
 public partial class ColumnEditorControl : UserControl
 {
     public event EventHandler? EditorFocused;
@@ -24,8 +31,8 @@ public partial class ColumnEditorControl : UserControl
     public event EventHandler? ResizeRequested;
     public event EventHandler<ColumnResizeDeltaEventArgs>? RightEdgeResizeDeltaRequested;
     public event EventHandler? InsertImageRequested;
+    public event EventHandler<ColumnImageFileEventArgs>? ImageFileDropped;
     public event EventHandler<ColumnImageEventArgs>? RemoveImageRequested;
-    public event EventHandler<ColumnImageEventArgs>? ImageWidthChangedRequested;
     public event EventHandler? SetFontFamilyRequested;
     public event EventHandler? IncreaseFontRequested;
     public event EventHandler? DecreaseFontRequested;
@@ -50,6 +57,8 @@ public partial class ColumnEditorControl : UserControl
 
     public int SelectionStart => Editor.SelectionStart;
     public int SelectionLength => Editor.SelectionLength;
+    public double PictureSurfaceWidth => ImageOverlay.ActualWidth;
+    public double PictureSurfaceHeight => ImageOverlay.ActualHeight;
 
     private ColumnViewModel? VM => DataContext as ColumnViewModel;
 

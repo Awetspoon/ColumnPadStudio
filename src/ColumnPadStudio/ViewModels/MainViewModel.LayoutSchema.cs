@@ -37,7 +37,10 @@ public sealed partial class MainViewModel
         string OriginalFileName,
         double Width,
         int PixelWidth,
-        int PixelHeight);
+        int PixelHeight,
+        double Left,
+        double Top,
+        string Layer);
 
     private sealed record DirtyWorkspaceState(
         bool ShowLineNumbers,

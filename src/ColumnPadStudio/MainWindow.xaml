@@ -280,8 +280,12 @@
 
         <ScrollViewer x:Name="ColumnsScrollViewer"
                       HorizontalScrollBarVisibility="Auto"
-                      VerticalScrollBarVisibility="Disabled">
-            <Grid x:Name="ColumnsHost" Background="{DynamicResource ColumnHostBackgroundBrush}" />
+                      VerticalScrollBarVisibility="Disabled"
+                      HorizontalContentAlignment="Left"
+                      SizeChanged="ColumnsScrollViewer_SizeChanged">
+            <Grid x:Name="ColumnsHost"
+                  HorizontalAlignment="Left"
+                  Background="{DynamicResource ColumnHostBackgroundBrush}" />
         </ScrollViewer>
     </DockPanel>
 </Window>

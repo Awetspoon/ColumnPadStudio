@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using ColumnPadStudio.Workflows;
 
 namespace ColumnPadStudio.Services;
@@ -14,12 +15,15 @@ public sealed partial class WorkflowService
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
-        WriteIndented = true
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true,
+        Converters = { new JsonStringEnumConverter() }
     };
 
     public static string DefaultWorkflowsDirectory => AppStoragePaths.WorkflowsDirectory;
 
     public string WorkflowsDirectory { get; }
+    public IReadOnlyList<string> LastLoadWarnings { get; private set; } = [];
 
     public WorkflowService(string? workflowsDirectory = null)
     {
@@ -40,9 +44,16 @@ public sealed partial class WorkflowService
                 return false;
 
             var root = document.RootElement;
-            return root.TryGetProperty(nameof(WorkflowDefinition.Nodes), out var nodes) &&
+            if (TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.FileType), out var fileType) &&
+                fileType.ValueKind == JsonValueKind.String &&
+                !string.Equals(fileType.GetString(), WorkflowDefinition.WorkflowFileType, StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.Nodes), out var nodes) &&
                    nodes.ValueKind == JsonValueKind.Array &&
-                   root.TryGetProperty(nameof(WorkflowDefinition.Links), out var links) &&
+                   TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.Links), out var links) &&
                    links.ValueKind == JsonValueKind.Array;
         }
         catch (JsonException)
@@ -54,17 +65,24 @@ public sealed partial class WorkflowService
     public IReadOnlyList<WorkflowDefinition> LoadAll()
     {
         if (!Directory.Exists(WorkflowsDirectory))
+        {
+            LastLoadWarnings = [];
             return Array.Empty<WorkflowDefinition>();
+        }
 
         var loaded = new List<WorkflowDefinition>();
+        var warnings = new List<string>();
         foreach (var filePath in Directory
                      .GetFiles(WorkflowsDirectory, "*.workflow.json")
                      .OrderBy(Path.GetFileName, StringComparer.OrdinalIgnoreCase))
         {
             if (TryLoad(filePath, out var workflow))
                 loaded.Add(workflow);
+            else
+                warnings.Add(Path.GetFileName(filePath));
         }
 
+        LastLoadWarnings = warnings;
         return loaded;
     }
 
@@ -77,6 +95,9 @@ public sealed partial class WorkflowService
         try
         {
             var json = File.ReadAllText(filePath);
+            if (!IsWorkflowDefinitionJson(json))
+                return false;
+
             var parsed = JsonSerializer.Deserialize<WorkflowDefinition>(json, JsonOptions);
             if (parsed is null)
                 return false;
@@ -116,6 +137,12 @@ public sealed partial class WorkflowService
         AtomicFileWriter.WriteText(path, json);
 
         workflow.FilePath = path;
+    }
+
+    public string CreateContentSignature(WorkflowDefinition workflow)
+    {
+        ArgumentNullException.ThrowIfNull(workflow);
+        return JsonSerializer.Serialize(Snapshot(workflow), JsonOptions);
     }
 
     public void Delete(WorkflowDefinition workflow)
@@ -324,6 +351,21 @@ public sealed partial class WorkflowService
 
             link.Id = candidate;
         }
+    }
+
+    private static bool TryGetPropertyIgnoreCase(JsonElement element, string propertyName, out JsonElement value)
+    {
+        foreach (var property in element.EnumerateObject())
+        {
+            if (string.Equals(property.Name, propertyName, StringComparison.OrdinalIgnoreCase))
+            {
+                value = property.Value;
+                return true;
+            }
+        }
+
+        value = default;
+        return false;
     }
 
 }

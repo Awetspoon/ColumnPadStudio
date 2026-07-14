@@ -41,10 +41,19 @@ public partial class MainWindow
         {
             PersistWidthsFromGrid();
             SaveAutoRecoverySnapshot();
+            if (_autoRecoveryWarningShown)
+            {
+                _autoRecoveryWarningShown = false;
+                ActiveVm.StatusText = "Auto-recovery is available again.";
+            }
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
-            // Auto-save should never interrupt editing.
+            if (_autoRecoveryWarningShown)
+                return;
+
+            _autoRecoveryWarningShown = true;
+            ActiveVm.StatusText = "Auto-recovery is unavailable. Keep this window open or save your work manually.";
         }
     }
 

@@ -20,6 +20,7 @@ public sealed class WorkflowDiagramLinkPreview
 public sealed partial class WorkflowBuilderViewModel : NotifyBase
 {
     private readonly WorkflowService _workflowService;
+    private readonly Dictionary<WorkflowDefinition, string> _cleanWorkflowSignatures = [];
     private WorkflowDefinition? _selectedWorkflow;
     private WorkflowDiagramNode? _selectedNode;
     private WorkflowDiagramLink? _selectedLink;
@@ -119,6 +120,7 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
     public bool HasSelectedLink => SelectedLink is not null;
     public bool HasSelectedTemplate => SelectedTemplate is not null;
     public bool CanCreateLink => SelectedWorkflow is { Nodes.Count: >= 2 };
+    public bool HasUnsavedChanges => Workflows.Any(IsWorkflowDirty);
     public double DiagramCanvasWidth => CalculateDiagramCanvasWidth();
     public double DiagramCanvasHeight => CalculateDiagramCanvasHeight();
 
@@ -142,6 +144,40 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
     public WorkflowBuilderViewModel(WorkflowService workflowService)
     {
         _workflowService = workflowService;
+    }
+
+    public bool IsWorkflowDirty(WorkflowDefinition workflow)
+    {
+        ArgumentNullException.ThrowIfNull(workflow);
+        return !_cleanWorkflowSignatures.TryGetValue(workflow, out var cleanSignature) ||
+               !string.Equals(cleanSignature, _workflowService.CreateContentSignature(workflow), StringComparison.Ordinal);
+    }
+
+    public int SaveAllChangedWorkflows()
+    {
+        var changed = Workflows.Where(IsWorkflowDirty).ToList();
+        foreach (var workflow in changed)
+        {
+            _workflowService.Save(workflow);
+            MarkWorkflowClean(workflow);
+        }
+
+        OnPropertyChanged(nameof(SelectedWorkflowFileLabel));
+        StatusText = changed.Count == 1
+            ? "Saved 1 changed workflow."
+            : $"Saved {changed.Count} changed workflows.";
+        return changed.Count;
+    }
+
+    private void MarkWorkflowClean(WorkflowDefinition workflow)
+    {
+        _cleanWorkflowSignatures[workflow] = _workflowService.CreateContentSignature(workflow);
+        OnPropertyChanged(nameof(HasUnsavedChanges));
+    }
+
+    private void NotifyWorkflowDirtyStateChanged()
+    {
+        OnPropertyChanged(nameof(HasUnsavedChanges));
     }
 
     private double CalculateDiagramCanvasWidth()

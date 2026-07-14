@@ -39,7 +39,7 @@ public sealed partial class MainViewModel : NotifyBase
     private string _cleanStateSignature = string.Empty;
     private bool _forceDirty;
     private static readonly JsonSerializerOptions LayoutJsonOptions = new() { WriteIndented = true };
-    private const int CurrentLayoutVersion = 13;
+    private const int CurrentLayoutVersion = 14;
 
     private readonly Dictionary<string, FontFaceOption> _fontFaceOptionsByName =
         new(StringComparer.CurrentCultureIgnoreCase);

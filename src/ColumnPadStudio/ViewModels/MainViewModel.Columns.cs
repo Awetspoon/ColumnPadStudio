@@ -91,6 +91,28 @@ public sealed partial class MainViewModel
         return true;
     }
 
+    public bool KeepOnlyColumn(string columnId)
+    {
+        var selected = Columns.FirstOrDefault(column => string.Equals(column.Id, columnId, StringComparison.Ordinal));
+        if (selected is null)
+            return false;
+
+        for (var index = Columns.Count - 1; index >= 0; index--)
+        {
+            if (!ReferenceEquals(Columns[index], selected))
+                Columns.RemoveAt(index);
+        }
+
+        selected.WidthPx = null;
+        selected.IsWidthLocked = false;
+        ActiveColumnId = selected.Id;
+        OnPropertyChanged(nameof(ColumnCount));
+        NotifyActiveColumnActionPropertiesChanged();
+        RequestRebuildColumns?.Invoke(this, EventArgs.Empty);
+        RefreshStatus();
+        return true;
+    }
+
     public void ResetActiveColumnWidth()
     {
         var active = GetActive();
@@ -184,6 +206,7 @@ public sealed partial class MainViewModel
         foreach (var c in Columns)
         {
             c.Text = string.Empty;
+            c.SetCheckedChecklistLineIndexes(null);
             c.ClearImages();
         }
 

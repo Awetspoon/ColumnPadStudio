@@ -128,10 +128,21 @@ public sealed partial class MainViewModel
             var width = GetJsonDoubleOrDefault(imageNode, nameof(LayoutImage.Width), 320.0);
             var pixelWidth = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.PixelWidth), 0);
             var pixelHeight = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.PixelHeight), 0);
+            var left = GetJsonDoubleOrDefault(imageNode, nameof(LayoutImage.Left), 12.0);
+            var top = GetJsonDoubleOrDefault(imageNode, nameof(LayoutImage.Top), 12.0);
+            var layer = GetJsonValueOrDefault(
+                imageNode,
+                nameof(LayoutImage.Layer),
+                nameof(ColumnImageLayer.InFrontOfText));
 
-            parsed.Add(new LayoutImage(filePath, originalFileName, width, pixelWidth, pixelHeight));
+            parsed.Add(new LayoutImage(filePath, originalFileName, width, pixelWidth, pixelHeight, left, top, layer));
         }
 
         return parsed;
     }
+
+    private static ColumnImageLayer ParseImageLayer(string? value)
+        => Enum.TryParse<ColumnImageLayer>(value, ignoreCase: true, out var parsed)
+            ? parsed
+            : ColumnImageLayer.InFrontOfText;
 }

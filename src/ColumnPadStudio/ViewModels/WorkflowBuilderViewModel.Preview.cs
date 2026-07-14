@@ -50,6 +50,7 @@ public sealed partial class WorkflowBuilderViewModel
 
         workflow.Nodes.CollectionChanged += WorkflowNodes_CollectionChanged;
         workflow.Links.CollectionChanged += WorkflowLinks_CollectionChanged;
+        workflow.PropertyChanged += Workflow_PropertyChanged;
 
         foreach (var node in workflow.Nodes)
             node.PropertyChanged += WorkflowNode_PropertyChanged;
@@ -65,6 +66,7 @@ public sealed partial class WorkflowBuilderViewModel
 
         workflow.Nodes.CollectionChanged -= WorkflowNodes_CollectionChanged;
         workflow.Links.CollectionChanged -= WorkflowLinks_CollectionChanged;
+        workflow.PropertyChanged -= Workflow_PropertyChanged;
 
         foreach (var node in workflow.Nodes)
             node.PropertyChanged -= WorkflowNode_PropertyChanged;
@@ -90,6 +92,7 @@ public sealed partial class WorkflowBuilderViewModel
         OnPropertyChanged(nameof(CanCreateLink));
         NotifyDiagramCanvasSizeChanged();
         RefreshLinkPreviews();
+        NotifyWorkflowDirtyStateChanged();
     }
 
     private void WorkflowLinks_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
@@ -107,10 +110,14 @@ public sealed partial class WorkflowBuilderViewModel
         }
 
         RefreshLinkPreviews();
+        NotifyWorkflowDirtyStateChanged();
     }
 
     private void WorkflowNode_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName != nameof(WorkflowDiagramNode.IsSelected))
+            NotifyWorkflowDirtyStateChanged();
+
         if (e.PropertyName is nameof(WorkflowDiagramNode.X) or nameof(WorkflowDiagramNode.Y) or nameof(WorkflowDiagramNode.Width) or nameof(WorkflowDiagramNode.Height))
         {
             NotifyDiagramCanvasSizeChanged();
@@ -124,8 +131,16 @@ public sealed partial class WorkflowBuilderViewModel
 
     private void WorkflowLink_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName != nameof(WorkflowDiagramLink.IsSelected))
+            NotifyWorkflowDirtyStateChanged();
+
         if (e.PropertyName is nameof(WorkflowDiagramLink.FromNodeId) or nameof(WorkflowDiagramLink.ToNodeId) or nameof(WorkflowDiagramLink.Label))
             RefreshLinkPreviews();
+    }
+
+    private void Workflow_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        NotifyWorkflowDirtyStateChanged();
     }
 
     private void NotifyDiagramCanvasSizeChanged()

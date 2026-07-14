@@ -53,8 +53,6 @@ public sealed class ColumnViewModel : NotifyBase
 
     public ObservableCollection<ColumnImageViewModel> Images { get; } = new();
 
-    public bool HasImages => Images.Count > 0;
-
     public ColumnViewModel()
     {
         Images.CollectionChanged += Images_CollectionChanged;
@@ -71,8 +69,12 @@ public sealed class ColumnViewModel : NotifyBase
         get => _text;
         set
         {
+            var nextText = value ?? string.Empty;
+            if (LineMarkerMode == LineMarkerMode.Checklist)
+                RemapChecklistLineIndexes(_text, nextText);
+
             _visibleLineCount = null;
-            Set(ref _text, value ?? string.Empty);
+            Set(ref _text, nextText);
             RecomputeDerivedMetrics();
         }
     }
@@ -286,31 +288,65 @@ public sealed class ColumnViewModel : NotifyBase
         RecomputeDerivedMetrics();
     }
 
-    public void ShiftChecklistLineIndexes(int startLineIndexInclusive, int delta)
+    private void RemapChecklistLineIndexes(string? previousText, string? nextText)
     {
-        if (delta == 0 || _checkedChecklistLineIndexes.Count == 0)
+        if (_checkedChecklistLineIndexes.Count == 0 || string.Equals(previousText, nextText, StringComparison.Ordinal))
             return;
 
-        var remapped = new HashSet<int>();
-        foreach (var index in _checkedChecklistLineIndexes)
+        var oldLines = SplitLines(previousText);
+        var newLines = SplitLines(nextText);
+        if (newLines.Length == 1 && newLines[0].Length == 0)
         {
-            if (index < startLineIndexInclusive)
+            _checkedChecklistLineIndexes.Clear();
+            return;
+        }
+
+        var commonPrefix = 0;
+        while (commonPrefix < oldLines.Length &&
+               commonPrefix < newLines.Length &&
+               string.Equals(oldLines[commonPrefix], newLines[commonPrefix], StringComparison.Ordinal))
+        {
+            commonPrefix++;
+        }
+
+        var commonSuffix = 0;
+        while (commonSuffix < oldLines.Length - commonPrefix &&
+               commonSuffix < newLines.Length - commonPrefix &&
+               string.Equals(
+                   oldLines[oldLines.Length - 1 - commonSuffix],
+                   newLines[newLines.Length - 1 - commonSuffix],
+                   StringComparison.Ordinal))
+        {
+            commonSuffix++;
+        }
+
+        var oldChangedLineCount = oldLines.Length - commonPrefix - commonSuffix;
+        var newChangedLineCount = newLines.Length - commonPrefix - commonSuffix;
+        var lineCountDelta = newLines.Length - oldLines.Length;
+        var remapped = new HashSet<int>();
+
+        foreach (var oldIndex in _checkedChecklistLineIndexes)
+        {
+            if (oldIndex < commonPrefix)
             {
-                remapped.Add(index);
+                remapped.Add(oldIndex);
                 continue;
             }
 
-            var shifted = index + delta;
-            if (shifted >= 0)
-                remapped.Add(shifted);
+            if (oldIndex >= commonPrefix + oldChangedLineCount)
+            {
+                remapped.Add(oldIndex + lineCountDelta);
+                continue;
+            }
+
+            if (newChangedLineCount > 0)
+            {
+                var relativeIndex = oldIndex - commonPrefix;
+                remapped.Add(commonPrefix + Math.Min(relativeIndex, newChangedLineCount - 1));
+            }
         }
 
-        if (_checkedChecklistLineIndexes.SetEquals(remapped))
-            return;
-
         _checkedChecklistLineIndexes = remapped;
-        TrimChecklistLineIndexesToBounds();
-        RecomputeDerivedMetrics();
     }
 
     public void SetVisibleLineCount(int lineCount)
@@ -329,6 +365,20 @@ public sealed class ColumnViewModel : NotifyBase
             return;
 
         Images.Clear();
+    }
+
+    public void SelectImage(ColumnImageViewModel image)
+    {
+        ArgumentNullException.ThrowIfNull(image);
+
+        foreach (var candidate in Images)
+            candidate.IsSelected = ReferenceEquals(candidate, image);
+    }
+
+    public void DeselectImages()
+    {
+        foreach (var image in Images)
+            image.IsSelected = false;
     }
 
     private void UpdateMetricsText()
@@ -353,7 +403,6 @@ public sealed class ColumnViewModel : NotifyBase
                 image.PropertyChanged += Image_PropertyChanged;
         }
 
-        OnPropertyChanged(nameof(HasImages));
         OnPropertyChanged(nameof(Images));
     }
 
@@ -433,4 +482,10 @@ public sealed class ColumnViewModel : NotifyBase
         var maxIndex = Math.Max(0, LineCount - 1);
         _checkedChecklistLineIndexes.RemoveWhere(index => index < 0 || index > maxIndex);
     }
+
+    private static string[] SplitLines(string? text)
+        => (text ?? string.Empty)
+            .Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Replace('\r', '\n')
+            .Split('\n');
 }

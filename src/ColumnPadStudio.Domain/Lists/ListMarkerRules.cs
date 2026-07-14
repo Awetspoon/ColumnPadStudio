@@ -1,4 +1,4 @@
-﻿namespace ColumnPadStudio.Domain.Lists;
+namespace ColumnPadStudio.Domain.Lists;
 
 public static class ListMarkerRules
 {

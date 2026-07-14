@@ -65,7 +65,10 @@ public sealed partial class MainViewModel
                         image.OriginalFileName,
                         image.Width,
                         image.PixelWidth,
-                        image.PixelHeight)).ToList(),
+                        image.PixelHeight,
+                        image.Left,
+                        image.Top,
+                        image.Layer.ToString())).ToList(),
                     c.EditorFontFamily,
                     c.EditorFontSize,
                     c.EditorFontStyle.ToString(),
@@ -75,6 +78,14 @@ public sealed partial class MainViewModel
     }
 
     private bool IsRawDocumentKind => CurrentFileKind is SaveFileKind.TextDocument or SaveFileKind.MarkdownDocument;
+
+    public void PrepareForRichContent()
+    {
+        if (IsRawDocumentKind)
+            SetCurrentFileReference(null, SaveFileKind.Layout);
+
+        ForceDirty();
+    }
 
     private void PromoteRawDocumentToLayoutIfNeeded(int targetColumnCount)
     {

@@ -49,6 +49,7 @@
                         <MenuItem Header="Reset This Column Size" Click="ColumnMenuResetWidth_Click"/>
                         <MenuItem Header="Resize This Column..." Click="ColumnMenuResize_Click"/>
                         <MenuItem Header="Insert Picture..." Click="InsertPicture_Click"/>
+                        <MenuItem x:Name="ColumnPicturesMenuItem" Header="Pictures"/>
                         <MenuItem Header="{Binding PlacementTarget.DataContext.WidthLockActionLabel, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   ToolTip="{Binding PlacementTarget.DataContext.WidthLockActionToolTip, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
                                   Click="ColumnMenuToggleWidthLock_Click"/>
@@ -112,19 +113,19 @@
                 </Grid>
             </Border>
 
-            <Grid Background="{DynamicResource EditorBackgroundBrush}"
-                  SnapsToDevicePixels="True">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+            <Grid x:Name="EditorSurface"
+                  Background="{DynamicResource EditorBackgroundBrush}"
+                  SnapsToDevicePixels="True"
+                  ClipToBounds="True"
+                  AllowDrop="True"
+                  PreviewDragOver="EditorSurface_DragOver"
+                  PreviewDrop="EditorSurface_Drop">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="{Binding LineNumberColumnWidth}"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <Border x:Name="LineNumberGutter"
-                        Grid.Row="0"
                         Grid.Column="0"
                         BorderBrush="{DynamicResource ControlBorderBrush}"
                         BorderThickness="0,0,1,0"
@@ -170,9 +171,72 @@
                     </TextBlock>
                 </Border>
 
+                <Border Grid.Column="1"
+                        Panel.ZIndex="0"
+                        Background="{DynamicResource EditorBackgroundBrush}">
+                    <Border.Style>
+                        <Style TargetType="Border">
+                            <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
+                                    <Setter Property="Background" Value="{DynamicResource EditorLinedPaperBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                </Border>
+
+                <ItemsControl Grid.Column="1"
+                              Panel.ZIndex="1"
+                              IsHitTestVisible="False"
+                              ItemsSource="{Binding Images}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Top}"/>
+                        </Style>
+                    </ItemsControl.ItemContainerStyle>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Grid Width="{Binding Width}"
+                                  Height="{Binding Height}"
+                                  Visibility="{Binding BehindTextVisibility}">
+                                <Image Source="{Binding FilePath}"
+                                       Stretch="Uniform"
+                                       SnapsToDevicePixels="True"/>
+                                <Border Background="{DynamicResource ControlBackgroundBrush}"
+                                        BorderBrush="{DynamicResource ControlBorderBrush}"
+                                        BorderThickness="1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding FileExists}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Margin="8"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"
+                                               Text="Picture file missing"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
                 <TextBox x:Name="Editor"
-                         Grid.Row="0"
                          Grid.Column="1"
+                         Panel.ZIndex="2"
                          Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
                          FontFamily="{Binding EditorFontFamily}"
                          FontSize="{Binding EditorFontSize}"
@@ -205,11 +269,7 @@
                          PreviewMouseRightButtonDown="Editor_PreviewMouseRightButtonDown">
                     <TextBox.Style>
                         <Style TargetType="TextBox" BasedOn="{StaticResource EditorTextBoxStyle}">
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource EditorLinedPaperBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
+                            <Setter Property="Background" Value="Transparent"/>
                         </Style>
                     </TextBox.Style>
                     <TextBox.ContextMenu>
@@ -250,73 +310,84 @@
                     </TextBox.ContextMenu>
                 </TextBox>
 
-                <ItemsControl Grid.Row="1"
+                <ItemsControl x:Name="ImageOverlay"
                               Grid.Column="1"
-                              Margin="8,6,8,8"
+                              Panel.ZIndex="3"
+                              ClipToBounds="True"
                               ItemsSource="{Binding Images}">
-                    <ItemsControl.Style>
-                        <Style TargetType="ItemsControl">
-                            <Setter Property="Visibility" Value="Collapsed"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding HasImages}" Value="True">
-                                    <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                            </Style.Triggers>
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <Canvas/>
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemContainerStyle>
+                        <Style TargetType="ContentPresenter">
+                            <Setter Property="Canvas.Left" Value="{Binding Left}"/>
+                            <Setter Property="Canvas.Top" Value="{Binding Top}"/>
                         </Style>
-                    </ItemsControl.Style>
+                    </ItemsControl.ItemContainerStyle>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="0,0,0,8"
-                                    Padding="8"
-                                    Background="{DynamicResource ColumnHeaderBackgroundBrush}"
-                                    BorderBrush="{DynamicResource ControlBorderBrush}"
-                                    BorderThickness="1"
-                                    CornerRadius="4">
-                                <StackPanel>
-                                    <DockPanel Margin="0,0,0,6">
-                                        <Button DockPanel.Dock="Right"
-                                                Style="{StaticResource CompactButtonStyle}"
-                                                Content="Remove"
-                                                Tag="{Binding}"
-                                                Click="ImageRemove_Click"/>
-                                        <TextBlock Margin="0,0,8,0"
-                                                   VerticalAlignment="Center"
-                                                   FontWeight="SemiBold"
-                                                   Foreground="{DynamicResource ControlForegroundBrush}"
-                                                   Text="{Binding DisplayName}"
-                                                   TextTrimming="CharacterEllipsis"/>
-                                    </DockPanel>
-                                    <Image Width="{Binding Width}"
-                                           HorizontalAlignment="Left"
+                            <Grid Width="{Binding Width}"
+                                  Height="{Binding Height}"
+                                  Visibility="{Binding OverlayVisibility}">
+                                <Grid.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{Binding PlacementTarget.DataContext.LayerActionText, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  Click="ImageToggleLayer_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="Remove Picture"
+                                                  Tag="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                                  Click="ImageRemove_Click"/>
+                                    </ContextMenu>
+                                </Grid.ContextMenu>
+                                <Image x:Name="Picture"
                                            Source="{Binding FilePath}"
                                            Stretch="Uniform"
                                            SnapsToDevicePixels="True"/>
-                                    <DockPanel Margin="0,7,0,0">
-                                        <Button DockPanel.Dock="Left"
-                                                Style="{StaticResource CompactButtonStyle}"
-                                                Content="-"
-                                                Tag="{Binding}"
-                                                Click="ImageShrink_Click"/>
-                                        <Button DockPanel.Dock="Right"
-                                                Style="{StaticResource CompactButtonStyle}"
-                                                Content="+"
-                                                Tag="{Binding}"
-                                                Click="ImageGrow_Click"/>
-                                        <TextBlock DockPanel.Dock="Right"
-                                                   Margin="8,0,0,0"
-                                                   VerticalAlignment="Center"
-                                                   FontSize="11"
-                                                   Foreground="{DynamicResource LineNumberForegroundBrush}"
-                                                   Text="{Binding SizeText}"/>
-                                        <Slider Margin="6,0"
-                                                Minimum="80"
-                                                Maximum="2000"
-                                                Value="{Binding Width, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
-                                                Tag="{Binding}"
-                                                ValueChanged="ImageWidthSlider_ValueChanged"/>
-                                    </DockPanel>
-                                </StackPanel>
-                            </Border>
+                                <Border Background="{DynamicResource ControlBackgroundBrush}"
+                                        BorderBrush="{DynamicResource ControlBorderBrush}"
+                                        BorderThickness="1">
+                                    <Border.Style>
+                                        <Style TargetType="Border">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding FileExists}" Value="False">
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Border.Style>
+                                    <TextBlock Margin="8"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Center"
+                                               Text="Picture file missing"
+                                               TextAlignment="Center"
+                                               TextWrapping="Wrap"/>
+                                </Border>
+                                <Border BorderBrush="{DynamicResource ControlFocusBorderBrush}"
+                                        BorderThickness="2"
+                                        IsHitTestVisible="False"
+                                        Visibility="{Binding SelectionVisibility}"/>
+                                <Thumb Background="Transparent"
+                                       Cursor="SizeAll"
+                                       Focusable="False"
+                                       Tag="{Binding}"
+                                       DragStarted="ImageMoveThumb_DragStarted"
+                                       DragDelta="ImageMoveThumb_DragDelta"/>
+                                <Thumb Width="14"
+                                       Height="14"
+                                       HorizontalAlignment="Right"
+                                       VerticalAlignment="Bottom"
+                                       Cursor="SizeNWSE"
+                                       Focusable="False"
+                                       Background="{DynamicResource ControlFocusBorderBrush}"
+                                       Tag="{Binding}"
+                                       Visibility="{Binding SelectionVisibility}"
+                                       DragStarted="ImageResizeThumb_DragStarted"
+                                       DragDelta="ImageResizeThumb_DragDelta"/>
+                            </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

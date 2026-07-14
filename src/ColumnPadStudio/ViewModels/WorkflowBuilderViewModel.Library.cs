@@ -15,19 +15,27 @@ public sealed partial class WorkflowBuilderViewModel
         SelectedTemplate = Templates.FirstOrDefault();
 
         Workflows.Clear();
+        _cleanWorkflowSignatures.Clear();
         foreach (var workflow in _workflowService.LoadAll())
+        {
             Workflows.Add(workflow);
+            MarkWorkflowClean(workflow);
+        }
 
         if (Workflows.Count == 0)
         {
             AddWorkflow();
-            StatusText = "No workflow files found yet. Added a workflow.";
+            if (SelectedWorkflow is not null)
+                MarkWorkflowClean(SelectedWorkflow);
+            StatusText = "No workflow files found yet. Added a blank draft.";
             return;
         }
 
         SelectedWorkflow = Workflows[0];
 
-        StatusText = $"Loaded {Workflows.Count} workflow(s).";
+        StatusText = _workflowService.LastLoadWarnings.Count == 0
+            ? $"Loaded {Workflows.Count} workflow(s)."
+            : $"Loaded {Workflows.Count} workflow(s). Skipped {_workflowService.LastLoadWarnings.Count} unreadable file(s).";
     }
 
     public void AddWorkflow()
@@ -40,6 +48,7 @@ public sealed partial class WorkflowBuilderViewModel
         OnPropertyChanged(nameof(DiagramCanvasWidth));
         OnPropertyChanged(nameof(DiagramCanvasHeight));
         StatusText = $"Added {workflow.Name}.";
+        NotifyWorkflowDirtyStateChanged();
     }
 
     public bool CreateWorkflowFromSelectedTemplate()
@@ -55,6 +64,7 @@ public sealed partial class WorkflowBuilderViewModel
         OnPropertyChanged(nameof(DiagramCanvasWidth));
         OnPropertyChanged(nameof(DiagramCanvasHeight));
         StatusText = $"Created diagram from template: {template.Name}.";
+        NotifyWorkflowDirtyStateChanged();
         return true;
     }
 
@@ -75,6 +85,7 @@ public sealed partial class WorkflowBuilderViewModel
         OnPropertyChanged(nameof(DiagramCanvasWidth));
         OnPropertyChanged(nameof(DiagramCanvasHeight));
         StatusText = $"Imported workflow from {Path.GetFileName(filePath)}.";
+        NotifyWorkflowDirtyStateChanged();
         return true;
     }
 
@@ -114,6 +125,7 @@ public sealed partial class WorkflowBuilderViewModel
             return;
 
         _workflowService.Save(SelectedWorkflow);
+        MarkWorkflowClean(SelectedWorkflow);
         OnPropertyChanged(nameof(SelectedWorkflowFileLabel));
         StatusText = $"Saved {Path.GetFileName(SelectedWorkflow.FilePath)}.";
     }
@@ -126,6 +138,7 @@ public sealed partial class WorkflowBuilderViewModel
 
         var selectedIndex = Workflows.IndexOf(workflow);
         _workflowService.Delete(workflow);
+        _cleanWorkflowSignatures.Remove(workflow);
 
         if (!Workflows.Remove(workflow))
             return false;

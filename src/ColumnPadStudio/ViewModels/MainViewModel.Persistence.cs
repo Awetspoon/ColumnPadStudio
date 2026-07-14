@@ -143,7 +143,10 @@ public sealed partial class MainViewModel
                     image.OriginalFileName,
                     image.Width,
                     image.PixelWidth,
-                    image.PixelHeight)).ToList(),
+                    image.PixelHeight,
+                    image.Left,
+                    image.Top,
+                    image.Layer.ToString())).ToList(),
                 c.EditorFontFamily,
                 c.EditorFontSize,
                 c.EditorFontStyle.ToString(),
@@ -205,7 +208,14 @@ public sealed partial class MainViewModel
         var i = 1;
         foreach (var item in colsNode)
         {
-            var obj = item as JsonObject;
+            if (item is not JsonObject obj ||
+                obj[nameof(LayoutColumn.Text)] is not JsonValue textValue ||
+                !textValue.TryGetValue<string>(out _))
+            {
+                StatusText = $"Invalid layout file: Column {i} is damaged.";
+                return false;
+            }
+
             var defaultTitle = $"Column {i}";
             var title = GetJsonValueOrDefault(obj, nameof(LayoutColumn.Title), defaultTitle);
             if (string.IsNullOrWhiteSpace(title))
@@ -276,7 +286,10 @@ public sealed partial class MainViewModel
                     image.OriginalFileName,
                     image.Width,
                     image.PixelWidth,
-                    image.PixelHeight));
+                    image.PixelHeight,
+                    image.Left,
+                    image.Top,
+                    ParseImageLayer(image.Layer)));
             }
             vm.EditorFontFamily = string.IsNullOrWhiteSpace(column.FontFamily) ? EditorFontFamily : column.FontFamily;
             vm.EditorFontSize = column.FontSize <= 0 ? EditorFontSize : column.FontSize;

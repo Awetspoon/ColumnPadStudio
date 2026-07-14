@@ -137,12 +137,22 @@ Check(!vm.MoveActiveColumnLeft(), "MoveActiveColumnLeft should refuse to swap th
 Check(vm.StatusText.Contains("first column"), "MoveActiveColumnLeft should explain when the selected column is already first.");
 vm.Columns[0].LineMarkerMode = LineMarkerMode.Checklist;
 vm.Columns[0].SetCheckedChecklistLineIndexes([0]);
-vm.Columns[0].Images.Add(new ColumnImageViewModel("C:\\images\\diagram.png", "diagram.png", 420, 800, 600));
+vm.Columns[0].Images.Add(new ColumnImageViewModel(
+    "C:\\images\\diagram.png",
+    "diagram.png",
+    420,
+    800,
+    600,
+    18,
+    26,
+    ColumnImageLayer.BehindText));
 vm.DuplicateActive();
 Check(vm.Columns[^1].LineMarkerMode == LineMarkerMode.Checklist, "DuplicateActive should preserve the duplicated column gutter marker mode.");
 Check(vm.Columns[^1].IsChecklistLineChecked(0), "DuplicateActive should preserve duplicated column checklist metadata.");
 Check(vm.Columns[^1].Images.Count == 1, "DuplicateActive should preserve duplicated column image attachments.");
 Check(Math.Abs(vm.Columns[^1].Images[0].Width - 420) < 0.001, "DuplicateActive should preserve duplicated image display width.");
+Check(Math.Abs(vm.Columns[^1].Images[0].Left - 18) < 0.001 && Math.Abs(vm.Columns[^1].Images[0].Top - 26) < 0.001, "DuplicateActive should preserve image position.");
+Check(vm.Columns[^1].Images[0].Layer == ColumnImageLayer.BehindText, "DuplicateActive should preserve image text layer.");
 
 vm.ThemePreset = "High Contrast";
 Check(vm.ThemePreset == "Dark Mode", "Legacy theme 'High Contrast' should normalize to 'Dark Mode'.");
@@ -182,6 +192,8 @@ Check(loaded.Columns[0].WidthPx == 444, "JSON round-trip should preserve per-col
 Check(loaded.Columns[0].Images.Count == 1, "JSON round-trip should preserve column image attachments.");
 Check(loaded.Columns[0].Images[0].OriginalFileName == "diagram.png", "JSON round-trip should preserve image display names.");
 Check(Math.Abs(loaded.Columns[0].Images[0].Width - 420) < 0.001, "JSON round-trip should preserve image display width.");
+Check(Math.Abs(loaded.Columns[0].Images[0].Left - 18) < 0.001 && Math.Abs(loaded.Columns[0].Images[0].Top - 26) < 0.001, "JSON round-trip should preserve image position.");
+Check(loaded.Columns[0].Images[0].Layer == ColumnImageLayer.BehindText, "JSON round-trip should preserve image text layer.");
 Check(!loaded.Columns[0].UseDefaultFont, "JSON round-trip should preserve per-column default-font toggle.");
 Check(loaded.Columns[0].EditorFontFamily == "Consolas", "JSON round-trip should preserve per-column font family.");
 Check(Math.Abs(loaded.Columns[0].EditorFontSize - 17) < 0.001, "JSON round-trip should preserve per-column font size.");
@@ -323,6 +335,42 @@ existingWorkflowVm.Load();
 var workflowCountBeforeAdd = existingWorkflowVm.Workflows.Count;
 existingWorkflowVm.AddWorkflow();
 Check(existingWorkflowVm.Workflows.Count == workflowCountBeforeAdd + 1, "Workflow Builder Add Workflow should add one workflow.");
+
+Check(!WorkflowService.IsWorkflowDefinitionJson("{}"), "Workflow detection should reject unrelated empty JSON objects.");
+Check(!WorkflowService.IsWorkflowDefinitionJson(json), "Workflow detection should reject ColumnPad layout JSON.");
+var camelCaseWorkflowPath = Path.Combine(workflowTemp, "camel-case.workflow.json");
+File.WriteAllText(camelCaseWorkflowPath, """
+{
+  "fileType": "ColumnPadWorkflow",
+  "schemaVersion": 3,
+  "id": "camel-case",
+  "name": "Camel Case Workflow",
+  "nodes": [
+    { "id": "start", "kind": "Start", "title": "Start" }
+  ],
+  "links": []
+}
+""");
+Check(workflowService.TryLoad(camelCaseWorkflowPath, out var camelCaseWorkflow), "Workflow import should accept case-insensitive property names and readable enum names.");
+Check(camelCaseWorkflow.Nodes.Count == 1 && camelCaseWorkflow.Nodes[0].Kind == WorkflowNodeKind.Start, "Case-insensitive workflow import should preserve node data.");
+
+var invalidWorkflowPath = Path.Combine(workflowTemp, "invalid.workflow.json");
+File.WriteAllText(invalidWorkflowPath, "{}");
+_ = workflowService.LoadAll();
+Check(workflowService.LastLoadWarnings.Contains("invalid.workflow.json"), "Workflow library loading should report unreadable workflow filenames instead of silently skipping them.");
+
+var dirtyWorkflowService = new WorkflowService(Path.Combine(workflowTemp, "dirty-state"));
+var dirtyWorkflowVm = new WorkflowBuilderViewModel(dirtyWorkflowService);
+dirtyWorkflowVm.Load();
+Check(!dirtyWorkflowVm.HasUnsavedChanges, "Opening an empty Workflow Builder should not treat its untouched blank draft as a user edit.");
+dirtyWorkflowVm.SelectedWorkflow!.Name = "My Workflow";
+Check(dirtyWorkflowVm.HasUnsavedChanges, "Editing the blank workflow draft should mark it unsaved.");
+dirtyWorkflowVm.SaveSelectedWorkflow();
+Check(!dirtyWorkflowVm.HasUnsavedChanges, "Saving a workflow should establish a clean state.");
+dirtyWorkflowVm.SelectedWorkflow!.Description = "Changed after save";
+Check(dirtyWorkflowVm.HasUnsavedChanges, "Editing workflow details should mark the Workflow Builder dirty.");
+Check(dirtyWorkflowVm.SaveAllChangedWorkflows() == 1, "Save-all should save each changed workflow once.");
+Check(!dirtyWorkflowVm.HasUnsavedChanges, "Save-all should clear the Workflow Builder dirty state.");
 Directory.Delete(workflowTemp, recursive: true);
 
 
@@ -376,6 +424,10 @@ var beforeInvalidLoadCount = loaded.Columns.Count;
 loaded.LoadFromJson("{ not valid json", "smoke");
 Check(loaded.StatusText == "Invalid layout file.", "Invalid JSON should report an invalid layout status.");
 Check(loaded.Columns.Count == beforeInvalidLoadCount, "Invalid JSON should not mutate existing column state.");
+var damagedLayout = JsonNode.Parse(json)!.AsObject();
+damagedLayout["Columns"]!.AsArray()[0] = "not a column object";
+Check(!loaded.LoadFromJson(damagedLayout.ToJsonString(), "damaged"), "Layout loading should reject malformed column entries.");
+Check(loaded.Columns.Count == beforeInvalidLoadCount, "Rejecting a damaged layout should leave the current workspace untouched.");
 
 var metrics = new ColumnViewModel
 {
@@ -403,10 +455,37 @@ var checklistModeMetrics = new ColumnViewModel
 checklistModeMetrics.SetCheckedChecklistLineIndexes([2]);
 Check(checklistModeMetrics.ChecklistTotal == 3, "Checklist gutter mode should count only non-empty checklist lines.");
 Check(checklistModeMetrics.ChecklistDone == 1, "Checklist gutter mode should count checked lines from gutter metadata.");
-checklistModeMetrics.ShiftChecklistLineIndexes(1, +1);
-Check(checklistModeMetrics.GetCheckedChecklistLineIndexes().SequenceEqual([3]), "Shifting checklist metadata should move checks with inserted lines.");
-checklistModeMetrics.Text = "first\nsecond";
-Check(checklistModeMetrics.GetCheckedChecklistLineIndexes().Count == 0, "Checklist metadata should trim invalid checked indexes after line count shrinks.");
+checklistModeMetrics.Text = "first\ninserted\n\nsecond\nthird";
+Check(checklistModeMetrics.GetCheckedChecklistLineIndexes().SequenceEqual([3]), "Checklist remapping should move checks with inserted lines.");
+checklistModeMetrics.Text = "first\ninserted\n\nthird";
+Check(checklistModeMetrics.GetCheckedChecklistLineIndexes().Count == 0, "Checklist remapping should remove a check when its line is deleted.");
+
+var checklistEnterAtStart = new ColumnViewModel { Text = "task", LineMarkerMode = LineMarkerMode.Checklist };
+checklistEnterAtStart.SetCheckedChecklistLineIndexes([0]);
+checklistEnterAtStart.Text = "\ntask";
+Check(checklistEnterAtStart.GetCheckedChecklistLineIndexes().SequenceEqual([1]), "Checklist remapping should keep a check with text shifted down by Enter at line start.");
+
+var singleModeVm = new MainViewModel();
+singleModeVm.SetColumnCount(3);
+var retainedColumn = singleModeVm.Columns[1];
+retainedColumn.Text = "keep me";
+retainedColumn.LineMarkerMode = LineMarkerMode.Checklist;
+retainedColumn.SetCheckedChecklistLineIndexes([0]);
+retainedColumn.Images.Add(new ColumnImageViewModel("C:\\images\\retained.png", left: 34, top: 45));
+Check(singleModeVm.KeepOnlyColumn(retainedColumn.Id), "Single text conversion should accept an existing column.");
+Check(singleModeVm.Columns.Count == 1 && ReferenceEquals(singleModeVm.Columns[0], retainedColumn), "Single text conversion should retain the selected column object rather than copy selected fields.");
+Check(singleModeVm.Columns[0].Images.Count == 1 && singleModeVm.Columns[0].IsChecklistLineChecked(0), "Single text conversion should retain pictures and checklist metadata.");
+
+singleModeVm.ClearAll();
+Check(singleModeVm.Columns[0].Images.Count == 0, "Clear All should remove column pictures.");
+Check(singleModeVm.Columns[0].GetCheckedChecklistLineIndexes().Count == 0, "Clear All should remove checklist metadata.");
+
+var richContentVm = new MainViewModel();
+richContentVm.LoadTextDocument("plain text", "plain.txt", "C:\\notes\\plain.txt", SaveFileKind.TextDocument);
+richContentVm.PrepareForRichContent();
+richContentVm.Columns[0].Images.Add(new ColumnImageViewModel("C:\\images\\rich.png"));
+Check(richContentVm.CurrentFileKind == SaveFileKind.Layout && richContentVm.CurrentFilePath is null, "Adding rich content to a text document should promote it to a native layout instead of silently losing the picture.");
+Check(richContentVm.IsDirty, "Promoting a text document for a picture should mark it dirty.");
 
 var lineToggleVm = new MainViewModel();
 Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - ColumnViewModel.VisibleLineNumberColumnWidth) < 0.001), "Line-number gutter should default to visible width.");

@@ -44,32 +44,9 @@ public partial class MainWindow
         if (ActiveWorkspace is { } workspace)
             workspace.LastMultiColumnCount = Math.Max(2, vm.Columns.Count);
 
-        var preservedTitle = selected.Title;
-        var preservedText = selected.Text ?? string.Empty;
-        var preservedPastePreset = selected.PastePreset;
-        var preservedFontFamily = selected.EditorFontFamily;
-        var preservedFontSize = selected.EditorFontSize;
-        var preservedFontStyle = selected.EditorFontStyle;
-        var preservedFontWeight = selected.EditorFontWeight;
-        var preservedUseDefaultFont = selected.UseDefaultFont;
+        if (!vm.KeepOnlyColumn(selected.Id))
+            return;
 
-        vm.SetColumnCount(1);
-
-        var single = vm.Columns[0];
-        single.Title = string.IsNullOrWhiteSpace(preservedTitle) ? "Document" : preservedTitle;
-        single.Text = preservedText;
-        single.WidthPx = null;
-        single.IsWidthLocked = false;
-        single.PastePreset = preservedPastePreset;
-        single.EditorFontFamily = preservedFontFamily;
-        single.EditorFontSize = preservedFontSize;
-        single.EditorFontStyle = preservedFontStyle;
-        single.EditorFontWeight = preservedFontWeight;
-        single.UseDefaultFont = preservedUseDefaultFont;
-
-        vm.ActiveColumnId = single.Id;
-        RebuildColumns();
-        vm.RefreshStatus();
         vm.StatusText = "Single text mode enabled.";
     }
 

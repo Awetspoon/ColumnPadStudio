@@ -7,6 +7,8 @@ namespace ColumnPadStudio.Workflows;
 
 public sealed class WorkflowDefinition : NotifyBase
 {
+    public const string WorkflowFileType = "ColumnPadWorkflow";
+
     private int _schemaVersion = 3;
     private string _id = Guid.NewGuid().ToString("N");
     private string _name = "New Workflow";
@@ -15,6 +17,8 @@ public sealed class WorkflowDefinition : NotifyBase
     private WorkflowTriggerType _trigger = WorkflowTriggerType.Manual;
     private ObservableCollection<WorkflowDiagramNode> _nodes = [];
     private ObservableCollection<WorkflowDiagramLink> _links = [];
+
+    public string FileType => WorkflowFileType;
 
     public int SchemaVersion
     {

@@ -39,6 +39,8 @@ public static class ColumnImageFileService
         if (!SupportedExtensions.Contains(extension))
             throw new NotSupportedException("ColumnPad supports PNG, JPG, BMP, GIF, WEBP, and TIFF images.");
 
+        var (pixelWidth, pixelHeight) = ReadPixelSize(sourcePath);
+
         Directory.CreateDirectory(AppStoragePaths.ImagesDirectory);
 
         var originalFileName = Path.GetFileName(sourcePath);
@@ -46,9 +48,16 @@ public static class ColumnImageFileService
         var storedFileName = $"{safeBaseName}-{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
         var storedPath = Path.Combine(AppStoragePaths.ImagesDirectory, storedFileName);
 
-        File.Copy(sourcePath, storedPath, overwrite: false);
+        try
+        {
+            File.Copy(sourcePath, storedPath, overwrite: false);
+        }
+        catch
+        {
+            TryDeleteIncompleteCopy(storedPath);
+            throw;
+        }
 
-        var (pixelWidth, pixelHeight) = ReadPixelSize(storedPath);
         var displayWidth = Math.Clamp(pixelWidth > 0 ? pixelWidth : 320.0, 160.0, 900.0);
 
         return new ColumnImageImport(storedPath, originalFileName, displayWidth, pixelWidth, pixelHeight);
@@ -81,5 +90,20 @@ public static class ColumnImageFileService
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = new string(name.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray()).Trim('-', ' ');
         return string.IsNullOrWhiteSpace(sanitized) ? "image" : sanitized;
+    }
+
+    private static void TryDeleteIncompleteCopy(string filePath)
+    {
+        try
+        {
+            if (File.Exists(filePath))
+                File.Delete(filePath);
+        }
+        catch (IOException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 }

@@ -43,6 +43,7 @@ public partial class ColumnEditorControl
 
     private void Editor_GotFocus(object sender, RoutedEventArgs e)
     {
+        VM?.DeselectImages();
         EditorFocused?.Invoke(this, EventArgs.Empty);
     }
 
@@ -69,6 +70,7 @@ public partial class ColumnEditorControl
 
     private void Editor_SizeChanged(object sender, SizeChangedEventArgs e)
     {
+        ClampImagesToSurface();
         QueueLineNumberRefresh();
         SyncLineNumberScrollWithEditor();
     }

@@ -22,6 +22,7 @@ public partial class ColumnEditorControl
 
         ColumnFontBoldMenuItem.IsChecked = VM.EditorFontWeight == FontWeights.Bold;
         ColumnFontItalicMenuItem.IsChecked = VM.EditorFontStyle == FontStyles.Italic;
+        RefreshPicturesMenu();
     }
 
     private void ClearSelection_Click(object sender, RoutedEventArgs e)
@@ -71,31 +72,28 @@ public partial class ColumnEditorControl
             RemoveImageRequested?.Invoke(this, new ColumnImageEventArgs(image));
     }
 
-    private void ImageWidthSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    private void RefreshPicturesMenu()
     {
-        if (!IsLoaded)
+        ColumnPicturesMenuItem.Items.Clear();
+        ColumnPicturesMenuItem.Visibility = VM?.Images.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (VM is null)
             return;
 
-        if ((sender as FrameworkElement)?.Tag is ColumnImageViewModel image)
-            ImageWidthChangedRequested?.Invoke(this, new ColumnImageEventArgs(image));
-    }
-
-    private void ImageShrink_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.Tag is not ColumnImageViewModel image)
-            return;
-
-        image.Width -= 40;
-        ImageWidthChangedRequested?.Invoke(this, new ColumnImageEventArgs(image));
-    }
-
-    private void ImageGrow_Click(object sender, RoutedEventArgs e)
-    {
-        if ((sender as FrameworkElement)?.Tag is not ColumnImageViewModel image)
-            return;
-
-        image.Width += 40;
-        ImageWidthChangedRequested?.Invoke(this, new ColumnImageEventArgs(image));
+        foreach (var image in VM.Images)
+        {
+            var item = new MenuItem
+            {
+                Header = image.DisplayName,
+                Tag = image,
+                IsCheckable = true,
+                IsChecked = image.IsSelected
+            };
+            item.Click += ImageSelectFromMenu_Click;
+            ColumnPicturesMenuItem.Items.Add(item);
+        }
     }
 
     private void ColumnMenuToggleWidthLock_Click(object sender, RoutedEventArgs e)

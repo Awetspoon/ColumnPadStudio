@@ -8,6 +8,8 @@ public partial class ColumnEditorControl
 {
     private void Editor_PreviewKeyDown(object sender, KeyEventArgs e)
     {
+        VM?.DeselectImages();
+
         if (Keyboard.Modifiers == ModifierKeys.None && e.Key == Key.Escape && ClearSelection())
         {
             e.Handled = true;
@@ -38,17 +40,6 @@ public partial class ColumnEditorControl
             return;
         }
 
-        if (Keyboard.Modifiers == ModifierKeys.None &&
-            e.Key == Key.Enter &&
-            Editor.SelectionLength == 0 &&
-            VM?.LineMarkerMode == LineMarkerMode.Checklist)
-        {
-            var caretIndex = Editor.CaretIndex;
-            var lineIndex = Editor.GetLineIndexFromCharacterIndex(caretIndex);
-            var lineStart = Editor.GetCharacterIndexFromLineIndex(lineIndex);
-            var shiftFrom = caretIndex == lineStart ? lineIndex : lineIndex + 1;
-            VM.ShiftChecklistLineIndexes(shiftFrom, +1);
-        }
     }
 
     private void RightEdgeResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)

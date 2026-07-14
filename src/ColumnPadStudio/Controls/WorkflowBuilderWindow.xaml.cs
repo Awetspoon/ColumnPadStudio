@@ -1,5 +1,6 @@
 using System.IO;
 using System.Linq;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -29,6 +30,45 @@ public partial class WorkflowBuilderWindow : Window
         _pendingImportFilePath = importFilePath;
 
         Loaded += WorkflowBuilderWindow_Loaded;
+        Closing += WorkflowBuilderWindow_Closing;
+    }
+
+    private void WorkflowBuilderWindow_Closing(object? sender, CancelEventArgs e)
+    {
+        if (!ViewModel.HasUnsavedChanges)
+            return;
+
+        var result = MessageBox.Show(
+            this,
+            "Save changed workflows before closing?",
+            "Unsaved Workflows",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Warning,
+            MessageBoxResult.Yes);
+
+        if (result == MessageBoxResult.Cancel)
+        {
+            e.Cancel = true;
+            return;
+        }
+
+        if (result != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            ViewModel.SaveAllChangedWorkflows();
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            e.Cancel = true;
+            MessageBox.Show(
+                this,
+                $"Could not save all changed workflows. The window will stay open.\n\n{ex.Message}",
+                "Workflow Save Failed",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
     }
 
     private void WorkflowBuilderWindow_Loaded(object sender, RoutedEventArgs e)

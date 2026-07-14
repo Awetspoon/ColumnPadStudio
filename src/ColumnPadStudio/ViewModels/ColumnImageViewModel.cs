@@ -1,6 +1,13 @@
 using System.IO;
+using System.Windows;
 
 namespace ColumnPadStudio.ViewModels;
+
+public enum ColumnImageLayer
+{
+    BehindText,
+    InFrontOfText
+}
 
 public sealed class ColumnImageViewModel : NotifyBase
 {
@@ -10,13 +17,20 @@ public sealed class ColumnImageViewModel : NotifyBase
     private string _filePath;
     private string _originalFileName;
     private double _width;
+    private double _left;
+    private double _top;
+    private ColumnImageLayer _layer;
+    private bool _isSelected;
 
     public ColumnImageViewModel(
         string filePath,
         string? originalFileName = null,
         double width = 320.0,
         int pixelWidth = 0,
-        int pixelHeight = 0)
+        int pixelHeight = 0,
+        double left = 12.0,
+        double top = 12.0,
+        ColumnImageLayer layer = ColumnImageLayer.InFrontOfText)
     {
         Id = Guid.NewGuid().ToString("N");
         _filePath = filePath;
@@ -24,6 +38,9 @@ public sealed class ColumnImageViewModel : NotifyBase
             ? Path.GetFileName(filePath)
             : originalFileName.Trim();
         _width = ClampWidth(width);
+        _left = ClampPosition(left);
+        _top = ClampPosition(top);
+        _layer = layer;
         PixelWidth = Math.Max(0, pixelWidth);
         PixelHeight = Math.Max(0, pixelHeight);
     }
@@ -72,7 +89,54 @@ public sealed class ColumnImageViewModel : NotifyBase
 
             _width = nextValue;
             OnPropertyChanged();
-            OnPropertyChanged(nameof(SizeText));
+            OnPropertyChanged(nameof(Height));
+        }
+    }
+
+    public double Height => PixelWidth > 0 && PixelHeight > 0
+        ? Math.Max(1.0, Width * PixelHeight / PixelWidth)
+        : Math.Max(1.0, Width * 0.75);
+
+    public double Left
+    {
+        get => _left;
+        set => Set(ref _left, ClampPosition(value));
+    }
+
+    public double Top
+    {
+        get => _top;
+        set => Set(ref _top, ClampPosition(value));
+    }
+
+    public ColumnImageLayer Layer
+    {
+        get => _layer;
+        set
+        {
+            if (_layer == value)
+                return;
+
+            _layer = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(BehindTextVisibility));
+            OnPropertyChanged(nameof(OverlayVisibility));
+            OnPropertyChanged(nameof(LayerActionText));
+        }
+    }
+
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value)
+                return;
+
+            _isSelected = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(OverlayVisibility));
+            OnPropertyChanged(nameof(SelectionVisibility));
         }
     }
 
@@ -85,12 +149,22 @@ public sealed class ColumnImageViewModel : NotifyBase
 
     public bool FileExists => !string.IsNullOrWhiteSpace(FilePath) && File.Exists(FilePath);
 
-    public string SizeText => PixelWidth > 0 && PixelHeight > 0
-        ? $"{Math.Round(Width):0}px wide | source {PixelWidth} x {PixelHeight}"
-        : $"{Math.Round(Width):0}px wide";
+    public Visibility BehindTextVisibility => Layer == ColumnImageLayer.BehindText
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
+    public Visibility OverlayVisibility => Layer == ColumnImageLayer.InFrontOfText || IsSelected
+        ? Visibility.Visible
+        : Visibility.Collapsed;
+
+    public Visibility SelectionVisibility => IsSelected ? Visibility.Visible : Visibility.Collapsed;
+
+    public string LayerActionText => Layer == ColumnImageLayer.InFrontOfText
+        ? "Place Behind Text"
+        : "Place In Front of Text";
 
     public ColumnImageViewModel Duplicate()
-        => new(FilePath, OriginalFileName, Width, PixelWidth, PixelHeight);
+        => new(FilePath, OriginalFileName, Width, PixelWidth, PixelHeight, Left, Top, Layer);
 
     private static double ClampWidth(double width)
     {
@@ -98,5 +172,13 @@ public sealed class ColumnImageViewModel : NotifyBase
             return 320.0;
 
         return Math.Clamp(width, MinDisplayWidth, MaxDisplayWidth);
+    }
+
+    private static double ClampPosition(double value)
+    {
+        if (double.IsNaN(value) || double.IsInfinity(value))
+            return 0.0;
+
+        return Math.Max(0.0, value);
     }
 }
