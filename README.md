@@ -12,7 +12,7 @@ Get the latest Windows app from the [ColumnPad Releases page](https://github.com
 
 Latest download:
 
-- `ColumnPadStudio-v2.2.4-win-x64.exe`
+- `ColumnPadStudio-v2.3.0-win-x64.exe`
 
 ColumnPad is currently shipped as a portable single-file Windows app. Download the `.exe`, place it somewhere you want to keep it, and open it like a normal desktop app.
 
@@ -45,20 +45,21 @@ Note: ColumnPad is not code-signed yet, so Windows SmartScreen may warn the firs
 - Line numbers, word wrap, spell check, proofing-language selection, and lined-paper mode.
 - Default, light, and dark theme modes with preference saving.
 - Bullet/checklist paste helpers and checklist gutter support.
-- Column image attachments that save with native ColumnPad layouts.
+- In-column pictures with drag-and-drop placement, proportional resizing, front/behind-text layering, and native layout persistence.
 - Built-in Workflow Builder with starter templates, node colours, JSON workflow import/export, and readable workflow `.txt`/`.md` exports.
 
 ## Current Release
 
-ColumnPad v2.2.4 focuses on final workflow cleanup and release polish:
+ColumnPad v2.3.0 focuses on dependable pictures, editing, layouts, and workflow data:
 
-- Cleaner Workflow Builder file actions with one grouped `Export...` menu.
-- Workflow Builder now behaves as an independent app window when minimized.
-- Workflow imports, exports, readable workflow notes, and starter templates are better structured internally.
-- Workflow starter templates and export wiring now have stronger smoke-test coverage.
-- The right-side Workflow Builder inspector now aligns properly at the top of the panel.
+- Pictures now stay inside their own column and can be moved, resized proportionally, or placed in front of or behind text.
+- Fixed blank white picture panels and unstable picture resizing.
+- Improved column sizing so default columns fill the available space while saved custom widths remain intact.
+- Kept checklist state aligned through typing, paste, delete, replace, and undo operations.
+- Strengthened layout, recovery, and workflow validation so damaged or incomplete data is handled more safely.
+- Improved Workflow Builder change tracking and unsaved-change protection.
 
-Full notes: [docs/releases/v2.2.4.md](docs/releases/v2.2.4.md)
+Full notes: [docs/releases/v2.3.0.md](docs/releases/v2.3.0.md)
 
 ## User Requirements
 

@@ -4,6 +4,27 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.3.0] - 2026-07-15
+
+### Added
+- Added in-column picture placement with drag-and-drop insertion, movement, proportional resizing, front/behind-text layering, and native layout persistence.
+
+### Changed
+- Reworked default column sizing so columns fill the available editor space while preserving explicitly saved widths.
+- Centralised checklist-row remapping across typing, paste, delete, replace, and undo operations.
+- Strengthened workflow import validation, dirty-state tracking, save prompts, and load warnings.
+- Hardened native layout and recovery validation so invalid data is rejected without replacing valid workspace state.
+
+### Fixed
+- Fixed pictures appearing as blank white panels even when their image files loaded correctly.
+- Fixed picture resizing jitter by calculating each resize from a stable drag origin.
+- Fixed single-text mode transitions so column objects and their richer state are preserved.
+- Removed the obsolete picture tray controls and kept one in-column picture system.
+
+### Tested
+- Passed the Release build, 32 domain checks, and 278 smoke checks.
+- Visually verified picture loading and rendering in the published single-file Windows app.
+
 ## [v2.2.4] - 2026-07-09
 
 ### Changed
@@ -262,4 +283,3 @@ All notable changes to this project are documented in this file.
 - Consolidated dark-theme control foreground and background bindings so toolbar, menu, tab, and button text remains readable in dark mode.
 - Kept backward compatibility for legacy theme names (`Notepad Classic`, `High Contrast`, `Compact`) while using current names (`Light Mode`, `Dark Mode`, `Default Mode`).
 - Improved list handling for indented lines when toggling bullets or checklists and continuing lists on Enter.
-
