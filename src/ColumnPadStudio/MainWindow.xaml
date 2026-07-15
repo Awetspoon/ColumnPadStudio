@@ -1,4 +1,4 @@
-﻿<Window x:Class="ColumnPadStudio.MainWindow"
+<Window x:Class="ColumnPadStudio.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
@@ -162,10 +162,17 @@
                 BorderBrush="{DynamicResource ControlBorderBrush}"
                 BorderThickness="0,0,0,1">
             <Grid>
-                <StackPanel Orientation="Horizontal"
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0"
+                            Orientation="Horizontal"
                             Margin="10,4"
                             VerticalAlignment="Center"
-                            HorizontalAlignment="Left">
+                            HorizontalAlignment="Left"
+                            ClipToBounds="True">
                     <CheckBox Content="Spell Check"
                               Style="{StaticResource WritingOptionCheckBoxStyle}"
                               IsChecked="{Binding ActiveVm.SpellCheckEnabled, Mode=TwoWay}"/>
@@ -186,6 +193,17 @@
                                   SelectedValue="{Binding ActiveVm.EditorLanguageTag, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </StackPanel>
                 </StackPanel>
+
+                <Button x:Name="UpdateAvailableButton"
+                        Grid.Column="1"
+                        MinWidth="104"
+                        Margin="8,4,10,4"
+                        Padding="9,2"
+                        VerticalAlignment="Center"
+                        Content="Update available"
+                        Style="{StaticResource CompactButtonStyle}"
+                        Visibility="Collapsed"
+                        Click="UpdateAvailable_Click"/>
             </Grid>
         </Border>
 

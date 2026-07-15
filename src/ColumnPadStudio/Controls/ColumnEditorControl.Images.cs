@@ -1,5 +1,6 @@
 using ColumnPadStudio.ViewModels;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 
@@ -11,6 +12,41 @@ public partial class ColumnEditorControl
     private Point _imageResizeStartPointer;
     private double _imageResizeStartWidth;
     private double _imageResizeAspectRatio = 4.0 / 3.0;
+
+    private void InsertPicture_Click(object sender, RoutedEventArgs e)
+    {
+        InsertImageRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void ImageRemove_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is ColumnImageViewModel image)
+            RemoveImageRequested?.Invoke(this, new ColumnImageEventArgs(image));
+    }
+
+    private void RefreshPicturesMenu()
+    {
+        ColumnPicturesMenuItem.Items.Clear();
+        ColumnPicturesMenuItem.Visibility = VM?.Images.Count > 0
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        if (VM is null)
+            return;
+
+        foreach (var image in VM.Images)
+        {
+            var item = new MenuItem
+            {
+                Header = image.DisplayName,
+                Tag = image,
+                IsCheckable = true,
+                IsChecked = image.IsSelected
+            };
+            item.Click += ImageSelectFromMenu_Click;
+            ColumnPicturesMenuItem.Items.Add(item);
+        }
+    }
 
     private void EditorSurface_DragOver(object sender, DragEventArgs e)
     {

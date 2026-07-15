@@ -1,9 +1,34 @@
 using ColumnPadStudio.Domain.Workspaces;
+using System.Collections.Specialized;
 
 namespace ColumnPadStudio.ViewModels;
 
 public sealed partial class MainViewModel
 {
+    private readonly HashSet<ColumnViewModel> _observedColumns = [];
+
+    private void Columns_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        SynchronizeColumnSubscriptions();
+    }
+
+    private void SynchronizeColumnSubscriptions()
+    {
+        foreach (var removedColumn in _observedColumns.Where(column => !Columns.Contains(column)).ToList())
+        {
+            removedColumn.PropertyChanged -= Column_PropertyChanged;
+            _observedColumns.Remove(removedColumn);
+        }
+
+        foreach (var column in Columns)
+        {
+            if (!_observedColumns.Add(column))
+                continue;
+
+            column.PropertyChanged += Column_PropertyChanged;
+        }
+    }
+
     private bool CanMoveActiveColumn(int delta)
     {
         var active = GetActive();

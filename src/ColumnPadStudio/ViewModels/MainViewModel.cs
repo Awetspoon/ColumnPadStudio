@@ -3,18 +3,10 @@ using System.ComponentModel;
 using System.IO;
 using System.Text.Json;
 using System.Windows;
+using ColumnPadStudio.Models;
 using ColumnPadStudio.Services;
 
 namespace ColumnPadStudio.ViewModels;
-
-public enum SaveFileKind
-{
-    Layout,
-    TextDocument,
-    MarkdownDocument,
-    TextExport,
-    MarkdownExport
-}
 
 public sealed partial class MainViewModel : NotifyBase
 {
@@ -230,6 +222,8 @@ public sealed partial class MainViewModel : NotifyBase
 
     public MainViewModel()
     {
+        Columns.CollectionChanged += Columns_CollectionChanged;
+
         if (!EditorFontFamilies.Contains(_editorFontFamily, StringComparer.OrdinalIgnoreCase))
             _editorFontFamily = EditorFontFamilies.Count > 0 ? EditorFontFamilies[0] : "Consolas";
 
@@ -259,7 +253,6 @@ public sealed partial class MainViewModel : NotifyBase
             EditorFontWeight = _editorFontWeight,
             UseDefaultFont = true
         };
-        c.PropertyChanged += Column_PropertyChanged;
         return c;
     }
 

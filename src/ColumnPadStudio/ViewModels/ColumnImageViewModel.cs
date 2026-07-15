@@ -5,12 +5,6 @@ using System.Windows.Media.Imaging;
 
 namespace ColumnPadStudio.ViewModels;
 
-public enum ColumnImageLayer
-{
-    BehindText,
-    InFrontOfText
-}
-
 public sealed class ColumnImageViewModel : NotifyBase
 {
     public const double MinDisplayWidth = 80.0;

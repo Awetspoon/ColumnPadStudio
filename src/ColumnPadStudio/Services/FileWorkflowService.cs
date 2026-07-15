@@ -1,6 +1,6 @@
 using System.IO;
 using ColumnPadStudio.Domain.Workspaces;
-using ColumnPadStudio.ViewModels;
+using ColumnPadStudio.Models;
 
 namespace ColumnPadStudio.Services;
 

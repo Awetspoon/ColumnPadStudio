@@ -34,8 +34,8 @@ Important areas:
   Shared application resources and app startup shell.
 - `MainWindow.xaml`
   Main app window and top-level UI structure.
-- `MainWindow.xaml.cs`
-  Main shell core.
+- `MainWindow.xaml.cs` and `MainWindow.ColumnHost.cs`
+  Main shell startup/state coordination and column-control construction, sizing, selection, and event wiring.
 - `MainWindow.FileSession.cs`, `MainWindow.Lifecycle.cs`, `MainWindow.WorkspaceSessions.cs`, `MainWindow.SaveBeforeExit.cs`, and `MainWindow.DestructiveActions.cs`
   Open/save/export/print commands, recovery/autosave lifecycle, workspace-session JSON handling, exit-save prompts, and destructive-action confirmation wiring.
 - `MainWindow.EditorSurface.cs`
@@ -45,13 +45,15 @@ Important areas:
 - `MainWindow.Workspaces.cs`
   Workspace tab lifecycle and rename wiring.
 - `Controls/`
-  Reusable UI controls and dialogs.
+  Reusable UI controls and dialogs. Large controls are split by responsibility: the column editor keeps image, spelling, paste, gutter, menu, and interaction behavior in named partial files; Workflow Builder keeps canvas interactions and file actions separate from window lifecycle.
 - `Resources/`
   Shared WPF resource dictionaries loaded by `App.xaml`. `AppResources.xaml` is only an index. `ThemeBrushes.xaml` contains app brushes, system colour overrides, and shared geometry. `ControlStyles.xaml` contains reusable WPF control templates. `MenuStyles.xaml` contains shared menu and context-menu styling.
 - `ViewModels/`
-  Writable app state for the shell, columns, workflows, and workspace tabs. Larger view models are split into named partial files, for example `MainViewModel.Columns.cs`, `MainViewModel.FileState.cs`, `MainViewModel.Persistence.cs`, `MainViewModel.LayoutMigration.cs`, and `WorkflowBuilderViewModel.Preview.cs`.
+  Writable app state for the shell, columns, workflows, and workspace tabs. Larger view models are split into named partial files. `ColumnViewModel.Checklists.cs` and `ColumnViewModel.Images.cs` own rich column behavior. `MainViewModel.TextDocuments.cs`, `MainViewModel.LayoutPersistence.cs`, and `MainViewModel.Persistence.cs` keep text documents, native layouts, and save coordination distinct.
 - `Services/`
-  Focused single-job helpers, including `AppStoragePaths` as the single place for app storage folders.
+  Focused single-job helpers, including `AppStoragePaths` as the single place for app storage folders and `GitHubReleaseUpdateService` for the optional, non-blocking stable-release check. Workflow storage, serialization, and readable text/Markdown exports remain one service split into clearly named partial files so the format has one source of truth.
+- `Models/`
+  Small shared file and storage contracts that are used by both view models and services.
 - `Workflows/`
   Workflow models and built-in template catalog.
 - `Assets/`

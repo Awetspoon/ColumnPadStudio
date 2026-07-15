@@ -4,6 +4,7 @@ using ColumnPadStudio.Services;
 using ColumnPadStudio.Controls;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -11,6 +12,8 @@ using ColumnPadStudio.Models;
 using ColumnPadStudio.Workflows;
 using System.Windows.Controls;
 using System.Windows.Threading;
+using ColumnPadStudio;
+using ColumnPadStudio.SmokeTests;
 
 var failures = new List<string>();
 var checks = 0;
@@ -230,6 +233,64 @@ File.Delete(preferencesPath);
 Check(
     AppStoragePaths.CrashLogsDirectory == Path.Combine(AppStoragePaths.RootDirectory, "CrashLogs"),
     "App storage paths should expose the crash-log directory as a single source of truth.");
+
+Check(
+    typeof(MainWindow).Assembly.GetName().Name == "ColumnPadStudio",
+    "The application assembly should publish with the stable ColumnPadStudio executable name.");
+
+const string latestReleaseJson = """
+    {
+      "tag_name": "v2.4.0",
+      "html_url": "https://github.com/Awetspoon/ColumnPadStudio/releases/tag/v2.4.0"
+    }
+    """;
+using (var updateHttpClient = new HttpClient(new StaticJsonResponseHandler(latestReleaseJson)))
+{
+    var updateService = new GitHubReleaseUpdateService(updateHttpClient);
+    var latestRelease = await updateService.GetLatestReleaseAsync();
+
+    Check(latestRelease?.Version == new Version(2, 4, 0, 0), "GitHub update checks should parse release tags into comparable versions.");
+    Check(latestRelease?.DisplayVersion == "v2.4.0", "GitHub update checks should keep a clean version label for the notification.");
+    Check(latestRelease?.ReleasePage.AbsoluteUri == "https://github.com/Awetspoon/ColumnPadStudio/releases/tag/v2.4.0", "GitHub update checks should preserve the official HTTPS release page.");
+    Check(
+        latestRelease is not null && GitHubReleaseUpdateService.IsNewerRelease(latestRelease.Version, new Version(2, 3, 0, 0)),
+        "GitHub update checks should detect a newer stable release.");
+    Check(
+        latestRelease is not null && !GitHubReleaseUpdateService.IsNewerRelease(latestRelease.Version, new Version(2, 4, 0, 0)),
+        "GitHub update checks should not notify for the installed release.");
+}
+
+const string untrustedReleasePageJson = """
+    {
+      "tag_name": "v2.4.0",
+      "html_url": "https://example.com/not-columnpad"
+    }
+    """;
+using (var updateHttpClient = new HttpClient(new StaticJsonResponseHandler(untrustedReleasePageJson)))
+{
+    var updateService = new GitHubReleaseUpdateService(updateHttpClient);
+    var latestRelease = await updateService.GetLatestReleaseAsync();
+    Check(
+        latestRelease?.ReleasePage == GitHubReleaseUpdateService.ReleasesPageUri,
+        "Update links should fall back to the trusted ColumnPadStudio GitHub releases page.");
+}
+
+using (var updateHttpClient = new HttpClient(
+           new StaticJsonResponseHandler("{}", System.Net.HttpStatusCode.NotFound)))
+{
+    var updateService = new GitHubReleaseUpdateService(updateHttpClient);
+    Check(
+        await updateService.GetLatestReleaseAsync() is null,
+        "Update checks should quietly handle a repository with no published release.");
+}
+
+Check(
+    GitHubReleaseUpdateService.TryParseReleaseVersion("v2.5.0-beta.1", out var parsedReleaseVersion) &&
+    parsedReleaseVersion == new Version(2, 5, 0, 0),
+    "Release version parsing should ignore semantic-version labels when comparing versions.");
+Check(
+    !GitHubReleaseUpdateService.TryParseReleaseVersion("latest", out _),
+    "Release version parsing should reject tags that do not contain a numeric version.");
 
 var atomicRoot = Path.Combine(Path.GetTempPath(), $"columnpad-atomic-{Guid.NewGuid():N}");
 try
@@ -479,6 +540,20 @@ Check(singleModeVm.Columns[0].Images.Count == 1 && singleModeVm.Columns[0].IsChe
 singleModeVm.ClearAll();
 Check(singleModeVm.Columns[0].Images.Count == 0, "Clear All should remove column pictures.");
 Check(singleModeVm.Columns[0].GetCheckedChecklistLineIndexes().Count == 0, "Clear All should remove checklist metadata.");
+
+var imageSubscriptionColumn = new ColumnViewModel();
+var removedImage = new ColumnImageViewModel("C:\\images\\removed.png");
+var imageChangeNotifications = 0;
+imageSubscriptionColumn.PropertyChanged += (_, e) =>
+{
+    if (e.PropertyName == nameof(ColumnViewModel.Images))
+        imageChangeNotifications++;
+};
+imageSubscriptionColumn.Images.Add(removedImage);
+imageSubscriptionColumn.ClearImages();
+imageChangeNotifications = 0;
+removedImage.Width = 512;
+Check(imageChangeNotifications == 0, "Removed pictures should no longer notify their former column when they change.");
 
 var richContentVm = new MainViewModel();
 richContentVm.LoadTextDocument("plain text", "plain.txt", "C:\\notes\\plain.txt", SaveFileKind.TextDocument);

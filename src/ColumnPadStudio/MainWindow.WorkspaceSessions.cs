@@ -1,3 +1,4 @@
+using ColumnPadStudio.Models;
 using ColumnPadStudio.Services;
 using ColumnPadStudio.ViewModels;
 using Microsoft.Win32;

@@ -143,7 +143,7 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
 
     public WorkflowBuilderViewModel(WorkflowService workflowService)
     {
-        _workflowService = workflowService;
+        _workflowService = workflowService ?? throw new ArgumentNullException(nameof(workflowService));
     }
 
     public bool IsWorkflowDirty(WorkflowDefinition workflow)

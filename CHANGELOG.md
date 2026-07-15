@@ -4,6 +4,26 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.4.0] - 2026-07-15
+
+### Added
+- Added a non-blocking GitHub release check that shows an in-app update link only when a newer stable release is available.
+
+### Changed
+- Standardised the application and future release asset name as `ColumnPadStudio.exe` without version text in the filename.
+- Split the main shell, column state, persistence, workflow service, Workflow Builder, and editor-menu code into focused files without changing their public behavior.
+- Updated the solution grouping and repository guide so application and test projects are easier to navigate.
+
+### Fixed
+- Removed stale picture and column event subscriptions when those items are cleared or removed.
+- Added defensive service-boundary checks around recovery and Workflow Builder dependencies.
+
+### Tested
+- Passed the Release build with no warnings or errors.
+- Passed 32 domain checks and 289 app smoke checks.
+- Published and launch-checked the portable single-file Windows executable.
+
+
 ## [v2.3.0] - 2026-07-15
 
 ### Added

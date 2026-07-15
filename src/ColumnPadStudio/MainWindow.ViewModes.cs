@@ -93,7 +93,7 @@ public partial class MainWindow
         window.Show();
     }
 
-    private void ApplyTheme(string preset)
+    private static void ApplyTheme(string preset)
     {
         ThemeResourceService.ApplyTheme(Application.Current.Resources, preset);
     }

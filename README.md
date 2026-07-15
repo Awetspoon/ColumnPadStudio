@@ -12,11 +12,13 @@ Get the latest Windows app from the [ColumnPad Releases page](https://github.com
 
 Latest download:
 
-- `ColumnPadStudio-v2.3.0-win-x64.exe`
+- `ColumnPadStudio.exe`
 
 ColumnPad is currently shipped as a portable single-file Windows app. Download the `.exe`, place it somewhere you want to keep it, and open it like a normal desktop app.
 
 You do not need Visual Studio, Git, or the .NET SDK to use the released app.
+
+Your writing stays local. On startup, ColumnPad only makes a brief best-effort request to the public GitHub releases page to see whether a newer stable version exists; no document content is sent.
 
 Note: ColumnPad is not code-signed yet, so Windows SmartScreen may warn the first time you open it. Only download builds from this repository.
 
@@ -42,6 +44,7 @@ Note: ColumnPad is not code-signed yet, so Windows SmartScreen may warn the firs
 - Native `.columnpad.json` workspace save/load.
 - Multi-workspace session save/load.
 - Auto-recovery and crash restore.
+- A quiet GitHub release check that shows an update button only when a newer stable version is available.
 - Line numbers, word wrap, spell check, proofing-language selection, and lined-paper mode.
 - Default, light, and dark theme modes with preference saving.
 - Bullet/checklist paste helpers and checklist gutter support.

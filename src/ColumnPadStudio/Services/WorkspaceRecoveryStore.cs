@@ -1,6 +1,6 @@
 using System.IO;
 using System.Text.Json;
-using ColumnPadStudio.ViewModels;
+using ColumnPadStudio.Models;
 
 namespace ColumnPadStudio.Services;
 
@@ -25,6 +25,8 @@ public static class WorkspaceRecoveryStore
 
     public static void Save(IReadOnlyList<WorkspaceRecoveryWorkspace> workspaces, int activeWorkspaceIndex, string? recoveryDirectory = null)
     {
+        ArgumentNullException.ThrowIfNull(workspaces);
+
         if (workspaces.Count == 0)
         {
             Clear(recoveryDirectory);

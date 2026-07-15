@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using ColumnPadStudio.Models;
 
 namespace ColumnPadStudio.ViewModels;
 
