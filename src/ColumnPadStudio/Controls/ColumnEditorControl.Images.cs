@@ -7,6 +7,11 @@ namespace ColumnPadStudio.Controls;
 
 public partial class ColumnEditorControl
 {
+    private ColumnImageViewModel? _resizingImage;
+    private Point _imageResizeStartPointer;
+    private double _imageResizeStartWidth;
+    private double _imageResizeAspectRatio = 4.0 / 3.0;
+
     private void EditorSurface_DragOver(object sender, DragEventArgs e)
     {
         e.Effects = TryGetSingleDroppedFile(e.Data, out _)
@@ -56,37 +61,48 @@ public partial class ColumnEditorControl
             return;
 
         VM.SelectImage(image);
+        _resizingImage = image;
+        _imageResizeStartPointer = Mouse.GetPosition(ImageOverlay);
+        _imageResizeStartWidth = image.Width;
+        _imageResizeAspectRatio = GetImageAspectRatio(image);
         EditorFocused?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
     }
 
     private void ImageResizeThumb_DragDelta(object sender, DragDeltaEventArgs e)
     {
-        if (GetTaggedImage(sender) is not { } image)
+        if (GetTaggedImage(sender) is not { } image || !ReferenceEquals(_resizingImage, image))
             return;
 
-        var aspectRatio = image.PixelWidth > 0 && image.PixelHeight > 0
-            ? (double)image.PixelWidth / image.PixelHeight
-            : 4.0 / 3.0;
-        var verticalWidthChange = e.VerticalChange * aspectRatio;
-        var requestedChange = Math.Abs(verticalWidthChange) > Math.Abs(e.HorizontalChange)
-            ? verticalWidthChange
-            : e.HorizontalChange;
+        var pointer = Mouse.GetPosition(ImageOverlay);
+        var horizontalChange = pointer.X - _imageResizeStartPointer.X;
+        var verticalChange = pointer.Y - _imageResizeStartPointer.Y;
+        var heightPerWidth = 1.0 / _imageResizeAspectRatio;
+        var requestedChange = (horizontalChange + (verticalChange * heightPerWidth))
+            / (1.0 + (heightPerWidth * heightPerWidth));
 
         var maxWidthFromSurface = Math.Max(
             ColumnImageViewModel.MinDisplayWidth,
             ImageOverlay.ActualWidth - image.Left);
         var maxWidthFromHeight = Math.Max(
             ColumnImageViewModel.MinDisplayWidth,
-            (ImageOverlay.ActualHeight - image.Top) * aspectRatio);
+            (ImageOverlay.ActualHeight - image.Top) * _imageResizeAspectRatio);
         var maxWidth = Math.Min(
             ColumnImageViewModel.MaxDisplayWidth,
             Math.Min(maxWidthFromSurface, maxWidthFromHeight));
 
         image.Width = Math.Clamp(
-            image.Width + requestedChange,
+            _imageResizeStartWidth + requestedChange,
             ColumnImageViewModel.MinDisplayWidth,
             maxWidth);
+        e.Handled = true;
+    }
+
+    private void ImageResizeThumb_DragCompleted(object sender, DragCompletedEventArgs e)
+    {
+        if (GetTaggedImage(sender) is { } image && ReferenceEquals(_resizingImage, image))
+            _resizingImage = null;
+
         e.Handled = true;
     }
 
@@ -130,6 +146,11 @@ public partial class ColumnEditorControl
 
     private static ColumnImageViewModel? GetTaggedImage(object sender)
         => (sender as FrameworkElement)?.Tag as ColumnImageViewModel;
+
+    private static double GetImageAspectRatio(ColumnImageViewModel image)
+        => image.PixelWidth > 0 && image.PixelHeight > 0
+            ? (double)image.PixelWidth / image.PixelHeight
+            : 4.0 / 3.0;
 
     private static bool TryGetSingleDroppedFile(IDataObject data, out string filePath)
     {

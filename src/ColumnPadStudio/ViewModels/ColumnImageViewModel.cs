@@ -1,5 +1,7 @@
 using System.IO;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 
 namespace ColumnPadStudio.ViewModels;
 
@@ -16,6 +18,7 @@ public sealed class ColumnImageViewModel : NotifyBase
 
     private string _filePath;
     private string _originalFileName;
+    private ImageSource? _displaySource;
     private double _width;
     private double _left;
     private double _top;
@@ -34,6 +37,7 @@ public sealed class ColumnImageViewModel : NotifyBase
     {
         Id = Guid.NewGuid().ToString("N");
         _filePath = filePath;
+        _displaySource = LoadDisplaySource(filePath);
         _originalFileName = string.IsNullOrWhiteSpace(originalFileName)
             ? Path.GetFileName(filePath)
             : originalFileName.Trim();
@@ -57,9 +61,11 @@ public sealed class ColumnImageViewModel : NotifyBase
                 return;
 
             _filePath = nextValue;
+            _displaySource = LoadDisplaySource(nextValue);
             OnPropertyChanged();
             OnPropertyChanged(nameof(DisplayName));
-            OnPropertyChanged(nameof(FileExists));
+            OnPropertyChanged(nameof(DisplaySource));
+            OnPropertyChanged(nameof(CanDisplayImage));
         }
     }
 
@@ -143,11 +149,13 @@ public sealed class ColumnImageViewModel : NotifyBase
     public int PixelWidth { get; }
     public int PixelHeight { get; }
 
+    public ImageSource? DisplaySource => _displaySource;
+
     public string DisplayName => string.IsNullOrWhiteSpace(OriginalFileName)
         ? Path.GetFileName(FilePath)
         : OriginalFileName;
 
-    public bool FileExists => !string.IsNullOrWhiteSpace(FilePath) && File.Exists(FilePath);
+    public bool CanDisplayImage => DisplaySource is not null;
 
     public Visibility BehindTextVisibility => Layer == ColumnImageLayer.BehindText
         ? Visibility.Visible
@@ -180,5 +188,31 @@ public sealed class ColumnImageViewModel : NotifyBase
             return 0.0;
 
         return Math.Max(0.0, value);
+    }
+
+    private static ImageSource? LoadDisplaySource(string filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            return null;
+
+        try
+        {
+            using var stream = File.OpenRead(filePath);
+            var decoder = BitmapDecoder.Create(
+                stream,
+                BitmapCreateOptions.PreservePixelFormat,
+                BitmapCacheOption.OnLoad);
+            var frame = decoder.Frames.FirstOrDefault();
+            frame?.Freeze();
+            return frame;
+        }
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException
+            or FormatException
+            or InvalidOperationException)
+        {
+            return null;
+        }
     }
 }

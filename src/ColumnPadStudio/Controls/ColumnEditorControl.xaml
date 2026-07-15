@@ -1,4 +1,4 @@
-﻿<UserControl x:Class="ColumnPadStudio.Controls.ColumnEditorControl"
+<UserControl x:Class="ColumnPadStudio.Controls.ColumnEditorControl"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
@@ -206,7 +206,7 @@
                             <Grid Width="{Binding Width}"
                                   Height="{Binding Height}"
                                   Visibility="{Binding BehindTextVisibility}">
-                                <Image Source="{Binding FilePath}"
+                                <Image Source="{Binding DisplaySource}"
                                        Stretch="Uniform"
                                        SnapsToDevicePixels="True"/>
                                 <Border Background="{DynamicResource ControlBackgroundBrush}"
@@ -216,7 +216,7 @@
                                         <Style TargetType="Border">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding FileExists}" Value="False">
+                                                <DataTrigger Binding="{Binding CanDisplayImage}" Value="False">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -225,7 +225,7 @@
                                     <TextBlock Margin="8"
                                                VerticalAlignment="Center"
                                                HorizontalAlignment="Center"
-                                               Text="Picture file missing"
+                                               Text="Picture could not be loaded"
                                                TextAlignment="Center"
                                                TextWrapping="Wrap"/>
                                 </Border>
@@ -343,7 +343,7 @@
                                     </ContextMenu>
                                 </Grid.ContextMenu>
                                 <Image x:Name="Picture"
-                                           Source="{Binding FilePath}"
+                                           Source="{Binding DisplaySource}"
                                            Stretch="Uniform"
                                            SnapsToDevicePixels="True"/>
                                 <Border Background="{DynamicResource ControlBackgroundBrush}"
@@ -353,7 +353,7 @@
                                         <Style TargetType="Border">
                                             <Setter Property="Visibility" Value="Collapsed"/>
                                             <Style.Triggers>
-                                                <DataTrigger Binding="{Binding FileExists}" Value="False">
+                                                <DataTrigger Binding="{Binding CanDisplayImage}" Value="False">
                                                     <Setter Property="Visibility" Value="Visible"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
@@ -362,7 +362,7 @@
                                     <TextBlock Margin="8"
                                                VerticalAlignment="Center"
                                                HorizontalAlignment="Center"
-                                               Text="Picture file missing"
+                                               Text="Picture could not be loaded"
                                                TextAlignment="Center"
                                                TextWrapping="Wrap"/>
                                 </Border>
@@ -375,7 +375,13 @@
                                        Focusable="False"
                                        Tag="{Binding}"
                                        DragStarted="ImageMoveThumb_DragStarted"
-                                       DragDelta="ImageMoveThumb_DragDelta"/>
+                                       DragDelta="ImageMoveThumb_DragDelta">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="{x:Type Thumb}">
+                                            <Border Background="Transparent"/>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
                                 <Thumb Width="14"
                                        Height="14"
                                        HorizontalAlignment="Right"
@@ -386,7 +392,8 @@
                                        Tag="{Binding}"
                                        Visibility="{Binding SelectionVisibility}"
                                        DragStarted="ImageResizeThumb_DragStarted"
-                                       DragDelta="ImageResizeThumb_DragDelta"/>
+                                       DragDelta="ImageResizeThumb_DragDelta"
+                                       DragCompleted="ImageResizeThumb_DragCompleted"/>
                             </Grid>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
