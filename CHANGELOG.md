@@ -6,15 +6,17 @@ All notable changes to this project are documented in this file.
 
 ## [v2.4.1] - 2026-08-06
 
-### Improved
-- Expanded ignore rules for certificate bundles, strong-name keys, and common repository-root secret files.
+### Windows Build
+- Published the portable Windows x64 executable as `ColumnPadStudio.exe`.
 
-### Changed
-- Replaced nonessential personal identifiers in public documentation, licence attribution, and test fixture URLs with neutral project references.
+### Included Improvements
+- Added optional update notification, in-column picture editing, and stronger column, recovery, layout, checklist, and Workflow Builder behavior.
 
-### Documentation
-- Rewrote the README to reflect the current v2.4.1 app, build, test, packaging, privacy, image-storage, and contribution guidance.
-- Added release-scope and privacy checks to the release checklist.
+### Included Fixes
+- Resolved picture rendering and resizing issues, stale item event subscriptions, checklist-state drift, and invalid layout, recovery, and workflow-data handling.
+
+### Verified
+- Completed the Release build with no warnings or errors, passed 32 domain checks and 289 app smoke checks, and launched the downloaded release executable successfully.
 
 ## [v2.4.0] - 2026-07-15
 
