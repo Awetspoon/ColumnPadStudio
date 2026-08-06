@@ -2,6 +2,15 @@
 
 Use this checklist before creating a GitHub release.
 
+## 0. Review scope and privacy
+Before staging any files:
+
+1. Review the complete diff and confirm every change belongs to the release.
+2. Check that no credentials, personal data, local paths, private conversations, debug output, or temporary files are included.
+3. Confirm `.gitignore` excludes local configuration, secrets, build output, IDE state, and release artifacts.
+4. Review screenshots and release notes for private information and stale UI.
+5. Run `git diff --check` to catch whitespace errors.
+
 ## 1. Clean build outputs
 ```powershell
 dotnet clean .\ColumnPadStudio.sln

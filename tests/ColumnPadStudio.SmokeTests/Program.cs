@@ -241,7 +241,7 @@ Check(
 const string latestReleaseJson = """
     {
       "tag_name": "v2.4.0",
-      "html_url": "https://github.com/Awetspoon/ColumnPadStudio/releases/tag/v2.4.0"
+      "html_url": "https://github.com/example-owner/ColumnPadStudio/releases/tag/v2.4.0"
     }
     """;
 using (var updateHttpClient = new HttpClient(new StaticJsonResponseHandler(latestReleaseJson)))
@@ -251,7 +251,7 @@ using (var updateHttpClient = new HttpClient(new StaticJsonResponseHandler(lates
 
     Check(latestRelease?.Version == new Version(2, 4, 0, 0), "GitHub update checks should parse release tags into comparable versions.");
     Check(latestRelease?.DisplayVersion == "v2.4.0", "GitHub update checks should keep a clean version label for the notification.");
-    Check(latestRelease?.ReleasePage.AbsoluteUri == "https://github.com/Awetspoon/ColumnPadStudio/releases/tag/v2.4.0", "GitHub update checks should preserve the official HTTPS release page.");
+    Check(latestRelease?.ReleasePage.AbsoluteUri == "https://github.com/example-owner/ColumnPadStudio/releases/tag/v2.4.0", "GitHub update checks should preserve the official HTTPS release page.");
     Check(
         latestRelease is not null && GitHubReleaseUpdateService.IsNewerRelease(latestRelease.Version, new Version(2, 3, 0, 0)),
         "GitHub update checks should detect a newer stable release.");

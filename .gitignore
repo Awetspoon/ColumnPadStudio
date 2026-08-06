@@ -13,8 +13,12 @@
 .env.*
 !.env.example
 *.pfx
+*.p12
 *.pem
 *.key
+*.snk
+/secrets.json
+/credentials.json
 appsettings.Local.json
 appsettings.Development.json
 
@@ -28,7 +32,7 @@ appsettings.Development.json
 *.sln.docstates
 *.vsidx
 
-# Local Codex/session files
+# Local tool/session files
 .codex/
 .codex-dotnet-home/
 .dotnet-cli/

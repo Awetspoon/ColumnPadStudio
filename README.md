@@ -1,96 +1,128 @@
 # ColumnPad
 
-[![Release](https://img.shields.io/github/v/release/Awetspoon/ColumnPadStudio?display_name=tag)](https://github.com/Awetspoon/ColumnPadStudio/releases/latest)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)](https://github.com/Awetspoon/ColumnPadStudio/releases/latest)
+![Platform: Windows](https://img.shields.io/badge/platform-Windows-0078D6)
 
-ColumnPad is a Windows writing app for drafting notes, plans, prompts, checklists, and structured text in clean side-by-side columns. It is built for people who want an offline writing surface that keeps ideas separated, readable, recoverable, and easy to export.
+ColumnPad is a Windows writing app for notes, plans, prompts, checklists, and structured text. It gives each idea a clean, side-by-side column while keeping workspaces local, recoverable, and easy to export.
 
-## Download ColumnPad
+## Project Status
 
-Get the latest Windows app from the [ColumnPad Releases page](https://github.com/Awetspoon/ColumnPadStudio/releases/latest).
+Active development. Current release: **v2.4.1**.
 
-Latest download:
+Release notes: [v2.4.1](docs/releases/v2.4.1.md).
 
-- `ColumnPadStudio.exe`
+ColumnPad is a portable Windows desktop app. It does not require an account, cloud storage, or an always-on connection.
 
-ColumnPad is currently shipped as a portable single-file Windows app. Download the `.exe`, place it somewhere you want to keep it, and open it like a normal desktop app.
+## Download and Install
 
-You do not need Visual Studio, Git, or the .NET SDK to use the released app.
+Download the latest `ColumnPadStudio.exe` from the [GitHub Releases page](../../releases/latest), save it in a permanent folder, and run it like a normal Windows application.
 
-Your writing stays local. On startup, ColumnPad only makes a brief best-effort request to the public GitHub releases page to see whether a newer stable version exists; no document content is sent.
+The released executable is self-contained: Visual Studio, Git, and the .NET SDK are not required to use it.
 
-Note: ColumnPad is not code-signed yet, so Windows SmartScreen may warn the first time you open it. Only download builds from this repository.
+ColumnPad is not code-signed yet. Windows SmartScreen may warn the first time it is opened; download releases only from this repository.
 
 ## Screenshot
 
-![ColumnPad current desktop UI](docs/columnpad-screenshot.png)
+![ColumnPad desktop interface](docs/columnpad-screenshot.png)
 
-## What ColumnPad Helps With
-
-- Drafting notes across several columns without losing structure.
-- Keeping separate workspace tabs for different projects or writing sessions.
-- Planning prompts, release notes, checklists, comparisons, and app ideas.
-- Opening and saving clean `.txt` and `.md` documents.
-- Saving full ColumnPad workspaces so columns, titles, settings, images, and content reopen together.
-- Building repeatable planning flows with the built-in Workflow Builder.
+The screenshot reflects the current three-column writing surface and contains no personal or sample document data.
 
 ## Main Features
 
-- Multi-column writing with clean resize behavior.
-- Workspace tabs for separate writing sessions.
-- Single-text mode and column mode switching.
-- Clean `.txt` and `.md` open, save, and export.
-- Native `.columnpad.json` workspace save/load.
-- Multi-workspace session save/load.
-- Auto-recovery and crash restore.
-- A quiet GitHub release check that shows an update button only when a newer stable version is available.
-- Line numbers, word wrap, spell check, proofing-language selection, and lined-paper mode.
-- Default, light, and dark theme modes with preference saving.
-- Bullet/checklist paste helpers and checklist gutter support.
-- In-column pictures with drag-and-drop placement, proportional resizing, front/behind-text layering, and native layout persistence.
-- Built-in Workflow Builder with starter templates, node colours, JSON workflow import/export, and readable workflow `.txt`/`.md` exports.
+- Side-by-side writing columns with resize controls and workspace tabs.
+- Single-text and column modes for different drafting styles.
+- Plain-text, Markdown, native layout, and workspace-session open, save, and export flows.
+- Auto-recovery, crash logging, and save-before-exit safeguards.
+- Line numbers, word wrap, spell checking, proofing-language selection, lined-paper mode, and paste helpers for bullets and checklists.
+- Light, dark, and default themes with saved preferences.
+- In-column pictures with drag-and-drop placement, proportional resizing, and text layering.
+- Workflow Builder templates, node colours, workflow JSON import/export, and readable text or Markdown workflow exports.
+- A quiet, best-effort check for a newer stable GitHub release at startup.
 
-## Current Release
+## Supported Platforms and Technology
 
-ColumnPad v2.3.0 focuses on dependable pictures, editing, layouts, and workflow data:
+- Windows 10 or Windows 11, x64.
+- C#, .NET 8, and WPF.
+- Self-contained, single-file Windows publishing for releases.
 
-- Pictures now stay inside their own column and can be moved, resized proportionally, or placed in front of or behind text.
-- Fixed blank white picture panels and unstable picture resizing.
-- Improved column sizing so default columns fill the available space while saved custom widths remain intact.
-- Kept checklist state aligned through typing, paste, delete, replace, and undo operations.
-- Strengthened layout, recovery, and workflow validation so damaged or incomplete data is handled more safely.
-- Improved Workflow Builder change tracking and unsaved-change protection.
+## Privacy and Configuration
 
-Full notes: [docs/releases/v2.3.0.md](docs/releases/v2.3.0.md)
+No account, API key, server, or project-level configuration is required.
 
-## User Requirements
+ColumnPad keeps preferences, recovery data, workflow-library data, imported image copies, and crash logs in app-managed local application storage. Native layouts retain references to imported images rather than embedding image data, so keep the image copies with a layout when moving it to another computer.
+
+At startup, ColumnPad may make a brief request to the public GitHub releases endpoint to check for a newer stable version. The check never blocks writing or startup and does not send document content.
+
+## Using ColumnPad
+
+1. Create columns or a workspace tab for each topic you want to keep separate.
+2. Write directly, use the View and Columns menus to adjust the editing surface, and use the editor menus for search, paste, and checklist actions.
+3. Use File commands to open, save, export, or restore text, Markdown, native layouts, and workspace sessions.
+4. Open the Workflow Builder from the Workflows menu to start from a template or import a workflow.
+
+## Building from Source
+
+Developer requirements:
 
 - Windows 10 or Windows 11.
-- No account required.
-- No internet required after download.
-- No .NET SDK required for the released EXE.
+- .NET 8 SDK or a newer SDK that can build `net8.0-windows`.
+- Optional: Visual Studio with the .NET Desktop Development workload.
 
-## Project Notes
+Clone the repository and build:
 
-This repository contains the source code, tests, release notes, screenshots, and maintenance docs for ColumnPad.
+```powershell
+git clone <repository-url>
+cd ColumnPadStudio
+dotnet restore
+dotnet build .\ColumnPadStudio.sln -c Release
+```
 
-- `src/ColumnPadStudio/` - WPF app shell, UI, services, resources, and Workflow Builder.
-- `src/ColumnPadStudio.Domain/` - reusable text, list, and workspace rules.
-- `tests/` - smoke and domain checks.
-- `docs/` - release notes, structure notes, screenshots, workflow maps, and QA checklists.
-- `tools/` - helper scripts used during app maintenance.
+Run the app from source:
 
-More structure detail: [docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md)
+```powershell
+dotnet run --project .\src\ColumnPadStudio\ColumnPadStudio.csproj -c Release
+```
 
-Development and release decisions follow the ColumnPad app-building standard:
-[docs/APP_BUILDING_STANDARD.md](docs/APP_BUILDING_STANDARD.md)
+Publish the portable single-file executable:
 
-## Packaging Notes
+```powershell
+dotnet publish .\src\ColumnPadStudio\ColumnPadStudio.csproj -p:PublishProfile=FolderProfile
+```
 
-- Current releases ship as a portable single `.exe`.
-- The app is not code-signed yet.
-- A full installer, Start menu shortcuts, uninstall support, and automatic updates can be added later.
+The publish output is `src\ColumnPadStudio\publish\ColumnPadStudio.exe`.
+
+## Testing
+
+After a Release build, run both executable test suites:
+
+```powershell
+dotnet run --project .\tests\ColumnPadStudio.Domain.Tests\ColumnPadStudio.Domain.Tests.csproj -c Release --no-build
+dotnet run --project .\tests\ColumnPadStudio.SmokeTests\ColumnPadStudio.SmokeTests.csproj -c Release --no-build
+```
+
+Before publishing, also follow [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md) and the visual checks in [docs/UI_QA_CHECKLIST.md](docs/UI_QA_CHECKLIST.md).
+
+## Project Structure
+
+```text
+src/ColumnPadStudio/          WPF app shell, controls, services, resources, and workflows
+src/ColumnPadStudio.Domain/   Pure text, list, and workspace rules
+tests/                        Domain and app-level smoke checks
+docs/                         Release notes, architecture notes, workflows, screenshots, and QA guidance
+tools/                        Maintenance and asset-generation helpers
+```
+
+For a detailed guide, see [docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md). Larger changes should follow [docs/APP_BUILDING_STANDARD.md](docs/APP_BUILDING_STANDARD.md).
+
+## Known Limitations
+
+- The portable executable is currently unsigned and has no installer, automatic update, or uninstall flow.
+- The app is Windows-only.
+- Imported images remain local files referenced by native layouts; moving a layout alone does not package its images.
+
+## Contributing
+
+Keep changes focused, preserve local-data and secret exclusions, update relevant documentation, and run the Release build plus both test suites before opening a pull request. Add or refresh screenshots only when the visible interface has meaningfully changed.
 
 ## License
 

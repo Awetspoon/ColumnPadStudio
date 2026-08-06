@@ -4,6 +4,18 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.4.1] - 2026-08-06
+
+### Improved
+- Expanded ignore rules for certificate bundles, strong-name keys, and common repository-root secret files.
+
+### Changed
+- Replaced nonessential personal identifiers in public documentation, licence attribution, and test fixture URLs with neutral project references.
+
+### Documentation
+- Rewrote the README to reflect the current v2.4.1 app, build, test, packaging, privacy, image-storage, and contribution guidance.
+- Added release-scope and privacy checks to the release checklist.
+
 ## [v2.4.0] - 2026-07-15
 
 ### Added
