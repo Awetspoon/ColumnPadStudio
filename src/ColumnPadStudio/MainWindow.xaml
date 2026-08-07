@@ -24,8 +24,8 @@
                 <MenuItem Header="Save _As..." Click="SaveAs_Click" InputGestureText="Ctrl+Shift+S"/>
                 <Separator/>
                 <MenuItem Header="Export as ._txt" Click="ExportTxt_Click" InputGestureText="Ctrl+E"/>
-                <MenuItem Header="Export as ._md" Click="ExportMarkdown_Click" InputGestureText="Ctrl+Shift+E"/>
-                <MenuItem Header="_Print..." Click="Print_Click" InputGestureText="Ctrl+P"/>
+                <MenuItem Header="Export as ._json" Click="ExportJson_Click" InputGestureText="Ctrl+Shift+E"/>
+                <MenuItem Header="_Print Text..." Click="Print_Click" InputGestureText="Ctrl+P"/>
                 <Separator/>
                 <MenuItem Header="E_xit" Click="Exit_Click"/>
             </MenuItem>
@@ -35,9 +35,15 @@
                 <MenuItem Header="Find _Next" Click="FindNext_Click" InputGestureText="F3"/>
                 <MenuItem Header="_Replace All..." Click="ReplaceAll_Click" InputGestureText="Ctrl+H"/>
                 <Separator/>
-                <MenuItem Header="Show Gutter _Bullets" Click="ShowGutterBullets_Click" InputGestureText="Ctrl+Shift+8"/>
-                <MenuItem Header="Show Gutter _Checklist" Click="ShowGutterChecklist_Click" InputGestureText="Ctrl+Shift+7"/>
-                <MenuItem Header="_Toggle Checklist Check" Click="SelectionToggleChecks_Click" InputGestureText="Ctrl+Enter"/>
+                <MenuItem Header="_Gutter">
+                    <MenuItem Header="{Binding ActiveVm.GutterWidthMenuHeader}"
+                              Click="SetGutterWidth_Click"
+                              ToolTip="Set the shared gutter width for this workspace in pixels."/>
+                    <Separator/>
+                    <MenuItem Header="Show _Bullets" Click="ShowGutterBullets_Click" InputGestureText="Ctrl+Shift+8"/>
+                    <MenuItem Header="Show _Checklist" Click="ShowGutterChecklist_Click" InputGestureText="Ctrl+Shift+7"/>
+                    <MenuItem Header="_Toggle Checklist Check" Click="SelectionToggleChecks_Click" InputGestureText="Ctrl+Enter"/>
+                </MenuItem>
                 <MenuItem Header="C_lear Selection" Click="ClearSelection_Click" InputGestureText="Esc"/>
                 <Separator/>
                 <MenuItem Header="_Clear All Columns" Click="ClearAll_Click" InputGestureText="Ctrl+Shift+X"/>
@@ -53,10 +59,26 @@
                           IsCheckable="True"
                           IsChecked="{Binding ActiveVm.ShowLineNumbers, Mode=TwoWay}"
                           InputGestureText="Alt+L"/>
-                <MenuItem Header="_Lined Paper"
-                          IsCheckable="True"
-                          IsChecked="{Binding ActiveVm.LinedPaperEnabled, Mode=TwoWay}"
-                          InputGestureText="Alt+P"/>
+                <MenuItem Header="_Paper Style"
+                          ToolTip="{Binding ActiveVm.PaperStyleHelpText}">
+                    <MenuItem Header="_Ruled"
+                              IsCheckable="True"
+                              IsChecked="{Binding ActiveVm.IsRuledPaperSelected, Mode=OneWay}"
+                              Click="PaperRuled_Click"/>
+                    <MenuItem Header="_Soft Ruled"
+                              IsCheckable="True"
+                              IsChecked="{Binding ActiveVm.IsSoftRuledPaperSelected, Mode=OneWay}"
+                              Click="PaperSoftRuled_Click"/>
+                    <MenuItem Header="S_trong Ruled"
+                              IsCheckable="True"
+                              IsChecked="{Binding ActiveVm.IsStrongRuledPaperSelected, Mode=OneWay}"
+                              Click="PaperStrongRuled_Click"/>
+                    <Separator/>
+                    <MenuItem Header="Paper _Off"
+                              IsCheckable="True"
+                              IsChecked="{Binding ActiveVm.IsPaperOffSelected, Mode=OneWay}"
+                              Click="PaperOff_Click"/>
+                </MenuItem>
                 <Separator/>
                 <MenuItem Header="_Single Text Mode" Click="SingleTextMode_Click" InputGestureText="Ctrl+Shift+1"/>
                 <MenuItem Header="_Column Mode" Click="ColumnMode_Click" InputGestureText="Ctrl+Shift+2"/>
@@ -131,10 +153,6 @@
                 </MenuItem>
             </MenuItem>
 
-            <MenuItem Header="_Workflows">
-                <MenuItem Header="_Workflow Builder..." Click="OpenWorkflowBuilder_Click" InputGestureText="Ctrl+Shift+B"/>
-            </MenuItem>
-
             <MenuItem Header="_Columns">
                 <MenuItem Header="_Add Column" Click="AddColumn_Click" InputGestureText="Ctrl+Shift++"/>
                 <MenuItem Header="_Remove Selected Column" Click="RemoveActive_Click" InputGestureText="Ctrl+Shift+-"/>
@@ -147,13 +165,48 @@
                           InputGestureText="Alt+Shift+Right"
                           IsEnabled="{Binding ActiveVm.CanMoveActiveColumnRight}"/>
                 <Separator/>
-                <MenuItem Header="Reset _Column Size" Click="ResetActiveWidth_Click"/>
-                <MenuItem Header="_Reset All Column Sizes" Click="ResetWidths_Click" InputGestureText="Ctrl+R"/>
+                <MenuItem Header="Column _Width">
+                    <MenuItem Header="_Standard (320 px)"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsStandardColumnWidthSelected, Mode=OneWay}"
+                              Click="UseStandardColumnWidth_Click"/>
+                    <MenuItem Header="{Binding CustomColumnWidthMenuHeader}"
+                              IsCheckable="True"
+                              IsChecked="{Binding IsCustomColumnWidthSelected, Mode=OneWay}"
+                              Click="SetDefaultColumnWidth_Click"/>
+                    <Separator/>
+                    <MenuItem Header="_Fit Columns to Window"
+                              IsCheckable="True"
+                              IsChecked="{Binding FitColumnsToWindow, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ToolTip="Share the available window width equally. Saved pixel widths are kept for when Standard or Custom sizing is restored."/>
+                </MenuItem>
+                <MenuItem Header="Reset Selected to _Default Width"
+                          IsEnabled="{Binding CanManageColumnWidths}"
+                          Click="ResetActiveWidth_Click"/>
+                <MenuItem Header="Reset _All to Default Width"
+                          IsEnabled="{Binding CanManageColumnWidths}"
+                          Click="ResetWidths_Click"
+                          InputGestureText="Ctrl+R"/>
+                <Separator/>
+                <MenuItem Header="Column _Spacing">
+                    <MenuItem Header="_Snap All Columns Together"
+                              IsCheckable="True"
+                              IsChecked="{Binding SnapAllColumnsEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                              ToolTip="Apply snapping to every column. Individual columns do not have separate snap settings."/>
+                    <MenuItem Header="{Binding ColumnSpacingMenuHeader}"
+                              Click="SetColumnSpacing_Click"
+                              ToolTip="Choose the gap between snapped columns."/>
+                </MenuItem>
                 <Separator/>
                 <MenuItem Header="{Binding ActiveVm.LockActiveWidthActionLabel}"
                           ToolTip="{Binding ActiveVm.LockActiveWidthActionToolTip}"
+                          IsEnabled="{Binding CanManageColumnWidths}"
                           Click="LockActiveWidth_Click"
                           InputGestureText="Ctrl+Shift+L"/>
+            </MenuItem>
+
+            <MenuItem Header="_Workflows">
+                <MenuItem Header="_Workflow Builder..." Click="OpenWorkflowBuilder_Click" InputGestureText="Ctrl+Shift+B"/>
             </MenuItem>
         </Menu>
 
@@ -176,8 +229,9 @@
                     <CheckBox Content="Spell Check"
                               Style="{StaticResource WritingOptionCheckBoxStyle}"
                               IsChecked="{Binding ActiveVm.SpellCheckEnabled, Mode=TwoWay}"/>
-                    <CheckBox Content="Lined Paper"
+                    <CheckBox Content="Paper"
                               Style="{StaticResource WritingOptionCheckBoxStyle}"
+                              ToolTip="{Binding ActiveVm.PaperStyleHelpText}"
                               IsChecked="{Binding ActiveVm.LinedPaperEnabled, Mode=TwoWay}"/>
                     <Border Style="{StaticResource WritingOptionDividerStyle}"/>
                     <StackPanel Orientation="Horizontal" Margin="0,0,8,0" VerticalAlignment="Center">

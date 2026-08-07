@@ -15,7 +15,6 @@ public static partial class WorkflowTemplateCatalog
         string name,
         string category,
         string description,
-        WorkflowTriggerType trigger,
         IReadOnlyList<string> nodeTitles,
         IReadOnlyDictionary<string, WorkflowTemplateNodePayload>? nodeDetails = null)
     {
@@ -71,7 +70,6 @@ public static partial class WorkflowTemplateCatalog
             Name = name,
             Category = category,
             Description = description,
-            Trigger = trigger,
             Nodes = nodes,
             Connections = links
         };
@@ -82,7 +80,6 @@ public static partial class WorkflowTemplateCatalog
         string name,
         string category,
         string description,
-        WorkflowTriggerType trigger,
         string startTitle,
         string decisionTitle,
         string yesTitle,
@@ -127,7 +124,6 @@ public static partial class WorkflowTemplateCatalog
             Name = name,
             Category = category,
             Description = description,
-            Trigger = trigger,
             Nodes =
             [
                 new WorkflowTemplateNode("start", WorkflowNodeKind.Start, startTitle, startDetails.Description, 60, 90, 150, 60)

@@ -9,9 +9,10 @@ namespace ColumnPadStudio.Controls;
 public partial class ColumnEditorControl
 {
     private ColumnImageViewModel? _resizingImage;
-    private Point _imageResizeStartPointer;
     private double _imageResizeStartWidth;
     private double _imageResizeAspectRatio = 4.0 / 3.0;
+    private double _imageResizeHorizontalChange;
+    private double _imageResizeVerticalChange;
 
     private void InsertPicture_Click(object sender, RoutedEventArgs e)
     {
@@ -98,9 +99,10 @@ public partial class ColumnEditorControl
 
         VM.SelectImage(image);
         _resizingImage = image;
-        _imageResizeStartPointer = Mouse.GetPosition(ImageOverlay);
         _imageResizeStartWidth = image.Width;
         _imageResizeAspectRatio = GetImageAspectRatio(image);
+        _imageResizeHorizontalChange = 0;
+        _imageResizeVerticalChange = 0;
         EditorFocused?.Invoke(this, EventArgs.Empty);
         e.Handled = true;
     }
@@ -110,11 +112,10 @@ public partial class ColumnEditorControl
         if (GetTaggedImage(sender) is not { } image || !ReferenceEquals(_resizingImage, image))
             return;
 
-        var pointer = Mouse.GetPosition(ImageOverlay);
-        var horizontalChange = pointer.X - _imageResizeStartPointer.X;
-        var verticalChange = pointer.Y - _imageResizeStartPointer.Y;
+        _imageResizeHorizontalChange += e.HorizontalChange;
+        _imageResizeVerticalChange += e.VerticalChange;
         var heightPerWidth = 1.0 / _imageResizeAspectRatio;
-        var requestedChange = (horizontalChange + (verticalChange * heightPerWidth))
+        var requestedChange = (_imageResizeHorizontalChange + (_imageResizeVerticalChange * heightPerWidth))
             / (1.0 + (heightPerWidth * heightPerWidth));
 
         var maxWidthFromSurface = Math.Max(
@@ -164,20 +165,6 @@ public partial class ColumnEditorControl
 
         VM.SelectImage(image);
         EditorFocused?.Invoke(this, EventArgs.Empty);
-    }
-
-    private void ClampImagesToSurface()
-    {
-        if (VM is null || ImageOverlay.ActualWidth <= 0 || ImageOverlay.ActualHeight <= 0)
-            return;
-
-        foreach (var image in VM.Images)
-        {
-            var maxWidth = Math.Max(ColumnImageViewModel.MinDisplayWidth, ImageOverlay.ActualWidth - image.Left);
-            image.Width = Math.Min(image.Width, maxWidth);
-            image.Left = Math.Min(image.Left, Math.Max(0.0, ImageOverlay.ActualWidth - image.Width));
-            image.Top = Math.Min(image.Top, Math.Max(0.0, ImageOverlay.ActualHeight - image.Height));
-        }
     }
 
     private static ColumnImageViewModel? GetTaggedImage(object sender)

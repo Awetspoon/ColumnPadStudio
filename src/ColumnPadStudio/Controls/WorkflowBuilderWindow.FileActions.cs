@@ -60,7 +60,7 @@ public partial class WorkflowBuilderWindow
     {
         var dialog = new OpenFileDialog
         {
-            Filter = "Workflow JSON (*.workflow.json;*.json)|*.workflow.json;*.json|All files (*.*)|*.*",
+            Filter = "Reloadable workflow JSON (*.workflow.json;*.json)|*.workflow.json;*.json|All files (*.*)|*.*",
             FilterIndex = 1
         };
 
@@ -112,8 +112,8 @@ public partial class WorkflowBuilderWindow
     {
         ExportWorkflow(
             ".workflow.json",
-            "Workflow JSON (*.workflow.json)|*.workflow.json|JSON (*.json)|*.json|All files (*.*)|*.*",
-            "workflow JSON",
+            "Reloadable workflow JSON (*.workflow.json)|*.workflow.json|JSON (*.json)|*.json|All files (*.*)|*.*",
+            "reloadable workflow JSON",
             ViewModel.ExportSelectedWorkflowToFile);
     }
 
@@ -121,18 +121,9 @@ public partial class WorkflowBuilderWindow
     {
         ExportWorkflow(
             ".workflow.txt",
-            "Workflow text (*.workflow.txt)|*.workflow.txt|Text (*.txt)|*.txt|All files (*.*)|*.*",
-            "workflow text",
+            "Readable workflow text (*.workflow.txt)|*.workflow.txt|Text (*.txt)|*.txt|All files (*.*)|*.*",
+            "readable text copy",
             ViewModel.ExportSelectedWorkflowTextToFile);
-    }
-
-    private void ExportWorkflowMarkdown_Click(object sender, RoutedEventArgs e)
-    {
-        ExportWorkflow(
-            ".workflow.md",
-            "Workflow markdown (*.workflow.md)|*.workflow.md|Markdown (*.md)|*.md|All files (*.*)|*.*",
-            "workflow markdown",
-            ViewModel.ExportSelectedWorkflowMarkdownToFile);
     }
 
     private void ExportWorkflow(

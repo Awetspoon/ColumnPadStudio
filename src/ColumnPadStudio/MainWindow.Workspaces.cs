@@ -21,6 +21,19 @@ public partial class MainWindow
 
     private void AddWorkspace()
     {
+        if (Workspaces.Count >= WorkspaceSessionFileService.MaxWorkspaces)
+        {
+            var message = $"ColumnPad supports up to {WorkspaceSessionFileService.MaxWorkspaces} open workspaces.";
+            ActiveVm.StatusText = message;
+            MessageBox.Show(
+                this,
+                message,
+                "Workspace Limit",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
         var ws = CreateWorkspace(NextWorkspaceName());
         ActiveWorkspace = ws;
         WorkspaceTabs.SelectedItem = ws;
@@ -94,6 +107,8 @@ public partial class MainWindow
 
     private void Workspaces_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
     {
+        var currentWorkspaces = Workspaces.ToHashSet();
+        DetachCachedEditors(_columnEditorCache.RemoveWorkspacesExcept(currentWorkspaces));
         QueueWorkspaceTabScrollRefresh(scrollSelectedIntoView: true);
     }
 

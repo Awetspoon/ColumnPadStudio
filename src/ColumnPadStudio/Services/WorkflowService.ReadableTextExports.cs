@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using ColumnPadStudio.Workflows;
 
@@ -17,10 +18,10 @@ public sealed partial class WorkflowService
         var builder = new StringBuilder();
         builder.AppendLine(TextExportMarker);
         builder.AppendLine(TextExportFormatLine);
+        builder.AppendLine("Readable copy only; import the .workflow.json file to continue editing.");
         builder.AppendLine();
-        builder.AppendLine($"Workflow: {CleanSingleLine(export.Name, "New Workflow")}");
-        builder.AppendLine($"Category: {CleanSingleLine(export.Category, "Custom")}");
-        builder.AppendLine($"Trigger: {export.Trigger}");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Workflow: {CleanSingleLine(export.Name, "New Workflow")}");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"Category: {CleanSingleLine(export.Category, "Custom")}");
         AppendTextBlock(builder, "Description", export.Description);
 
         builder.AppendLine();
@@ -29,7 +30,7 @@ public sealed partial class WorkflowService
 
         foreach (var node in orderedNodes)
         {
-            builder.AppendLine($"{nodeIndexes[node.Id]}. [{node.Kind}] {CleanSingleLine(node.Title, WorkflowDiagramNode.DefaultTitleForKind(node.Kind))}");
+            builder.AppendLine(CultureInfo.InvariantCulture, $"{nodeIndexes[node.Id]}. [{node.Kind}] {CleanSingleLine(node.Title, WorkflowDiagramNode.DefaultTitleForKind(node.Kind))}");
             AppendTextBlock(builder, "Description", node.Description);
             AppendTextBlock(builder, "Goal", node.Goal);
             AppendTextBlock(builder, "Instructions", node.Instructions);
@@ -39,7 +40,6 @@ public sealed partial class WorkflowService
             builder.AppendLine();
         }
 
-        AppendTextConnections(builder, export, nodeIndexes);
         return builder.ToString().TrimEnd() + Environment.NewLine;
     }
 
@@ -49,9 +49,9 @@ public sealed partial class WorkflowService
         if (text.Length == 0)
             return;
 
-        builder.AppendLine($"{label}:");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"{label}:");
         foreach (var line in text.Split('\n'))
-            builder.AppendLine($"  {line}");
+            builder.AppendLine(CultureInfo.InvariantCulture, $"  {line}");
     }
 
     private static void AppendTextChecklist(StringBuilder builder, WorkflowDiagramNode node)
@@ -67,7 +67,7 @@ public sealed partial class WorkflowService
         foreach (var item in items)
         {
             var marker = item.IsDone ? "[x]" : "[ ]";
-            builder.AppendLine($"  - {marker} {CleanSingleLine(item.Text, "Checklist item")}");
+            builder.AppendLine(CultureInfo.InvariantCulture, $"  - {marker} {CleanSingleLine(item.Text, "Checklist item")}");
         }
     }
 
@@ -92,37 +92,8 @@ public sealed partial class WorkflowService
             var label = string.IsNullOrWhiteSpace(link.Label)
                 ? string.Empty
                 : $" ({CleanSingleLine(link.Label, string.Empty)})";
-            builder.AppendLine($"  - {BuildTextNodeReference(target, nodeIndexes)}{label}");
+            builder.AppendLine(CultureInfo.InvariantCulture, $"  - {BuildTextNodeReference(target, nodeIndexes)}{label}");
         }
     }
 
-    private static void AppendTextConnections(
-        StringBuilder builder,
-        WorkflowDefinition workflow,
-        IReadOnlyDictionary<string, int> nodeIndexes)
-    {
-        var nodesById = workflow.Nodes.ToDictionary(item => item.Id, StringComparer.Ordinal);
-        var links = workflow.Links
-            .Where(link => nodesById.ContainsKey(link.FromNodeId) && nodesById.ContainsKey(link.ToNodeId))
-            .ToList();
-
-        builder.AppendLine("Connections");
-        builder.AppendLine("-----------");
-
-        if (links.Count == 0)
-        {
-            builder.AppendLine("No connections.");
-            return;
-        }
-
-        foreach (var link in links)
-        {
-            var from = BuildTextNodeReference(nodesById[link.FromNodeId], nodeIndexes);
-            var to = BuildTextNodeReference(nodesById[link.ToNodeId], nodeIndexes);
-            var label = string.IsNullOrWhiteSpace(link.Label)
-                ? string.Empty
-                : $" ({CleanSingleLine(link.Label, string.Empty)})";
-            builder.AppendLine($"- {from} -> {to}{label}");
-        }
-    }
 }

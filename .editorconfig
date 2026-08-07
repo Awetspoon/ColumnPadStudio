@@ -10,6 +10,12 @@ trim_trailing_whitespace = true
 indent_style = space
 indent_size = 4
 
+[*.cs]
+# Keep service APIs instance-based even when a current method has no instance state.
+dotnet_diagnostic.CA1822.severity = none
+# Prefer interface-shaped collection boundaries over analyzer-suggested concrete types.
+dotnet_diagnostic.CA1859.severity = none
+
 [*.md]
 end_of_line = lf
 trim_trailing_whitespace = false

@@ -28,6 +28,7 @@ public sealed partial class ColumnViewModel
 
         _checkedChecklistLineIndexes = next;
         TrimChecklistLineIndexesToBounds();
+        InvalidateGutterState();
         RecomputeDerivedMetrics();
     }
 
@@ -43,6 +44,7 @@ public sealed partial class ColumnViewModel
             _checkedChecklistLineIndexes.Add(lineIndex);
 
         TrimChecklistLineIndexesToBounds();
+        InvalidateGutterState();
         RecomputeDerivedMetrics();
     }
 
@@ -56,6 +58,7 @@ public sealed partial class ColumnViewModel
         if (newLines.Length == 1 && newLines[0].Length == 0)
         {
             _checkedChecklistLineIndexes.Clear();
+            InvalidateGutterState();
             return;
         }
 
@@ -104,7 +107,11 @@ public sealed partial class ColumnViewModel
             }
         }
 
+        if (_checkedChecklistLineIndexes.SetEquals(remapped))
+            return;
+
         _checkedChecklistLineIndexes = remapped;
+        InvalidateGutterState();
     }
 
     private void UpdateMetricsText()
@@ -127,7 +134,8 @@ public sealed partial class ColumnViewModel
         }
 
         LineCount = lines;
-        TrimChecklistLineIndexesToBounds();
+        if (TrimChecklistLineIndexesToBounds())
+            InvalidateGutterState();
 
         var wordCount = 0;
         var inWord = false;
@@ -176,10 +184,10 @@ public sealed partial class ColumnViewModel
         UpdateMetricsText();
     }
 
-    private void TrimChecklistLineIndexesToBounds()
+    private bool TrimChecklistLineIndexesToBounds()
     {
         var maxIndex = Math.Max(0, LineCount - 1);
-        _checkedChecklistLineIndexes.RemoveWhere(index => index < 0 || index > maxIndex);
+        return _checkedChecklistLineIndexes.RemoveWhere(index => index < 0 || index > maxIndex) > 0;
     }
 
     private static string[] SplitLines(string? text)

@@ -132,6 +132,22 @@ public sealed partial class MainViewModel
             .ToList();
     }
 
+    private static FontFaceOption ResolveFontFaceOption(string familyName, string? preferredStyleName)
+    {
+        var family = Fonts.SystemFontFamilies.FirstOrDefault(candidate =>
+            string.Equals(candidate.Source, familyName, StringComparison.OrdinalIgnoreCase));
+
+        family ??= new FontFamily(familyName);
+        var options = BuildFontFaceOptions(family);
+        foreach (var option in options)
+        {
+            if (string.Equals(option.Name, preferredStyleName, StringComparison.OrdinalIgnoreCase))
+                return option;
+        }
+
+        return options[0];
+    }
+
     private static string ToStyleName(FontStyle style, FontWeight weight)
     {
         var parts = new List<string>();

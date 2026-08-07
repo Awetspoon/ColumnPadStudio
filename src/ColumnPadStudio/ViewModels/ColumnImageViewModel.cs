@@ -1,7 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
+using ColumnPadStudio.Services;
 
 namespace ColumnPadStudio.ViewModels;
 
@@ -10,9 +10,10 @@ public sealed class ColumnImageViewModel : NotifyBase
     public const double MinDisplayWidth = 80.0;
     public const double MaxDisplayWidth = 2000.0;
 
-    private string _filePath;
+    private readonly string _filePath;
+    private readonly byte[]? _imageContent;
     private string _originalFileName;
-    private ImageSource? _displaySource;
+    private readonly ImageSource? _displaySource;
     private double _width;
     private double _left;
     private double _top;
@@ -27,41 +28,30 @@ public sealed class ColumnImageViewModel : NotifyBase
         int pixelHeight = 0,
         double left = 12.0,
         double top = 12.0,
-        ColumnImageLayer layer = ColumnImageLayer.InFrontOfText)
+        ColumnImageLayer layer = ColumnImageLayer.InFrontOfText,
+        byte[]? imageContent = null)
     {
         Id = Guid.NewGuid().ToString("N");
-        _filePath = filePath;
-        _displaySource = LoadDisplaySource(filePath);
+        _filePath = filePath ?? string.Empty;
+        _imageContent = imageContent is { Length: > 0 and <= ColumnImageFileService.MaxImageFileBytes }
+            ? imageContent
+            : ColumnImageFileService.TryReadImageContent(filePath);
         _originalFileName = string.IsNullOrWhiteSpace(originalFileName)
-            ? Path.GetFileName(filePath)
+            ? Path.GetFileName(filePath) ?? "Picture"
             : originalFileName.Trim();
         _width = ClampWidth(width);
         _left = ClampPosition(left);
         _top = ClampPosition(top);
         _layer = layer;
-        PixelWidth = Math.Max(0, pixelWidth);
-        PixelHeight = Math.Max(0, pixelHeight);
+        var display = ColumnImageFileService.LoadDisplaySource(_imageContent, _filePath);
+        PixelWidth = display?.PixelWidth ?? Math.Max(0, pixelWidth);
+        PixelHeight = display?.PixelHeight ?? Math.Max(0, pixelHeight);
+        _displaySource = display?.Source;
     }
 
     public string Id { get; }
 
-    public string FilePath
-    {
-        get => _filePath;
-        set
-        {
-            var nextValue = value ?? string.Empty;
-            if (string.Equals(_filePath, nextValue, StringComparison.Ordinal))
-                return;
-
-            _filePath = nextValue;
-            _displaySource = LoadDisplaySource(nextValue);
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(DisplayName));
-            OnPropertyChanged(nameof(DisplaySource));
-            OnPropertyChanged(nameof(CanDisplayImage));
-        }
-    }
+    public string FilePath => _filePath;
 
     public string OriginalFileName
     {
@@ -142,6 +132,7 @@ public sealed class ColumnImageViewModel : NotifyBase
 
     public int PixelWidth { get; }
     public int PixelHeight { get; }
+    internal byte[]? ImageContent => _imageContent;
 
     public ImageSource? DisplaySource => _displaySource;
 
@@ -166,7 +157,7 @@ public sealed class ColumnImageViewModel : NotifyBase
         : "Place In Front of Text";
 
     public ColumnImageViewModel Duplicate()
-        => new(FilePath, OriginalFileName, Width, PixelWidth, PixelHeight, Left, Top, Layer);
+        => new(FilePath, OriginalFileName, Width, PixelWidth, PixelHeight, Left, Top, Layer, _imageContent);
 
     private static double ClampWidth(double width)
     {
@@ -182,31 +173,5 @@ public sealed class ColumnImageViewModel : NotifyBase
             return 0.0;
 
         return Math.Max(0.0, value);
-    }
-
-    private static ImageSource? LoadDisplaySource(string filePath)
-    {
-        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
-            return null;
-
-        try
-        {
-            using var stream = File.OpenRead(filePath);
-            var decoder = BitmapDecoder.Create(
-                stream,
-                BitmapCreateOptions.PreservePixelFormat,
-                BitmapCacheOption.OnLoad);
-            var frame = decoder.Frames.FirstOrDefault();
-            frame?.Freeze();
-            return frame;
-        }
-        catch (Exception ex) when (ex is IOException
-            or UnauthorizedAccessException
-            or NotSupportedException
-            or FormatException
-            or InvalidOperationException)
-        {
-            return null;
-        }
     }
 }

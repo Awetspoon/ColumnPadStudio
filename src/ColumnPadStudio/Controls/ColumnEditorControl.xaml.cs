@@ -20,9 +20,15 @@ public sealed class ColumnImageFileEventArgs(string filePath, double left, doubl
     public double Top { get; } = top;
 }
 
+public sealed class ColumnTextColorEventArgs(string value) : EventArgs
+{
+    public string Value { get; } = value;
+}
+
 public partial class ColumnEditorControl : UserControl
 {
     public event EventHandler? EditorFocused;
+    public event EventHandler? ColumnActionsOpening;
     public event EventHandler? LockWidthRequested;
     public event EventHandler? MoveLeftRequested;
     public event EventHandler? MoveRightRequested;
@@ -39,13 +45,24 @@ public partial class ColumnEditorControl : UserControl
     public event EventHandler? ToggleBoldRequested;
     public event EventHandler? ToggleItalicRequested;
     public event EventHandler? ResetFontRequested;
+    public event EventHandler<ColumnTextColorEventArgs>? SetTextColorRequested;
+    public event EventHandler? SetCustomTextColorRequested;
 
     private ScrollViewer? _editorScrollViewer;
     private bool _lineNumberRefreshPending;
     private int _lastRenderedLineNumberCount = -1;
+    private LineMarkerMode? _lastRenderedLineMarkerMode;
+    private int _lastRenderedGutterStateVersion = -1;
+    private int _checklistLayoutVersion;
+    private int _lastRenderedChecklistLayoutVersion = -1;
     private int _gutterContextLineIndex = -1;
     private int _editorContextMenuCharacterIndex = -1;
     private ColumnViewModel? _observedVm;
+    private bool _isObservedVmSubscribed;
+    private bool _hasSavedEditorScrollOffsets;
+    private bool _editorScrollRestorePending;
+    private double _savedEditorHorizontalOffset;
+    private double _savedEditorVerticalOffset;
 
     public ColumnEditorControl()
     {
@@ -58,7 +75,6 @@ public partial class ColumnEditorControl : UserControl
     public int SelectionStart => Editor.SelectionStart;
     public int SelectionLength => Editor.SelectionLength;
     public double PictureSurfaceWidth => ImageOverlay.ActualWidth;
-    public double PictureSurfaceHeight => ImageOverlay.ActualHeight;
 
     private ColumnViewModel? VM => DataContext as ColumnViewModel;
 

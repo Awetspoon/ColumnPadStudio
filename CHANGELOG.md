@@ -4,6 +4,35 @@ All notable changes to this project are documented in this file.
 
 ## [Unreleased]
 
+## [v2.5.0] - 2026-08-07
+
+### Added
+- Added saved Standard (320 px), Custom (220-5000 px), and Fit Columns to Window sizing, plus one global Snap control and adjustable spacing.
+- Added a saved workspace-wide line-number gutter width from 32-160 px.
+- Added theme-aware per-column text colours with presets, custom hexadecimal colours, and layout persistence.
+- Added Ruled, Soft Ruled, and Strong Ruled paper styles aligned with the editor and gutter.
+- Added an automated Windows build gate and explicit version signatures for saved and exported files.
+
+### Changed
+- Replaced Markdown document/export support with concise, readable JSON text exports; native `.columnpad.json` layouts remain the full-fidelity format.
+- Embedded picture data in native layouts so saved workspaces remain portable if an original picture is moved or deleted.
+- Moved the app, tests, automated build, and one-file release profile to the supported .NET 10 LTS runtime.
+- Reworked recovery into complete atomic generations with fallback, and expanded workspace dirty-state tracking to include tab and session changes.
+- Simplified Workflow Builder creation, connection editing, save/import/export actions, and automatic node placement while keeping older workflows compatible.
+
+### Fixed
+- Fixed column adding and resetting so pixel widths remain stable, horizontal workspace scrolling returns when needed, and long text scrolls inside its own column.
+- Made Snap change only the shared gap and made Fit an explicit equal-width mode that preserves saved pixel widths.
+- Fixed selection highlighting, keyboard-focus borders, paper alignment, gutter updates, and repeated blank lines during paste.
+- Fixed save, exit, session-replacement, and crash-recovery paths so unsaved work and the previous healthy recovery generation are preserved.
+- Prevented text and JSON exports from silently discarding pictures or rich column formatting by requiring a native layout save.
+- Added stable workflow node IDs and migration for older step-list workflows.
+- Quarantined malformed preferences, bounded crash-log growth, and strengthened layout, workflow, image, and recovery validation.
+
+### Tested
+- Added coverage for column spacing preferences, text-colour persistence, paper alignment and compatibility, selection contrast, keyboard focus, preference quarantine, transactional recovery, portable pictures, schema validation, migration, and import limits.
+- Completed the Release build with no warnings or errors, passed 51 domain checks and 558 app smoke checks, and launch-checked the single-file Windows executable.
+
 ## [v2.4.1] - 2026-08-06
 
 ### Windows Build

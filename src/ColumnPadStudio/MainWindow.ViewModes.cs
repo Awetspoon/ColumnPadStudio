@@ -1,4 +1,5 @@
 using ColumnPadStudio.Controls;
+using ColumnPadStudio.Models;
 using ColumnPadStudio.Services;
 using System.Windows;
 
@@ -9,6 +10,11 @@ public partial class MainWindow
     private void ThemeLight_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.LightPreset);
     private void ThemeDark_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DarkPreset);
     private void ThemeDefault_Click(object sender, RoutedEventArgs e) => SetTheme(ThemePresetService.DefaultPreset);
+
+    private void PaperRuled_Click(object sender, RoutedEventArgs e) => ActiveVm.UsePaperStyle(PaperStyle.Ruled);
+    private void PaperSoftRuled_Click(object sender, RoutedEventArgs e) => ActiveVm.UsePaperStyle(PaperStyle.SoftRuled);
+    private void PaperStrongRuled_Click(object sender, RoutedEventArgs e) => ActiveVm.UsePaperStyle(PaperStyle.StrongRuled);
+    private void PaperOff_Click(object sender, RoutedEventArgs e) => ActiveVm.LinedPaperEnabled = false;
 
     private void ResetEditorFont_Click(object sender, RoutedEventArgs e)
     {
@@ -61,7 +67,6 @@ public partial class MainWindow
 
         var targetColumns = Math.Max(2, ActiveWorkspace?.LastMultiColumnCount ?? 3);
         vm.SetColumnCount(targetColumns);
-        RebuildColumns();
         vm.RefreshStatus();
         vm.StatusText = $"Column mode restored ({targetColumns} columns).";
     }

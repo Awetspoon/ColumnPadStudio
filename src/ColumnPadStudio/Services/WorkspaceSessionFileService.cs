@@ -18,6 +18,7 @@ public sealed record WorkspaceSessionSaveCandidate(
 
 public static class WorkspaceSessionFileService
 {
+    public const int MaxWorkspaces = 64;
     private static readonly JsonSerializerOptions JsonOptions = new() { WriteIndented = true };
 
     public static bool ShouldSaveWorkspaceSession(IReadOnlyList<WorkspaceSessionSaveCandidate> workspaces)
@@ -76,15 +77,14 @@ public static class WorkspaceSessionFileService
 
     public static bool IsWorkspaceSessionJson(string? json)
     {
-        return WorkspaceImportRules.IsWorkspaceSessionJson(json);
+        return TryParseSession(json, out _);
     }
 
     public static string SerializeSession(IReadOnlyList<WorkspaceSessionEntryData> workspaces, int activeWorkspaceIndex)
     {
         ArgumentNullException.ThrowIfNull(workspaces);
 
-        if (workspaces.Count == 0)
-            throw new ArgumentException("At least one workspace is required.", nameof(workspaces));
+        ValidateWorkspaceCount(workspaces.Count, nameof(workspaces));
 
         var normalized = new List<WorkspaceSessionFileEntry>(workspaces.Count);
         for (var i = 0; i < workspaces.Count; i++)
@@ -98,8 +98,8 @@ public static class WorkspaceSessionFileService
         }
 
         var session = new WorkspaceSessionFile(
-            FileType: "ColumnPadWorkspaceSession",
-            Version: 2,
+            FileType: WorkspaceImportRules.WorkspaceSessionFileType,
+            Version: WorkspaceImportRules.CurrentWorkspaceSessionVersion,
             ActiveWorkspaceIndex: Math.Clamp(activeWorkspaceIndex, 0, normalized.Count - 1),
             Workspaces: normalized);
 
@@ -123,8 +123,15 @@ public static class WorkspaceSessionFileService
             return false;
         }
 
-        if (parsed?["Workspaces"] is not JsonArray workspaceNodes || workspaceNodes.Count == 0)
+        if (parsed is null || !WorkspaceImportRules.IsWorkspaceSessionJson(json))
             return false;
+
+        if (parsed["Workspaces"] is not JsonArray workspaceNodes ||
+            workspaceNodes.Count == 0 ||
+            workspaceNodes.Count > MaxWorkspaces)
+        {
+            return false;
+        }
 
         var workspaces = new List<WorkspaceSessionEntryData>(workspaceNodes.Count);
         for (var i = 0; i < workspaceNodes.Count; i++)
@@ -147,6 +154,15 @@ public static class WorkspaceSessionFileService
             ActiveWorkspaceIndex: Math.Clamp(GetInt(parsed, "ActiveWorkspaceIndex", 0), 0, workspaces.Count - 1),
             Workspaces: workspaces);
         return true;
+    }
+
+    private static void ValidateWorkspaceCount(int workspaceCount, string parameterName)
+    {
+        if (workspaceCount <= 0)
+            throw new ArgumentException("At least one workspace is required.", parameterName);
+
+        if (workspaceCount > MaxWorkspaces)
+            throw new ArgumentException($"A session can contain up to {MaxWorkspaces} workspaces.", parameterName);
     }
 
     private static JsonNode ParseLayoutNode(string? layoutJson)

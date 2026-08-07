@@ -1,4 +1,5 @@
 using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Services;
 using ColumnPadStudio.ViewModels;
 using System.Linq;
 using System.Windows;
@@ -9,15 +10,35 @@ namespace ColumnPadStudio.Controls;
 
 public partial class ColumnEditorControl
 {
+    private void HeaderGrip_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        ActivateColumnForActions();
+    }
+
+    private void ColumnActionsButton_Click(object sender, RoutedEventArgs e)
+    {
+        ActivateColumnForActions();
+
+        if (ColumnActionsButton.ContextMenu is not { } columnContextMenu)
+            return;
+
+        columnContextMenu.PlacementTarget = ColumnActionsButton;
+        columnContextMenu.IsOpen = true;
+    }
+
+    private void ActivateColumnForActions()
+    {
+        ColumnActionsOpening?.Invoke(this, EventArgs.Empty);
+    }
+
     private void ColumnContextMenu_Opened(object sender, RoutedEventArgs e)
     {
-        UpdatePastePresetMenuChecks();
-
         if (VM is null)
             return;
 
         ColumnFontBoldMenuItem.IsChecked = VM.EditorFontWeight == FontWeights.Bold;
         ColumnFontItalicMenuItem.IsChecked = VM.EditorFontStyle == FontStyles.Italic;
+        RefreshTextColorMenuChecks();
         RefreshPicturesMenu();
     }
 
@@ -92,6 +113,36 @@ public partial class ColumnEditorControl
         ResetFontRequested?.Invoke(this, EventArgs.Empty);
     }
 
+    private void ColumnTextColorPreset_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is MenuItem { Tag: string value })
+            SetTextColorRequested?.Invoke(this, new ColumnTextColorEventArgs(value));
+    }
+
+    private void ColumnTextColorCustom_Click(object sender, RoutedEventArgs e)
+    {
+        SetCustomTextColorRequested?.Invoke(this, EventArgs.Empty);
+    }
+
+    private void RefreshTextColorMenuChecks()
+    {
+        if (VM is null)
+            return;
+
+        foreach (var item in ColumnTextColorMenuItem.Items.OfType<MenuItem>())
+        {
+            if (item.Tag is string value)
+                item.IsChecked = string.Equals(value, VM.EditorTextColor, StringComparison.Ordinal);
+        }
+
+        var isCustom = ColumnTextColorService.IsCustom(VM.EditorTextColor);
+        ColumnTextColorCustomMenuItem.IsChecked = isCustom;
+        ColumnTextColorCustomSwatch.Background = VM.CustomEditorTextColorBrush ?? Brushes.Transparent;
+        ColumnTextColorCustomLabel.Text = isCustom
+            ? $"Custom... ({VM.EditorTextColor})"
+            : "Custom...";
+    }
+
     private void PastePresetNone_Click(object sender, RoutedEventArgs e) => SetPastePreset(PasteListPreset.None);
     private void PastePresetBullets_Click(object sender, RoutedEventArgs e) => SetPastePreset(PasteListPreset.Bullets);
     private void PastePresetChecklist_Click(object sender, RoutedEventArgs e) => SetPastePreset(PasteListPreset.Checklist);
@@ -108,24 +159,25 @@ public partial class ColumnEditorControl
         if (VM.LineMarkerMode != LineMarkerMode.Checklist)
             VM.LineMarkerMode = LineMarkerMode.Checklist;
 
-        var (startLine, endLine) = GetSelectedLineRange();
+        var (startLine, endLine) = GetSelectedLogicalLineRange();
         for (var i = startLine; i <= endLine; i++)
             VM.ToggleChecklistLineChecked(i);
 
         QueueLineNumberRefresh();
     }
 
-    private (int StartLine, int EndLine) GetSelectedLineRange()
+    private (int StartLine, int EndLine) GetSelectedLogicalLineRange()
     {
         var selectionStart = Editor.SelectionStart;
         var selectionEnd = selectionStart + Editor.SelectionLength;
+        var editorText = Editor.Text ?? string.Empty;
 
-        var startLine = Editor.GetLineIndexFromCharacterIndex(selectionStart);
-        var endLine = Editor.GetLineIndexFromCharacterIndex(selectionEnd);
+        var startLine = GetLogicalLineIndexFromCharacterIndex(selectionStart);
+        var endLine = GetLogicalLineIndexFromCharacterIndex(selectionEnd);
 
         if (selectionEnd > selectionStart &&
             endLine > startLine &&
-            selectionEnd == Editor.GetCharacterIndexFromLineIndex(endLine))
+            IsLogicalLineStart(editorText, selectionEnd))
         {
             endLine--;
         }

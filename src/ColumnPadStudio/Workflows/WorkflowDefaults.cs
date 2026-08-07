@@ -8,7 +8,6 @@ public static class WorkflowDefaults
         {
             Name = string.IsNullOrWhiteSpace(name) ? "New Workflow" : name.Trim(),
             Category = "Custom",
-            Trigger = WorkflowTriggerType.Manual,
             Description = string.Empty
         };
 

@@ -21,14 +21,13 @@ public sealed partial class MainViewModel
         switch (kind)
         {
             case SaveFileKind.TextDocument:
-            case SaveFileKind.MarkdownDocument:
                 AtomicFileWriter.WriteText(path, BuildSingleDocumentText(), Encoding.UTF8);
                 break;
             case SaveFileKind.TextExport:
                 AtomicFileWriter.WriteText(path, BuildExportText(), Encoding.UTF8);
                 break;
-            case SaveFileKind.MarkdownExport:
-                AtomicFileWriter.WriteText(path, BuildExportMarkdown(), Encoding.UTF8);
+            case SaveFileKind.JsonExport:
+                AtomicFileWriter.WriteText(path, BuildExportJson(), Encoding.UTF8);
                 break;
             default:
                 AtomicFileWriter.WriteText(path, ToLayoutJson(), Encoding.UTF8);

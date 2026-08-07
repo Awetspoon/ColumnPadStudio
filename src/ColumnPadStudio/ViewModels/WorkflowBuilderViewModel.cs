@@ -31,7 +31,6 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
     public ObservableCollection<WorkflowTemplateDefinition> Templates { get; } = [];
     public ObservableCollection<WorkflowDiagramLinkPreview> LinkPreviews { get; } = [];
 
-    public IReadOnlyList<WorkflowTriggerType> TriggerTypes { get; } = Enum.GetValues<WorkflowTriggerType>();
     public IReadOnlyList<WorkflowNodeKind> NodeKinds { get; } = Enum.GetValues<WorkflowNodeKind>();
     public IReadOnlyList<WorkflowNodeColor> NodeColors { get; } = Enum.GetValues<WorkflowNodeColor>();
 
@@ -52,6 +51,7 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
             OnPropertyChanged(nameof(CanCreateLink));
             OnPropertyChanged(nameof(SelectedWorkflowFileLabel));
 
+            ResetConnectionDraft();
             SelectedNode = _selectedWorkflow?.Nodes.FirstOrDefault();
             SelectedLink = _selectedWorkflow?.Links.FirstOrDefault();
             RefreshLinkPreviews();
@@ -76,6 +76,7 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
 
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedNode));
+            UseSelectedNodeAsConnectionStart();
         }
     }
 
@@ -119,7 +120,7 @@ public sealed partial class WorkflowBuilderViewModel : NotifyBase
     public bool HasSelectedNode => SelectedNode is not null;
     public bool HasSelectedLink => SelectedLink is not null;
     public bool HasSelectedTemplate => SelectedTemplate is not null;
-    public bool CanCreateLink => SelectedWorkflow is { Nodes.Count: >= 2 };
+    public bool CanCreateLink => HasValidConnectionDraft();
     public bool HasUnsavedChanges => Workflows.Any(IsWorkflowDirty);
     public double DiagramCanvasWidth => CalculateDiagramCanvasWidth();
     public double DiagramCanvasHeight => CalculateDiagramCanvasHeight();

@@ -9,38 +9,41 @@ public sealed record FileDialogDefinition(string FileName, string Filter, string
 public enum OpenFileLoadKind
 {
     TextDocument,
-    MarkdownDocument,
     TextExport,
-    MarkdownExport,
+    JsonExport,
     WorkspaceSession,
     WorkflowJson,
-    LayoutJson
+    LayoutJson,
+    Unsupported
 }
 
 public static class FileWorkflowService
 {
-    public const string SupportedOpenFileFilter = "Supported Files (*.columnpad.json;*.txt;*.md;*.json)|*.columnpad.json;*.txt;*.md;*.json|Layout Files (*.columnpad.json;*.json)|*.columnpad.json;*.json|Text Documents (*.txt)|*.txt|Markdown Documents (*.md)|*.md|All files (*.*)|*.*";
+    public const string SupportedOpenFileFilter = "Supported Files (*.columnpad.json;*.json;*.txt)|*.columnpad.json;*.json;*.txt|ColumnPad and JSON Files (*.columnpad.json;*.json)|*.columnpad.json;*.json|Text Documents (*.txt)|*.txt|All files (*.*)|*.*";
 
     public static OpenFileLoadKind ClassifyOpenFile(string? extension, string? content)
     {
         var normalizedExtension = (extension ?? string.Empty).ToLowerInvariant();
 
-        return normalizedExtension switch
+        if (string.Equals(normalizedExtension, ".txt", StringComparison.Ordinal))
         {
-            ".txt" => WorkspaceImportRules.LooksLikeTextExport(content)
+            return WorkspaceImportRules.LooksLikeTextExport(content)
                 ? OpenFileLoadKind.TextExport
-                : OpenFileLoadKind.TextDocument,
-            ".md" => WorkspaceImportRules.LooksLikeMarkdownExport(content)
-                ? OpenFileLoadKind.MarkdownExport
-                : OpenFileLoadKind.MarkdownDocument,
-            _ => ClassifyJsonFile(content)
-        };
+                : OpenFileLoadKind.TextDocument;
+        }
+
+        return normalizedExtension.EndsWith(".json", StringComparison.Ordinal)
+            ? ClassifyJsonFile(content)
+            : OpenFileLoadKind.Unsupported;
     }
 
     private static OpenFileLoadKind ClassifyJsonFile(string? content)
     {
         if (WorkspaceSessionFileService.IsWorkspaceSessionJson(content))
             return OpenFileLoadKind.WorkspaceSession;
+
+        if (WorkspaceImportRules.IsJsonExport(content))
+            return OpenFileLoadKind.JsonExport;
 
         return WorkflowService.IsWorkflowDefinitionJson(content)
             ? OpenFileLoadKind.WorkflowJson
@@ -73,22 +76,16 @@ public static class FileWorkflowService
                 DefaultExt: ".txt",
                 AddExtension: true),
 
-            SaveFileKind.MarkdownDocument => new FileDialogDefinition(
-                FileName: BuildSuggestedSaveFileName(currentFilePath, requiresSaveAsBeforeOverwrite, "document.md"),
-                Filter: "Markdown (*.md)|*.md|All files (*.*)|*.*",
-                DefaultExt: ".md",
-                AddExtension: true),
-
             SaveFileKind.TextExport => new FileDialogDefinition(
                 FileName: BuildSuggestedSaveFileName(currentFilePath, requiresSaveAsBeforeOverwrite, "ColumnPad_export.txt"),
                 Filter: "Text (*.txt)|*.txt|All files (*.*)|*.*",
                 DefaultExt: ".txt",
                 AddExtension: true),
 
-            SaveFileKind.MarkdownExport => new FileDialogDefinition(
-                FileName: BuildSuggestedSaveFileName(currentFilePath, requiresSaveAsBeforeOverwrite, "ColumnPad_export.md"),
-                Filter: "Markdown (*.md)|*.md|All files (*.*)|*.*",
-                DefaultExt: ".md",
+            SaveFileKind.JsonExport => new FileDialogDefinition(
+                FileName: BuildSuggestedSaveFileName(currentFilePath, requiresSaveAsBeforeOverwrite, "ColumnPad_export.json"),
+                Filter: "ColumnPad Text Export (*.json)|*.json|All files (*.*)|*.*",
+                DefaultExt: ".json",
                 AddExtension: true),
 
             _ => new FileDialogDefinition(

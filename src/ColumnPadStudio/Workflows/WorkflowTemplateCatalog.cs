@@ -13,7 +13,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Essay Plan",
                 category: "Writing",
                 description: "Shape a writing piece from thesis through evidence, structure, draft, and review.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Define thesis",
@@ -58,7 +57,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Research Notes",
                 category: "Writing",
                 description: "Capture sources, key claims, quotes, gaps, and follow-up questions.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Collect sources",
@@ -72,7 +70,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Content Draft Pipeline",
                 category: "Writing",
                 description: "Move a content idea from inbox to outline, draft, edit, and publish notes.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Idea inbox",
@@ -87,7 +84,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Project Planning Kickoff",
                 category: "Project Management",
                 description: "Set up a clean planning board with scope, milestones, risks, and delivery notes.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Define scope",
@@ -100,7 +96,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Sprint Triage Board",
                 category: "Engineering",
                 description: "Create a triage-ready layout for backlog grooming and release readiness checks.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Collect inbox",
@@ -114,7 +109,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Release Checklist",
                 category: "Engineering",
                 description: "Run a release through build, smoke checks, notes, packaging, and final upload.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Build",
@@ -159,7 +153,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Daily Standup Notes",
                 category: "Team Ops",
                 description: "Capture yesterday/today/blockers quickly with repeatable structure.",
-                trigger: WorkflowTriggerType.OnAppStart,
                 nodeTitles:
                 [
                     "Yesterday",
@@ -171,7 +164,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Bug Investigation Log",
                 category: "Engineering",
                 description: "Track repro steps, hypotheses, evidence, and fixes in a repeatable flow.",
-                trigger: WorkflowTriggerType.Manual,
                 startTitle: "Capture repro",
                 decisionTitle: "Hypothesis confirmed?",
                 yesTitle: "Implement fix",
@@ -182,7 +174,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Compare Ideas",
                 category: "Thinking",
                 description: "Compare options, decide whether one is strong enough, then capture next action.",
-                trigger: WorkflowTriggerType.Manual,
                 startTitle: "List options",
                 decisionTitle: "Clear winner?",
                 yesTitle: "Commit to winner",
@@ -193,7 +184,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Decision Tree",
                 category: "Thinking",
                 description: "Start with a question, branch possible answers, and close with an action.",
-                trigger: WorkflowTriggerType.Manual,
                 startTitle: "Define question",
                 decisionTitle: "Condition met?",
                 yesTitle: "Take path A",
@@ -204,7 +194,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "Meeting Notes",
                 category: "Team Ops",
                 description: "Prepare agenda, capture decisions, assign actions, and review follow-up.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Agenda",
@@ -218,7 +207,6 @@ public static partial class WorkflowTemplateCatalog
                 name: "SOP Builder",
                 category: "Operations",
                 description: "Draft standard operating procedures with reusable sections and checklists.",
-                trigger: WorkflowTriggerType.Manual,
                 nodeTitles:
                 [
                     "Purpose",

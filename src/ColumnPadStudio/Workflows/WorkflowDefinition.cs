@@ -8,13 +8,13 @@ namespace ColumnPadStudio.Workflows;
 public sealed class WorkflowDefinition : NotifyBase
 {
     public const string WorkflowFileType = "ColumnPadWorkflow";
+    public const int CurrentSchemaVersion = 4;
 
-    private int _schemaVersion = 3;
+    private int _schemaVersion = CurrentSchemaVersion;
     private string _id = Guid.NewGuid().ToString("N");
     private string _name = "New Workflow";
     private string _category = "Custom";
     private string _description = string.Empty;
-    private WorkflowTriggerType _trigger = WorkflowTriggerType.Manual;
     private ObservableCollection<WorkflowDiagramNode> _nodes = [];
     private ObservableCollection<WorkflowDiagramLink> _links = [];
 
@@ -48,12 +48,6 @@ public sealed class WorkflowDefinition : NotifyBase
     {
         get => _description;
         set => Set(ref _description, value ?? string.Empty);
-    }
-
-    public WorkflowTriggerType Trigger
-    {
-        get => _trigger;
-        set => Set(ref _trigger, value);
     }
 
     public ObservableCollection<WorkflowDiagramNode> Nodes

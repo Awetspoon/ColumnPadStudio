@@ -2,6 +2,7 @@ using System.Text.Json.Nodes;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;
+using ColumnPadStudio.Services;
 
 namespace ColumnPadStudio.ViewModels;
 
@@ -118,13 +119,14 @@ public sealed partial class MainViewModel
                 continue;
 
             var filePath = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.FilePath), string.Empty);
-            if (string.IsNullOrWhiteSpace(filePath))
+            var content = ReadEmbeddedImageContent(imageNode);
+            if (string.IsNullOrWhiteSpace(filePath) && content is null)
                 continue;
 
             var originalFileName = GetJsonValueOrDefault(
                 imageNode,
                 nameof(LayoutImage.OriginalFileName),
-                Path.GetFileName(filePath));
+                string.IsNullOrWhiteSpace(filePath) ? "Picture" : Path.GetFileName(filePath));
             var width = GetJsonDoubleOrDefault(imageNode, nameof(LayoutImage.Width), 320.0);
             var pixelWidth = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.PixelWidth), 0);
             var pixelHeight = GetJsonValueOrDefault(imageNode, nameof(LayoutImage.PixelHeight), 0);
@@ -135,14 +137,41 @@ public sealed partial class MainViewModel
                 nameof(LayoutImage.Layer),
                 nameof(ColumnImageLayer.InFrontOfText));
 
-            parsed.Add(new LayoutImage(filePath, originalFileName, width, pixelWidth, pixelHeight, left, top, layer));
+            parsed.Add(new LayoutImage(filePath, originalFileName, width, pixelWidth, pixelHeight, left, top, layer, content));
         }
 
         return parsed;
     }
 
+    private static byte[]? ReadEmbeddedImageContent(JsonObject imageNode)
+    {
+        if (imageNode[nameof(LayoutImage.Content)] is not JsonValue contentNode)
+            return null;
+
+        if (!contentNode.TryGetValue<string>(out var encodedContent) || string.IsNullOrWhiteSpace(encodedContent))
+            return null;
+
+        var maximumEncodedLength = ((ColumnImageFileService.MaxImageFileBytes + 2L) / 3L * 4L) + 4L;
+        if (encodedContent.Length > maximumEncodedLength)
+            throw new InvalidDataException("Embedded picture data is too large.");
+
+        try
+        {
+            var content = Convert.FromBase64String(encodedContent);
+            if (content.Length == 0 || content.Length > ColumnImageFileService.MaxImageFileBytes)
+                throw new InvalidDataException("Embedded picture data is empty or too large.");
+
+            return content;
+        }
+        catch (FormatException ex)
+        {
+            throw new InvalidDataException("Embedded picture data is not valid Base64.", ex);
+        }
+    }
+
     private static ColumnImageLayer ParseImageLayer(string? value)
         => Enum.TryParse<ColumnImageLayer>(value, ignoreCase: true, out var parsed)
+            && Enum.IsDefined(parsed)
             ? parsed
             : ColumnImageLayer.InFrontOfText;
 }

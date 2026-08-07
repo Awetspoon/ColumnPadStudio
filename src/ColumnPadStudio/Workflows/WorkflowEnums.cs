@@ -1,13 +1,5 @@
 namespace ColumnPadStudio.Workflows;
 
-public enum WorkflowTriggerType
-{
-    Manual,
-    OnAppStart,
-    OnFileOpen,
-    OnFileSave
-}
-
 public enum WorkflowNodeKind
 {
     Start,

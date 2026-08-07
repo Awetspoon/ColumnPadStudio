@@ -10,7 +10,6 @@ public sealed partial class WorkflowService
 {
     public const string TextExportMarker = "ColumnPad Workflow Export";
     public const string TextExportFormatLine = "Format: Text";
-    public const string MarkdownExportMarker = "<!-- ColumnPad Workflow Export: Markdown -->";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -67,7 +66,7 @@ public sealed partial class WorkflowService
             if (!IsWorkflowDefinitionJson(json))
                 return false;
 
-            var parsed = JsonSerializer.Deserialize<WorkflowDefinition>(json, JsonOptions);
+            var parsed = DeserializeWorkflow(json);
             if (parsed is null)
                 return false;
 
@@ -144,14 +143,6 @@ public sealed partial class WorkflowService
         ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
 
         AtomicFileWriter.WriteText(filePath, BuildTextExport(workflow), Encoding.UTF8);
-    }
-
-    public void ExportMarkdownToPath(WorkflowDefinition workflow, string filePath)
-    {
-        ArgumentNullException.ThrowIfNull(workflow);
-        ArgumentException.ThrowIfNullOrWhiteSpace(filePath);
-
-        AtomicFileWriter.WriteText(filePath, BuildMarkdownExport(workflow), Encoding.UTF8);
     }
 
     public WorkflowDefinition CreateDraftFromImportedWorkflow(WorkflowDefinition imported, string? sourceLabel = null)

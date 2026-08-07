@@ -43,7 +43,8 @@ public partial class MainWindow
                 imported.PixelWidth,
                 imported.PixelHeight,
                 left,
-                top);
+                top,
+                imageContent: imported.Content);
 
             ActiveVm.PrepareForRichContent();
             active.Images.Add(image);
@@ -71,7 +72,8 @@ public partial class MainWindow
         if (_editorsById.TryGetValue(column.Id, out var editor) && editor.PictureSurfaceWidth > 0)
             return Math.Max(ColumnImageViewModel.MinDisplayWidth, editor.PictureSurfaceWidth - 24.0);
 
-        var columnWidth = column.WidthPx ?? (int)DefaultColumnWidthPx;
-        return Math.Max(ColumnImageViewModel.MinDisplayWidth, columnWidth - ColumnViewModel.VisibleLineNumberColumnWidth - 24.0);
+        var columnWidth = column.WidthPx ?? _appPreferences.DefaultColumnWidthPx;
+        var gutterWidth = column.LineNumberColumnWidth.IsAbsolute ? column.LineNumberColumnWidth.Value : 0;
+        return Math.Max(ColumnImageViewModel.MinDisplayWidth, columnWidth - gutterWidth - 24.0);
     }
 }

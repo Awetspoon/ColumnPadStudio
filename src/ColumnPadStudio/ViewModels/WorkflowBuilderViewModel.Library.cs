@@ -95,7 +95,7 @@ public sealed partial class WorkflowBuilderViewModel
             return false;
 
         _workflowService.ExportToPath(SelectedWorkflow, filePath);
-        StatusText = $"Exported workflow JSON to {Path.GetFileName(filePath)}.";
+        StatusText = $"Exported reloadable workflow JSON to {Path.GetFileName(filePath)}.";
         return true;
     }
 
@@ -105,17 +105,7 @@ public sealed partial class WorkflowBuilderViewModel
             return false;
 
         _workflowService.ExportTextToPath(SelectedWorkflow, filePath);
-        StatusText = $"Exported workflow text to {Path.GetFileName(filePath)}.";
-        return true;
-    }
-
-    public bool ExportSelectedWorkflowMarkdownToFile(string filePath)
-    {
-        if (SelectedWorkflow is null || string.IsNullOrWhiteSpace(filePath))
-            return false;
-
-        _workflowService.ExportMarkdownToPath(SelectedWorkflow, filePath);
-        StatusText = $"Exported workflow markdown to {Path.GetFileName(filePath)}.";
+        StatusText = $"Exported readable text copy to {Path.GetFileName(filePath)}.";
         return true;
     }
 

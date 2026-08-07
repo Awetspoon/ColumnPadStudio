@@ -47,6 +47,17 @@ public partial class MainWindow
             return;
         }
 
+        if (loadKind == OpenFileLoadKind.Unsupported)
+        {
+            MessageBox.Show(
+                this,
+                "ColumnPad can open ColumnPad JSON, workflow JSON, and plain-text (.txt) files.",
+                "Unsupported File",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
         if (loadKind == OpenFileLoadKind.WorkflowJson)
         {
             OpenWorkflowBuilder(dlg.FileName);
@@ -54,7 +65,11 @@ public partial class MainWindow
             return;
         }
 
-        if (!ConfirmWorkspaceDestructiveAction(ActiveWorkspace, "Open File", "Opening a file"))
+        var canReplaceCurrentContent = loadKind == OpenFileLoadKind.WorkspaceSession
+            ? TryConfirmSaveBeforeReplacingAllWorkspaces()
+            : ConfirmWorkspaceDestructiveAction(ActiveWorkspace, "Open File", "Opening a file");
+
+        if (!canReplaceCurrentContent)
             return;
 
         if (!TryRunFileAction("Open Failed", $"open {fileName}", () =>
@@ -67,11 +82,8 @@ public partial class MainWindow
                 case OpenFileLoadKind.TextDocument:
                     ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.TextDocument);
                     break;
-                case OpenFileLoadKind.MarkdownExport:
-                    ActiveVm.LoadFromExportMarkdown(content, fileName, dlg.FileName);
-                    break;
-                case OpenFileLoadKind.MarkdownDocument:
-                    ActiveVm.LoadTextDocument(content, fileName, dlg.FileName, SaveFileKind.MarkdownDocument);
+                case OpenFileLoadKind.JsonExport:
+                    ActiveVm.LoadFromExportJson(content, fileName, dlg.FileName);
                     break;
                 case OpenFileLoadKind.WorkspaceSession:
                     if (!TryLoadWorkspaceSession(content, fileName, dlg.FileName))
@@ -183,15 +195,15 @@ public partial class MainWindow
         });
     }
 
-    private void ExportMarkdown_Click(object sender, RoutedEventArgs e)
+    private void ExportJson_Click(object sender, RoutedEventArgs e)
     {
-        var dlg = CreateExportDialog(SaveFileKind.MarkdownExport);
+        var dlg = CreateExportDialog(SaveFileKind.JsonExport);
         if (dlg.ShowDialog() != true)
             return;
 
         TryRunFileAction("Export Failed", $"export {Path.GetFileName(dlg.FileName)}", () =>
         {
-            AtomicFileWriter.WriteText(dlg.FileName, ActiveVm.BuildExportMarkdown(), Encoding.UTF8);
+            AtomicFileWriter.WriteText(dlg.FileName, ActiveVm.BuildExportJson(), Encoding.UTF8);
             ActiveVm.StatusText = $"Exported: {Path.GetFileName(dlg.FileName)}";
         });
     }
@@ -213,8 +225,8 @@ public partial class MainWindow
         document.Blocks.Add(new Paragraph(new Run(ActiveVm.BuildExportText())));
         var paginator = ((IDocumentPaginatorSource)document).DocumentPaginator;
         paginator.PageSize = new Size(dlg.PrintableAreaWidth, dlg.PrintableAreaHeight);
-        dlg.PrintDocument(paginator, "ColumnPad print");
-        ActiveVm.StatusText = "Sent to printer.";
+        dlg.PrintDocument(paginator, "ColumnPad text print");
+        ActiveVm.StatusText = "Text view sent to printer.";
     }
 
     private void Exit_Click(object sender, RoutedEventArgs e) => Close();
