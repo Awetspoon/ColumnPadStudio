@@ -122,17 +122,17 @@
       "Id": "file-routing",
       "Kind": 2,
       "Title": "Choose file route",
-      "Description": "Opening or saving must decide whether the user is working with raw text, markdown, layout JSON, workspace-session JSON, or an export.",
+      "Description": "Opening or saving must decide whether the user is working with raw text, a concise JSON export, layout JSON, workspace-session JSON, or a workflow.",
       "Goal": "Send each file format through the right path without overwriting source files unexpectedly.",
       "Instructions": "Use FileWorkflowService, WorkspaceImportRules, MainWindow.FileSession.cs, MainViewModel.FileState.cs, and MainViewModel.Persistence.cs. Keep app-native files separate from human-readable exports.",
       "ExpectedOutput": "The app knows whether to load plain text, import an export, restore a layout, or restore multiple workspaces.",
       "ChecklistItems": [
         {
-          "Text": "Plain .txt and .md files must not be auto-split unless they contain ColumnPad export markers.",
+          "Text": "Plain .txt files must not be auto-split unless they contain ColumnPad export markers.",
           "IsDone": false
         },
         {
-          "Text": "Source text and markdown files require Save As before overwrite.",
+          "Text": "Source text files and concise JSON exports require Save As before overwrite.",
           "IsDone": false
         },
         {
@@ -164,7 +164,7 @@
           "IsDone": false
         },
         {
-          "Text": "Text and markdown exports stay human-readable and marked.",
+          "Text": "Text and JSON exports stay human-readable and marked.",
           "IsDone": false
         }
       ],
@@ -192,7 +192,7 @@
           "IsDone": false
         },
         {
-          "Text": "Do not place image data inside plain .txt or .md exports.",
+          "Text": "Do not place image data inside plain .txt or concise JSON exports.",
           "IsDone": false
         }
       ],

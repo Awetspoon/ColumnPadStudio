@@ -2,9 +2,11 @@ namespace ColumnPadStudio.ViewModels;
 
 public sealed partial class MainViewModel
 {
-    private sealed record LayoutFile(
+    internal sealed record LayoutFile(
+        string FileType,
         int Version,
         bool ShowLineNumbers,
+        int GutterWidthPx,
         bool WordWrap,
         string EditorFontFamily,
         string EditorFontStyle,
@@ -13,26 +15,28 @@ public sealed partial class MainViewModel
         bool SpellCheckEnabled,
         string EditorLanguageTag,
         bool LinedPaperEnabled,
+        string PaperStyle,
         string? ActiveId,
         int? ActiveIndex,
-        List<LayoutColumn> Columns);
+        IReadOnlyList<LayoutColumn> Columns);
 
-    private sealed record LayoutColumn(
+    internal sealed record LayoutColumn(
         string Title,
         string Text,
         int? WidthPx,
         bool IsWidthLocked,
         string PastePreset,
         string LineMarkerMode,
-        List<int> CheckedChecklistLineIndexes,
-        List<LayoutImage> Images,
+        IReadOnlyList<int> CheckedChecklistLineIndexes,
+        IReadOnlyList<LayoutImage> Images,
         string FontFamily,
         double FontSize,
         string FontStyle,
         string FontWeight,
-        bool UseDefaultFont);
+        bool UseDefaultFont,
+        string EditorTextColor);
 
-    private sealed record LayoutImage(
+    internal sealed record LayoutImage(
         string FilePath,
         string OriginalFileName,
         double Width,
@@ -40,32 +44,7 @@ public sealed partial class MainViewModel
         int PixelHeight,
         double Left,
         double Top,
-        string Layer);
+        string Layer,
+        byte[]? Content);
 
-    private sealed record DirtyWorkspaceState(
-        bool ShowLineNumbers,
-        bool WordWrap,
-        string EditorFontFamily,
-        string EditorFontStyle,
-        double EditorFontSize,
-        string ThemePreset,
-        bool SpellCheckEnabled,
-        string EditorLanguageTag,
-        bool LinedPaperEnabled,
-        List<DirtyColumnState> Columns);
-
-    private sealed record DirtyColumnState(
-        string Title,
-        string Text,
-        int? WidthPx,
-        bool IsWidthLocked,
-        string PastePreset,
-        string LineMarkerMode,
-        List<int> CheckedChecklistLineIndexes,
-        List<LayoutImage> Images,
-        string FontFamily,
-        double FontSize,
-        string FontStyle,
-        string FontWeight,
-        bool UseDefaultFont);
 }

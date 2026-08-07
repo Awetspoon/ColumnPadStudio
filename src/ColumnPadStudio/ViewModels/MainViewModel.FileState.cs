@@ -40,49 +40,19 @@ public sealed partial class MainViewModel
     {
         return CurrentFileKind switch
         {
-            SaveFileKind.TextDocument or SaveFileKind.MarkdownDocument => BuildSingleDocumentText(),
+            SaveFileKind.TextDocument => BuildSingleDocumentText(),
             SaveFileKind.TextExport => BuildExportText(),
-            SaveFileKind.MarkdownExport => BuildExportMarkdown(),
-            _ => JsonSerializer.Serialize(new DirtyWorkspaceState(
-                ShowLineNumbers,
-                WordWrap,
-                EditorFontFamily,
-                EditorFontStyleName,
-                EditorFontSize,
-                ThemePreset,
-                SpellCheckEnabled,
-                EditorLanguageTag,
-                LinedPaperEnabled,
-                Columns.Select(c => new DirtyColumnState(
-                    c.Title,
-                    c.Text ?? string.Empty,
-                    c.WidthPx,
-                    c.IsWidthLocked,
-                    c.PastePreset.ToString(),
-                    c.LineMarkerMode.ToString(),
-                    c.GetCheckedChecklistLineIndexes().ToList(),
-                    c.Images.Select(image => new LayoutImage(
-                        image.FilePath,
-                        image.OriginalFileName,
-                        image.Width,
-                        image.PixelWidth,
-                        image.PixelHeight,
-                        image.Left,
-                        image.Top,
-                        image.Layer.ToString())).ToList(),
-                    c.EditorFontFamily,
-                    c.EditorFontSize,
-                    c.EditorFontStyle.ToString(),
-                    c.EditorFontWeight.ToString(),
-                    c.UseDefaultFont)).ToList()))
+            SaveFileKind.JsonExport => BuildExportJson(),
+            _ => JsonSerializer.Serialize(CreateLayoutSnapshot(includeActiveSelection: false, includeImageContent: false))
         };
     }
 
-    private bool IsRawDocumentKind => CurrentFileKind is SaveFileKind.TextDocument or SaveFileKind.MarkdownDocument;
+    private bool IsRawDocumentKind => CurrentFileKind == SaveFileKind.TextDocument;
+    private bool IsLossyDocumentKind => IsRawDocumentKind || CurrentFileKind is SaveFileKind.TextExport or SaveFileKind.JsonExport;
 
     public void PrepareForRichContent()
     {
-        if (IsRawDocumentKind)
+        if (IsLossyDocumentKind)
             SetCurrentFileReference(null, SaveFileKind.Layout);
 
         ForceDirty();

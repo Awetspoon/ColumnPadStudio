@@ -13,36 +13,19 @@ public static class ClipboardTextService
         return ApplyPastePreset(normalized, preset);
     }
 
-    public static int CountLineBreaks(string text)
-    {
-        var count = 0;
-        for (var i = 0; i < text.Length; i++)
-        {
-            if (text[i] == '\n' || (text[i] == '\r' && (i + 1 >= text.Length || text[i + 1] != '\n')))
-                count++;
-        }
-
-        return count;
-    }
-
     public static string NormalizeClipboardText(string source)
     {
         if (string.IsNullOrEmpty(source))
             return string.Empty;
 
-        while (source.Contains("\r\r\n", StringComparison.Ordinal))
-            source = source.Replace("\r\r\n", "\r\n", StringComparison.Ordinal);
-
         source = source
             .Replace("\u2028", "\n", StringComparison.Ordinal)
-            .Replace("\u2029", "\n", StringComparison.Ordinal)
-            .Replace("\n\r", "\n", StringComparison.Ordinal);
+            .Replace("\u2029", "\n", StringComparison.Ordinal);
 
         var normalized = source
             .Replace("\r\n", "\n", StringComparison.Ordinal)
             .Replace("\r", "\n", StringComparison.Ordinal);
 
-        normalized = CollapseAlternatingBlankClipboardLines(normalized);
         return normalized.Replace("\n", Environment.NewLine, StringComparison.Ordinal);
     }
 
@@ -79,65 +62,5 @@ public static class ClipboardTextService
         }
 
         return string.Join(Environment.NewLine, lines);
-    }
-
-    private static string CollapseAlternatingBlankClipboardLines(string text)
-    {
-        var lines = text.Split('\n');
-        if (lines.Length < 6)
-            return text;
-
-        for (var i = 0; i < lines.Length - 1; i++)
-        {
-            if (!string.IsNullOrWhiteSpace(lines[i]) && !string.IsNullOrWhiteSpace(lines[i + 1]))
-                return text;
-        }
-
-        var evenCount = 0;
-        var oddCount = 0;
-        var evenBlank = 0;
-        var oddBlank = 0;
-        var evenContent = 0;
-        var oddContent = 0;
-
-        for (var i = 0; i < lines.Length; i++)
-        {
-            var isBlank = string.IsNullOrWhiteSpace(lines[i]);
-            if ((i & 1) == 0)
-            {
-                evenCount++;
-                if (isBlank)
-                    evenBlank++;
-                else
-                    evenContent++;
-            }
-            else
-            {
-                oddCount++;
-                if (isBlank)
-                    oddBlank++;
-                else
-                    oddContent++;
-            }
-        }
-
-        var collapseOdd = oddCount > 0 &&
-                          oddBlank >= (int)Math.Ceiling(oddCount * 0.85) &&
-                          evenContent >= 3 &&
-                          evenBlank <= 1;
-        var collapseEven = evenCount > 0 &&
-                           evenBlank >= (int)Math.Ceiling(evenCount * 0.85) &&
-                           oddContent >= 3 &&
-                           oddBlank <= 1;
-
-        if (!collapseOdd && !collapseEven)
-            return text;
-
-        var blankParityToRemove = collapseOdd ? 1 : 0;
-        var filtered = lines
-            .Where((line, index) => !((index & 1) == blankParityToRemove && string.IsNullOrWhiteSpace(line)))
-            .ToArray();
-
-        return string.Join('\n', filtered);
     }
 }

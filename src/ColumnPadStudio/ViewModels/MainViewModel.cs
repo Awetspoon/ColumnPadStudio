@@ -10,12 +10,17 @@ namespace ColumnPadStudio.ViewModels;
 
 public sealed partial class MainViewModel : NotifyBase
 {
+    public const int MinimumGutterWidthPx = 32;
+    public const int MaximumGutterWidthPx = 160;
+    public const int DefaultGutterWidthPx = MinimumGutterWidthPx;
+
     public event EventHandler? RequestRebuildColumns;
 
     public ObservableCollection<ColumnViewModel> Columns { get; } = new();
 
     private string? _activeColumnId;
     private bool _showLineNumbers = true;
+    private int _gutterWidthPx = DefaultGutterWidthPx;
     private bool _wordWrap = true;
     private string _editorFontFamily = "Consolas";
     private string _editorFontStyleName = "Regular";
@@ -26,12 +31,14 @@ public sealed partial class MainViewModel : NotifyBase
     private bool _spellCheckEnabled = true;
     private string _editorLanguageTag = "en-US";
     private bool _linedPaperEnabled;
+    private PaperStyle _selectedPaperStyle = PaperStyle.Ruled;
     private bool _requiresSaveAsBeforeOverwrite;
     private string _statusText = "";
     private string _cleanStateSignature = string.Empty;
     private bool _forceDirty;
     private static readonly JsonSerializerOptions LayoutJsonOptions = new() { WriteIndented = true };
-    private const int CurrentLayoutVersion = 14;
+    private const string LayoutFileType = "ColumnPadLayout";
+    private const int CurrentLayoutVersion = 19;
 
     private readonly Dictionary<string, FontFaceOption> _fontFaceOptionsByName =
         new(StringComparer.CurrentCultureIgnoreCase);
@@ -80,17 +87,50 @@ public sealed partial class MainViewModel : NotifyBase
     public bool IsLightThemeSelected => string.Equals(ThemePreset, ThemePresetService.LightPreset, StringComparison.Ordinal);
     public bool IsDarkThemeSelected => string.Equals(ThemePreset, ThemePresetService.DarkPreset, StringComparison.Ordinal);
     public string EditorFontSummary => $"{EditorFontFamily} {EditorFontStyleName} {EditorFontSize:0}";
+    public string GutterWidthMenuHeader => $"Gutter Width... ({GutterWidthPx} px)";
     public string ProofingLanguageDisplayName => EditorLanguages.FirstOrDefault(language => string.Equals(language.Tag, EditorLanguageTag, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? EditorLanguageTag;
     public string ProofingLanguageHelpText => $"Proofing language: {ProofingLanguageDisplayName}. Spell-check availability depends on installed Windows/WPF dictionaries.";
+    public bool IsPaperOffSelected => !LinedPaperEnabled;
+    public bool IsRuledPaperSelected => LinedPaperEnabled && SelectedPaperStyle == PaperStyle.Ruled;
+    public bool IsSoftRuledPaperSelected => LinedPaperEnabled && SelectedPaperStyle == PaperStyle.SoftRuled;
+    public bool IsStrongRuledPaperSelected => LinedPaperEnabled && SelectedPaperStyle == PaperStyle.StrongRuled;
+    public string PaperStyleHelpText => LinedPaperEnabled
+        ? $"Paper style: {GetPaperStyleDisplayName(SelectedPaperStyle)}. Lines follow the text row spacing."
+        : $"Paper is off. The selected style is {GetPaperStyleDisplayName(SelectedPaperStyle)}.";
 
     public bool ShowLineNumbers
     {
         get => _showLineNumbers;
         set
         {
-            Set(ref _showLineNumbers, value);
+            if (_showLineNumbers == value)
+                return;
+
+            _showLineNumbers = value;
+            OnPropertyChanged();
             foreach (var c in Columns) c.ShowLineNumbers = value;
             RefreshStatus();
+        }
+    }
+
+    public int GutterWidthPx
+    {
+        get => _gutterWidthPx;
+        set
+        {
+            var normalized = Math.Clamp(value, MinimumGutterWidthPx, MaximumGutterWidthPx);
+            if (_gutterWidthPx == normalized)
+                return;
+
+            // A gutter width is native layout data. Do not allow saving it back to a
+            // plain-text/export source where the setting would be silently lost.
+            PrepareForRichContent();
+            _gutterWidthPx = normalized;
+            ApplyGutterWidthToColumns();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(GutterWidthMenuHeader));
+            RefreshStatus();
+            StatusText = $"Set gutter width to {GutterWidthPx}px for this workspace.";
         }
     }
 
@@ -200,9 +240,36 @@ public sealed partial class MainViewModel : NotifyBase
         get => _linedPaperEnabled;
         set
         {
-            Set(ref _linedPaperEnabled, value);
+            if (_linedPaperEnabled == value)
+                return;
+
+            _linedPaperEnabled = value;
+            OnPropertyChanged();
+            NotifyPaperSelectionPropertiesChanged();
             RefreshStatus();
         }
+    }
+
+    public PaperStyle SelectedPaperStyle
+    {
+        get => _selectedPaperStyle;
+        set
+        {
+            var normalized = Enum.IsDefined(value) ? value : PaperStyle.Ruled;
+            if (_selectedPaperStyle == normalized)
+                return;
+
+            _selectedPaperStyle = normalized;
+            OnPropertyChanged();
+            NotifyPaperSelectionPropertiesChanged();
+            RefreshStatus();
+        }
+    }
+
+    public void UsePaperStyle(PaperStyle style)
+    {
+        SelectedPaperStyle = style;
+        LinedPaperEnabled = true;
     }
 
     public int ColumnCount
@@ -251,9 +318,17 @@ public sealed partial class MainViewModel : NotifyBase
             EditorFontSize = EditorFontSize,
             EditorFontStyle = _editorFontStyle,
             EditorFontWeight = _editorFontWeight,
-            UseDefaultFont = true
+            UseDefaultFont = true,
+            EditorTextColor = ColumnTextColorService.ThemeDefault
         };
+        c.SetSharedGutterWidth(GutterWidthPx);
         return c;
+    }
+
+    private void ApplyGutterWidthToColumns()
+    {
+        foreach (var column in Columns)
+            column.SetSharedGutterWidth(GutterWidthPx);
     }
 
     private void Column_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -261,11 +336,31 @@ public sealed partial class MainViewModel : NotifyBase
         if (sender is not ColumnViewModel column)
             return;
 
+        if (IsLossyDocumentKind && RequiresNativeLayout(e.PropertyName))
+            SetCurrentFileReference(null, SaveFileKind.Layout);
+
         if (!ReferenceEquals(column, GetActive()))
             return;
 
         if (e.PropertyName is nameof(ColumnViewModel.Title) or nameof(ColumnViewModel.ChecklistTotal) or nameof(ColumnViewModel.ChecklistDone))
             RefreshStatus();
+    }
+
+    private static bool RequiresNativeLayout(string? propertyName)
+    {
+        return propertyName is nameof(ColumnViewModel.Title)
+            or nameof(ColumnViewModel.WidthPx)
+            or nameof(ColumnViewModel.IsWidthLocked)
+            or nameof(ColumnViewModel.PastePreset)
+            or nameof(ColumnViewModel.LineMarkerMode)
+            or nameof(ColumnViewModel.GutterStateVersion)
+            or nameof(ColumnViewModel.Images)
+            or nameof(ColumnViewModel.EditorFontFamily)
+            or nameof(ColumnViewModel.EditorFontSize)
+            or nameof(ColumnViewModel.EditorFontStyle)
+            or nameof(ColumnViewModel.EditorFontWeight)
+            or nameof(ColumnViewModel.UseDefaultFont)
+            or nameof(ColumnViewModel.EditorTextColor);
     }
 
     private void ApplyEditorFontToColumns()
@@ -294,6 +389,15 @@ public sealed partial class MainViewModel : NotifyBase
         OnPropertyChanged(nameof(EditorFontSummary));
     }
 
+    private void NotifyPaperSelectionPropertiesChanged()
+    {
+        OnPropertyChanged(nameof(IsPaperOffSelected));
+        OnPropertyChanged(nameof(IsRuledPaperSelected));
+        OnPropertyChanged(nameof(IsSoftRuledPaperSelected));
+        OnPropertyChanged(nameof(IsStrongRuledPaperSelected));
+        OnPropertyChanged(nameof(PaperStyleHelpText));
+    }
+
     public void RefreshStatus()
     {
         var active = GetActive();
@@ -305,9 +409,17 @@ public sealed partial class MainViewModel : NotifyBase
             : string.Empty;
 
         var spellText = SpellCheckEnabled ? "On" : "Off";
-        var paperText = LinedPaperEnabled ? "On" : "Off";
+        var paperText = LinedPaperEnabled ? GetPaperStyleDisplayName(SelectedPaperStyle) : "Off";
         StatusText = $"Columns: {Columns.Count}    Selected: {active?.Title ?? "-"}    Line nums: {(ShowLineNumbers ? "On" : "Off")}    Wrap: {(WordWrap ? "On" : "Off")}    Font: {EditorFontFamily} {EditorFontStyleName} {EditorFontSize:0}    Theme: {ThemePreset}    Spell: {spellText}    Proofing: {EditorLanguageTag}    Paper: {paperText}{checkText}";
     }
+
+    private static string GetPaperStyleDisplayName(PaperStyle style) => style switch
+    {
+        PaperStyle.Ruled => "Ruled",
+        PaperStyle.SoftRuled => "Soft ruled",
+        PaperStyle.StrongRuled => "Strong ruled",
+        _ => "Ruled"
+    };
 
     public ColumnViewModel? GetActive()
     {

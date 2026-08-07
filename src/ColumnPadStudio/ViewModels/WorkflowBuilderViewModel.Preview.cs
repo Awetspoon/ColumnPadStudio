@@ -90,6 +90,7 @@ public sealed partial class WorkflowBuilderViewModel
         }
 
         OnPropertyChanged(nameof(CanCreateLink));
+        ValidateConnectionDraftNodes();
         NotifyDiagramCanvasSizeChanged();
         RefreshLinkPreviews();
         NotifyWorkflowDirtyStateChanged();
@@ -109,6 +110,7 @@ public sealed partial class WorkflowBuilderViewModel
                 item.PropertyChanged += WorkflowLink_PropertyChanged;
         }
 
+        OnPropertyChanged(nameof(CanCreateLink));
         RefreshLinkPreviews();
         NotifyWorkflowDirtyStateChanged();
     }
@@ -135,7 +137,10 @@ public sealed partial class WorkflowBuilderViewModel
             NotifyWorkflowDirtyStateChanged();
 
         if (e.PropertyName is nameof(WorkflowDiagramLink.FromNodeId) or nameof(WorkflowDiagramLink.ToNodeId) or nameof(WorkflowDiagramLink.Label))
+        {
+            OnPropertyChanged(nameof(CanCreateLink));
             RefreshLinkPreviews();
+        }
     }
 
     private void Workflow_PropertyChanged(object? sender, PropertyChangedEventArgs e)

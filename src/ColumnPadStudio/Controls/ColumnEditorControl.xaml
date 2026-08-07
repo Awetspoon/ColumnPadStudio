@@ -2,10 +2,20 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="clr-namespace:ColumnPadStudio.Controls"
-             MinWidth="220"
+             xmlns:domain="clr-namespace:ColumnPadStudio.Domain.Workspaces;assembly=ColumnPadStudio.Domain"
+             MinWidth="{x:Static domain:WorkspaceConstraints.MinimumColumnWidth}"
              Foreground="{DynamicResource ControlForegroundBrush}"
              UseLayoutRounding="True"
              SnapsToDevicePixels="True">
+    <UserControl.Resources>
+        <Style x:Key="MenuColorSwatchStyle" TargetType="Border">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Height" Value="14"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="SnapsToDevicePixels" Value="True"/>
+        </Style>
+    </UserControl.Resources>
     <Grid>
         <Border Background="{DynamicResource EditorBackgroundBrush}"
                 SnapsToDevicePixels="True">
@@ -19,6 +29,7 @@
             <Border x:Name="HeaderGrip"
                     DockPanel.Dock="Top"
                     Padding="6,4"
+                    ContextMenuOpening="HeaderGrip_ContextMenuOpening"
                     SnapsToDevicePixels="True">
                 <Border.Style>
                     <Style TargetType="Border">
@@ -33,42 +44,8 @@
                     </Style>
                 </Border.Style>
                 <Border.ContextMenu>
-                    <ContextMenu Opened="ColumnContextMenu_Opened"
-                                 Placement="Bottom">
+                    <ContextMenu Placement="Bottom">
                         <MenuItem Header="Rename Column" Click="ColumnMenuRename_Click"/>
-                        <MenuItem Header="Delete Column" Click="ColumnMenuDelete_Click"/>
-                        <MenuItem Header="Swap with Column on Left"
-                                  Click="ColumnMenuMoveLeft_Click"
-                                  InputGestureText="Alt+Shift+Left"
-                                  IsEnabled="{Binding PlacementTarget.DataContext.CanMoveLeft, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                        <MenuItem Header="Swap with Column on Right"
-                                  Click="ColumnMenuMoveRight_Click"
-                                  InputGestureText="Alt+Shift+Right"
-                                  IsEnabled="{Binding PlacementTarget.DataContext.CanMoveRight, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                        <Separator/>
-                        <MenuItem Header="Reset This Column Size" Click="ColumnMenuResetWidth_Click"/>
-                        <MenuItem Header="Resize This Column..." Click="ColumnMenuResize_Click"/>
-                        <MenuItem Header="Insert Picture..." Click="InsertPicture_Click"/>
-                        <MenuItem x:Name="ColumnPicturesMenuItem" Header="Pictures"/>
-                        <MenuItem Header="{Binding PlacementTarget.DataContext.WidthLockActionLabel, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  ToolTip="{Binding PlacementTarget.DataContext.WidthLockActionToolTip, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
-                                  Click="ColumnMenuToggleWidthLock_Click"/>
-                        <Separator/>
-                        <MenuItem Header="Column Font Settings">
-                            <MenuItem Header="Set Font Family..." Click="ColumnFontSetFamily_Click"/>
-                            <MenuItem Header="Increase Font Size" Click="ColumnFontIncrease_Click"/>
-                            <MenuItem Header="Decrease Font Size" Click="ColumnFontDecrease_Click"/>
-                            <MenuItem x:Name="ColumnFontBoldMenuItem"
-                                      Header="Bold"
-                                      IsCheckable="True"
-                                      Click="ColumnFontBold_Click"/>
-                            <MenuItem x:Name="ColumnFontItalicMenuItem"
-                                      Header="Italic"
-                                      IsCheckable="True"
-                                      Click="ColumnFontItalic_Click"/>
-                            <Separator/>
-                            <MenuItem Header="Use Workspace Font" Click="ColumnFontReset_Click"/>
-                        </MenuItem>
                     </ContextMenu>
                 </Border.ContextMenu>
                 <Grid>
@@ -87,29 +64,141 @@
                                    Foreground="{DynamicResource LineNumberForegroundBrush}"/>
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
-                        <StackPanel.Style>
-                            <Style TargetType="StackPanel">
-                                <Setter Property="Visibility" Value="Visible"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsStandaloneDocument}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </StackPanel.Style>
-                        <Button Style="{StaticResource CompactButtonStyle}"
-                                Margin="0,0,4,0"
-                                Click="ColumnMenuMoveLeft_Click"
-                                Content="Swap Left"
-                                ToolTip="Swap this column with the column on the left."
-                                IsEnabled="{Binding CanMoveLeft}"/>
-                        <Button Style="{StaticResource CompactButtonStyle}"
-                                Click="ColumnMenuMoveRight_Click"
-                                Content="Swap Right"
-                                ToolTip="Swap this column with the column on the right."
-                                IsEnabled="{Binding CanMoveRight}"/>
-                    </StackPanel>
+                    <Button x:Name="ColumnActionsButton"
+                            Grid.Column="1"
+                            Style="{StaticResource CompactButtonStyle}"
+                            AutomationProperties.Name="Column actions"
+                            Content="Actions ▾"
+                            ToolTip="Actions for this column. Right-click the header to rename it."
+                            Click="ColumnActionsButton_Click">
+                        <Button.ContextMenu>
+                            <ContextMenu Opened="ColumnContextMenu_Opened"
+                                         Placement="Bottom">
+                                <MenuItem Header="Rename Column" Click="ColumnMenuRename_Click"/>
+                                <MenuItem Header="Delete Column" Click="ColumnMenuDelete_Click"/>
+                                <MenuItem Header="Swap with Column on Left"
+                                          Click="ColumnMenuMoveLeft_Click"
+                                          InputGestureText="Alt+Shift+Left"
+                                          IsEnabled="{Binding PlacementTarget.DataContext.CanMoveLeft, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="Swap with Column on Right"
+                                          Click="ColumnMenuMoveRight_Click"
+                                          InputGestureText="Alt+Shift+Right"
+                                          IsEnabled="{Binding PlacementTarget.DataContext.CanMoveRight, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <Separator/>
+                                <MenuItem Header="Reset This Column to Default Width"
+                                          IsEnabled="{Binding PlacementTarget.DataContext.IsWidthManagementEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          Click="ColumnMenuResetWidth_Click"/>
+                                <MenuItem Header="Resize This Column..."
+                                          IsEnabled="{Binding PlacementTarget.DataContext.IsWidthManagementEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          Click="ColumnMenuResize_Click"/>
+                                <MenuItem Header="Insert Picture..." Click="InsertPicture_Click"/>
+                                <MenuItem x:Name="ColumnPicturesMenuItem" Header="Pictures"/>
+                                <MenuItem Header="{Binding PlacementTarget.DataContext.WidthLockActionLabel, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          ToolTip="{Binding PlacementTarget.DataContext.WidthLockActionToolTip, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          IsEnabled="{Binding PlacementTarget.DataContext.IsWidthManagementEnabled, RelativeSource={RelativeSource AncestorType=ContextMenu}}"
+                                          Click="ColumnMenuToggleWidthLock_Click"/>
+                                <Separator/>
+                                <MenuItem Header="Column Font Settings">
+                                    <MenuItem Header="Set Font Family..." Click="ColumnFontSetFamily_Click"/>
+                                    <MenuItem Header="Increase Font Size" Click="ColumnFontIncrease_Click"/>
+                                    <MenuItem Header="Decrease Font Size" Click="ColumnFontDecrease_Click"/>
+                                    <MenuItem x:Name="ColumnFontBoldMenuItem"
+                                              Header="Bold"
+                                              IsCheckable="True"
+                                              Click="ColumnFontBold_Click"/>
+                                    <MenuItem x:Name="ColumnFontItalicMenuItem"
+                                              Header="Italic"
+                                              IsCheckable="True"
+                                              Click="ColumnFontItalic_Click"/>
+                                    <MenuItem x:Name="ColumnTextColorMenuItem" Header="Text Colour">
+                                        <MenuItem Tag="Theme"
+                                                  IsCheckable="True"
+                                                  Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorForegroundBrush}"/>
+                                                    <TextBlock Text="Theme Default"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem Tag="Red" IsCheckable="True" Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorTextRedBrush}"/>
+                                                    <TextBlock Text="Red"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <MenuItem Tag="Orange" IsCheckable="True" Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorTextOrangeBrush}"/>
+                                                    <TextBlock Text="Orange"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <MenuItem Tag="Green" IsCheckable="True" Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorTextGreenBrush}"/>
+                                                    <TextBlock Text="Green"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <MenuItem Tag="Teal" IsCheckable="True" Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorTextTealBrush}"/>
+                                                    <TextBlock Text="Teal"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <MenuItem Tag="Blue" IsCheckable="True" Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorTextBlueBrush}"/>
+                                                    <TextBlock Text="Blue"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <MenuItem Tag="Purple" IsCheckable="True" Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorTextPurpleBrush}"/>
+                                                    <TextBlock Text="Purple"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <MenuItem Tag="Grey" IsCheckable="True" Click="ColumnTextColorPreset_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border Margin="0,0,8,0" Style="{StaticResource MenuColorSwatchStyle}" Background="{DynamicResource EditorTextGreyBrush}"/>
+                                                    <TextBlock Text="Grey"/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                        <Separator/>
+                                        <MenuItem x:Name="ColumnTextColorCustomMenuItem"
+                                                  IsCheckable="True"
+                                                  Click="ColumnTextColorCustom_Click">
+                                            <MenuItem.Header>
+                                                <StackPanel Orientation="Horizontal">
+                                                    <Border x:Name="ColumnTextColorCustomSwatch"
+                                                            Margin="0,0,8,0"
+                                                            Style="{StaticResource MenuColorSwatchStyle}"
+                                                            Background="Transparent"/>
+                                                    <TextBlock x:Name="ColumnTextColorCustomLabel" Text="Custom..."/>
+                                                </StackPanel>
+                                            </MenuItem.Header>
+                                        </MenuItem>
+                                    </MenuItem>
+                                    <Separator/>
+                                    <MenuItem Header="Use Workspace Font" Click="ColumnFontReset_Click"/>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
                 </Grid>
             </Border>
 
@@ -125,25 +214,26 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
+                <controls:PaperBackground x:Name="LineNumberPaperBackground"
+                                          Grid.Column="0"
+                                          BaseBackground="{DynamicResource LineNumberBackgroundBrush}"
+                                          PatternBrush="{DynamicResource PaperPatternBrush}"
+                                          IsPaperEnabled="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          PaperStyle="{Binding DataContext.ActiveVm.SelectedPaperStyle, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          LineHeight="{Binding EditorLineHeight}"
+                                          IsHitTestVisible="False"/>
+
                 <Border x:Name="LineNumberGutter"
                         Grid.Column="0"
+                        Background="Transparent"
                         BorderBrush="{DynamicResource ControlBorderBrush}"
                         BorderThickness="0,0,1,0"
+                        Panel.ZIndex="1"
                         SnapsToDevicePixels="True"
                         ClipToBounds="True"
                         Visibility="{Binding ShowLineNumbersVisibility}"
                         PreviewMouseLeftButtonDown="LineNumbers_PreviewMouseLeftButtonDown"
                         PreviewMouseRightButtonDown="LineNumbers_PreviewMouseRightButtonDown">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="{DynamicResource LineNumberBackgroundBrush}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource EditorLinedPaperBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
                     <Border.ContextMenu>
                         <ContextMenu Opened="LineNumbersContextMenu_Opened">
                             <MenuItem x:Name="LineMarkerNumbersMenuItem" Header="Numbers" IsCheckable="True" Click="LineMarkerNumbers_Click"/>
@@ -171,20 +261,15 @@
                     </TextBlock>
                 </Border>
 
-                <Border Grid.Column="1"
-                        Panel.ZIndex="0"
-                        Background="{DynamicResource EditorBackgroundBrush}">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="Background" Value="{DynamicResource EditorBackgroundBrush}"/>
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}" Value="True">
-                                    <Setter Property="Background" Value="{DynamicResource EditorLinedPaperBrush}"/>
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                </Border>
+                <controls:PaperBackground x:Name="EditorPaperBackground"
+                                          Grid.Column="1"
+                                          BaseBackground="{DynamicResource EditorBackgroundBrush}"
+                                          PatternBrush="{DynamicResource PaperPatternBrush}"
+                                          IsPaperEnabled="{Binding DataContext.ActiveVm.LinedPaperEnabled, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          PaperStyle="{Binding DataContext.ActiveVm.SelectedPaperStyle, RelativeSource={RelativeSource AncestorType=Window}}"
+                                          LineHeight="{Binding EditorLineHeight}"
+                                          IsHitTestVisible="False"
+                                          Panel.ZIndex="0"/>
 
                 <ItemsControl Grid.Column="1"
                               Panel.ZIndex="1"
@@ -242,12 +327,6 @@
                          FontSize="{Binding EditorFontSize}"
                          FontStyle="{Binding EditorFontStyle}"
                          FontWeight="{Binding EditorFontWeight}"
-                         Foreground="{DynamicResource EditorForegroundBrush}"
-                         SelectionBrush="{DynamicResource EditorSelectionBrush}"
-                         SelectionTextBrush="{DynamicResource EditorSelectionTextBrush}"
-                         SelectionOpacity="1"
-                         IsInactiveSelectionHighlightEnabled="False"
-                         CaretBrush="{DynamicResource EditorForegroundBrush}"
                          TextWrapping="{Binding TextWrappingMode}"
                          VerticalContentAlignment="Top"
                          TextBlock.LineHeight="{Binding EditorLineHeight}"
@@ -270,6 +349,40 @@
                     <TextBox.Style>
                         <Style TargetType="TextBox" BasedOn="{StaticResource EditorTextBoxStyle}">
                             <Setter Property="Background" Value="Transparent"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding EditorTextColor}" Value="Red">
+                                    <Setter Property="Foreground" Value="{DynamicResource EditorTextRedBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{DynamicResource EditorTextRedBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EditorTextColor}" Value="Orange">
+                                    <Setter Property="Foreground" Value="{DynamicResource EditorTextOrangeBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{DynamicResource EditorTextOrangeBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EditorTextColor}" Value="Green">
+                                    <Setter Property="Foreground" Value="{DynamicResource EditorTextGreenBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{DynamicResource EditorTextGreenBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EditorTextColor}" Value="Teal">
+                                    <Setter Property="Foreground" Value="{DynamicResource EditorTextTealBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{DynamicResource EditorTextTealBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EditorTextColor}" Value="Blue">
+                                    <Setter Property="Foreground" Value="{DynamicResource EditorTextBlueBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{DynamicResource EditorTextBlueBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EditorTextColor}" Value="Purple">
+                                    <Setter Property="Foreground" Value="{DynamicResource EditorTextPurpleBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{DynamicResource EditorTextPurpleBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding EditorTextColor}" Value="Grey">
+                                    <Setter Property="Foreground" Value="{DynamicResource EditorTextGreyBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{DynamicResource EditorTextGreyBrush}"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding HasCustomEditorTextColor}" Value="True">
+                                    <Setter Property="Foreground" Value="{Binding CustomEditorTextColorBrush}"/>
+                                    <Setter Property="CaretBrush" Value="{Binding CustomEditorTextColorBrush}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
                         </Style>
                     </TextBox.Style>
                     <TextBox.ContextMenu>
@@ -299,8 +412,8 @@
                             <Separator/>
                             <MenuItem Header="Paste Text As" Tag="PastePresetMenu">
                                 <MenuItem Header="Plain Text" Tag="None" IsCheckable="True" Click="PastePresetNone_Click"/>
-                                <MenuItem Header="Markdown Bullets" Tag="Bullets" IsCheckable="True" Click="PastePresetBullets_Click"/>
-                                <MenuItem Header="Markdown Checklist" Tag="Checklist" IsCheckable="True" Click="PastePresetChecklist_Click"/>
+                                <MenuItem Header="Dash Bullets" Tag="Bullets" IsCheckable="True" Click="PastePresetBullets_Click"/>
+                                <MenuItem Header="Dash Checklist" Tag="Checklist" IsCheckable="True" Click="PastePresetChecklist_Click"/>
                             </MenuItem>
                             <Separator/>
                             <MenuItem Header="Gutter: Bullets" Click="ToggleBullets_Click"/>
@@ -431,6 +544,10 @@
                             <Setter Property="IsEnabled" Value="False"/>
                             <Setter Property="Opacity" Value="0.35"/>
                             <Setter Property="Cursor" Value="Arrow"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsWidthManagementEnabled}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Setter Property="IsEnabled" Value="False"/>
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>

@@ -1,4 +1,6 @@
 using System.IO;
+using System.Security.Cryptography;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
 namespace ColumnPadStudio.Services;
@@ -8,10 +10,22 @@ public sealed record ColumnImageImport(
     string OriginalFileName,
     double DisplayWidth,
     int PixelWidth,
+    int PixelHeight,
+    string AssetId,
+    byte[] Content);
+
+public sealed record ColumnImageDisplay(
+    ImageSource Source,
+    int PixelWidth,
     int PixelHeight);
 
 public static class ColumnImageFileService
 {
+    public const int MaxImageFileBytes = 25 * 1024 * 1024;
+    public const long MaxImagePixelCount = 80_000_000;
+    public const int MaxImageDimension = 20_000;
+    private const int MaxDisplayDecodeDimension = 2000;
+
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".png",
@@ -39,71 +53,114 @@ public static class ColumnImageFileService
         if (!SupportedExtensions.Contains(extension))
             throw new NotSupportedException("ColumnPad supports PNG, JPG, BMP, GIF, WEBP, and TIFF images.");
 
-        var (pixelWidth, pixelHeight) = ReadPixelSize(sourcePath);
+        var fileLength = new FileInfo(sourcePath).Length;
+        if (fileLength <= 0 || fileLength > MaxImageFileBytes)
+            throw new InvalidDataException($"Pictures must be between 1 byte and {MaxImageFileBytes / (1024 * 1024)} MB.");
 
-        Directory.CreateDirectory(AppStoragePaths.ImagesDirectory);
+        var content = File.ReadAllBytes(sourcePath);
+        var (pixelWidth, pixelHeight) = ReadPixelSize(content);
+        ValidateDimensions(pixelWidth, pixelHeight);
 
         var originalFileName = Path.GetFileName(sourcePath);
-        var safeBaseName = SanitizeFileName(Path.GetFileNameWithoutExtension(sourcePath));
-        var storedFileName = $"{safeBaseName}-{Guid.NewGuid():N}{extension.ToLowerInvariant()}";
-        var storedPath = Path.Combine(AppStoragePaths.ImagesDirectory, storedFileName);
+        var assetId = ComputeAssetId(content);
+        var displayWidth = Math.Clamp(pixelWidth > 0 ? pixelWidth : 320.0, 160.0, 900.0);
+
+        return new ColumnImageImport(string.Empty, originalFileName, displayWidth, pixelWidth, pixelHeight, assetId, content);
+    }
+
+    public static ColumnImageDisplay? LoadDisplaySource(byte[]? content, string? fallbackPath)
+    {
+        var resolvedContent = content is { Length: > 0 and <= MaxImageFileBytes }
+            ? content
+            : TryReadImageContent(fallbackPath);
+        if (resolvedContent is null)
+            return null;
 
         try
         {
-            File.Copy(sourcePath, storedPath, overwrite: false);
+            var (pixelWidth, pixelHeight) = ReadPixelSize(resolvedContent);
+            ValidateDimensions(pixelWidth, pixelHeight);
+
+            using var stream = new MemoryStream(resolvedContent, writable: false);
+            var image = new BitmapImage();
+            image.BeginInit();
+            image.CacheOption = BitmapCacheOption.OnLoad;
+            image.CreateOptions = BitmapCreateOptions.PreservePixelFormat;
+            if (pixelWidth >= pixelHeight && pixelWidth > MaxDisplayDecodeDimension)
+                image.DecodePixelWidth = MaxDisplayDecodeDimension;
+            else if (pixelHeight > MaxDisplayDecodeDimension)
+                image.DecodePixelHeight = MaxDisplayDecodeDimension;
+            image.StreamSource = stream;
+            image.EndInit();
+            image.Freeze();
+            return new ColumnImageDisplay(image, pixelWidth, pixelHeight);
         }
-        catch
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException
+            or FormatException
+            or InvalidOperationException
+            or InvalidDataException)
         {
-            TryDeleteIncompleteCopy(storedPath);
-            throw;
+            return null;
         }
-
-        var displayWidth = Math.Clamp(pixelWidth > 0 ? pixelWidth : 320.0, 160.0, 900.0);
-
-        return new ColumnImageImport(storedPath, originalFileName, displayWidth, pixelWidth, pixelHeight);
     }
 
-    private static (int Width, int Height) ReadPixelSize(string imagePath)
+    public static byte[]? TryReadImageContent(string? filePath)
+    {
+        if (string.IsNullOrWhiteSpace(filePath) || !File.Exists(filePath))
+            return null;
+
+        try
+        {
+            var fileLength = new FileInfo(filePath).Length;
+            return fileLength is > 0 and <= MaxImageFileBytes
+                ? File.ReadAllBytes(filePath)
+                : null;
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static (int Width, int Height) ReadPixelSize(byte[] content)
     {
         try
         {
-            using var stream = File.OpenRead(imagePath);
+            using var stream = new MemoryStream(content, writable: false);
             var decoder = BitmapDecoder.Create(
                 stream,
-                BitmapCreateOptions.PreservePixelFormat,
-                BitmapCacheOption.OnLoad);
+                BitmapCreateOptions.PreservePixelFormat | BitmapCreateOptions.DelayCreation,
+                BitmapCacheOption.None);
 
             var frame = decoder.Frames.FirstOrDefault();
-            return frame is null
-                ? (0, 0)
-                : (frame.PixelWidth, frame.PixelHeight);
+            return frame is null ? (0, 0) : (frame.PixelWidth, frame.PixelHeight);
         }
-        catch (Exception ex) when (ex is IOException or NotSupportedException)
+        catch (Exception ex) when (ex is IOException
+            or NotSupportedException
+            or FormatException
+            or InvalidOperationException)
         {
             throw new InvalidDataException("The selected file could not be read as an image.", ex);
         }
     }
 
-    private static string SanitizeFileName(string? value)
+    private static void ValidateDimensions(int pixelWidth, int pixelHeight)
     {
-        var name = string.IsNullOrWhiteSpace(value) ? "image" : value.Trim();
-        var invalidChars = Path.GetInvalidFileNameChars();
-        var sanitized = new string(name.Select(ch => invalidChars.Contains(ch) ? '-' : ch).ToArray()).Trim('-', ' ');
-        return string.IsNullOrWhiteSpace(sanitized) ? "image" : sanitized;
+        if (pixelWidth <= 0 || pixelHeight <= 0 ||
+            pixelWidth > MaxImageDimension ||
+            pixelHeight > MaxImageDimension ||
+            (long)pixelWidth * pixelHeight > MaxImagePixelCount)
+        {
+            throw new InvalidDataException(
+                $"Picture dimensions must be no larger than {MaxImageDimension:N0} pixels per side or {MaxImagePixelCount:N0} pixels in total.");
+        }
     }
 
-    private static void TryDeleteIncompleteCopy(string filePath)
+    private static string ComputeAssetId(byte[] content)
     {
-        try
-        {
-            if (File.Exists(filePath))
-                File.Delete(filePath);
-        }
-        catch (IOException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
+        return Convert.ToHexString(SHA256.HashData(content)).ToLowerInvariant();
     }
+
 }

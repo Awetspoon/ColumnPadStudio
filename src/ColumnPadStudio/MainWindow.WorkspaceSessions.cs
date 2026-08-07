@@ -11,6 +11,9 @@ public partial class MainWindow
 {
     private bool ShouldSaveWorkspaceSession()
     {
+        if (Workspaces.Any(workspace => workspace.HasSessionChanges))
+            return true;
+
         return WorkspaceSessionFileService.ShouldSaveWorkspaceSession(BuildWorkspaceSessionSaveCandidates());
     }
 
@@ -53,7 +56,10 @@ public partial class MainWindow
         AtomicFileWriter.WriteText(path, json, Encoding.UTF8);
 
         foreach (var workspace in Workspaces)
+        {
             workspace.Vm.SetExternalFileReference(path, SaveFileKind.Layout, requiresSaveAs: false, markClean: true);
+            workspace.MarkSessionClean();
+        }
 
         ActiveVm.StatusText = $"Saved: {Path.GetFileName(path)}";
     }
@@ -84,6 +90,7 @@ public partial class MainWindow
             var name = string.IsNullOrWhiteSpace(entry.Name) ? NextWorkspaceName() : entry.Name.Trim();
             var workspaceSession = CreateWorkspace(name, vm);
             workspaceSession.LastMultiColumnCount = Math.Max(2, entry.LastMultiColumnCount);
+            workspaceSession.MarkSessionClean();
         }
 
         var activeIndex = Math.Clamp(session.ActiveWorkspaceIndex, 0, Workspaces.Count - 1);

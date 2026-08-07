@@ -86,6 +86,12 @@ public sealed partial class MainViewModel
 
     public void AddColumn()
     {
+        if (Columns.Count >= WorkspaceConstraints.MaxColumns)
+        {
+            StatusText = $"A workspace can contain up to {WorkspaceConstraints.MaxColumns} columns.";
+            return;
+        }
+
         PromoteRawDocumentToLayoutIfNeeded(Columns.Count + 1);
         Columns.Add(MakeColumn($"Column {Columns.Count + 1}"));
         ActiveColumnId = Columns.Last().Id;
@@ -138,24 +144,32 @@ public sealed partial class MainViewModel
         return true;
     }
 
-    public void ResetActiveColumnWidth()
+    public void ResetActiveColumnWidth(int defaultColumnWidthPx)
     {
         var active = GetActive();
         if (active is null)
             return;
 
+        var resolvedDefaultWidth = WorkspaceConstraints.ClampColumnWidth(defaultColumnWidthPx);
         active.WidthPx = null;
+        active.IsWidthLocked = false;
+        NotifyActiveColumnActionPropertiesChanged();
         RequestRebuildColumns?.Invoke(this, EventArgs.Empty);
-        StatusText = "Selected column width reset.";
+        StatusText = $"Reset {active.Title} to the default {resolvedDefaultWidth}px width.";
     }
 
-    public void ResetAllColumnWidths()
+    public void ResetAllColumnWidths(int defaultColumnWidthPx)
     {
+        var resolvedDefaultWidth = WorkspaceConstraints.ClampColumnWidth(defaultColumnWidthPx);
         foreach (var c in Columns)
+        {
             c.WidthPx = null;
+            c.IsWidthLocked = false;
+        }
 
+        NotifyActiveColumnActionPropertiesChanged();
         RequestRebuildColumns?.Invoke(this, EventArgs.Empty);
-        StatusText = "All column widths reset.";
+        StatusText = $"Reset all columns to the default {resolvedDefaultWidth}px width.";
     }
 
     public void SetActiveColumnWidth(int widthPx)
@@ -164,7 +178,7 @@ public sealed partial class MainViewModel
         if (active is null)
             return;
 
-        active.WidthPx = Math.Clamp(widthPx, 120, 5000);
+        active.WidthPx = WorkspaceConstraints.ClampColumnWidth(widthPx);
         RequestRebuildColumns?.Invoke(this, EventArgs.Empty);
         StatusText = $"Set {active.Title} width to {active.WidthPx}px.";
     }
@@ -243,6 +257,12 @@ public sealed partial class MainViewModel
         var a = GetActive();
         if (a is null) return;
 
+        if (Columns.Count >= WorkspaceConstraints.MaxColumns)
+        {
+            StatusText = $"A workspace can contain up to {WorkspaceConstraints.MaxColumns} columns.";
+            return;
+        }
+
         PromoteRawDocumentToLayoutIfNeeded(Columns.Count + 1);
 
         var copy = MakeColumn($"{a.Title} (copy)");
@@ -260,6 +280,7 @@ public sealed partial class MainViewModel
         copy.EditorFontStyle = a.EditorFontStyle;
         copy.EditorFontWeight = a.EditorFontWeight;
         copy.UseDefaultFont = a.UseDefaultFont;
+        copy.EditorTextColor = a.EditorTextColor;
 
         Columns.Add(copy);
         ActiveColumnId = copy.Id;

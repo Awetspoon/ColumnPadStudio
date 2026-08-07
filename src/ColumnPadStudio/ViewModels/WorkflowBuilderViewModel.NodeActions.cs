@@ -4,25 +4,32 @@ namespace ColumnPadStudio.ViewModels;
 
 public sealed partial class WorkflowBuilderViewModel
 {
+    private const double NodePlacementGap = 32;
+
     public void AddNode(WorkflowNodeKind kind)
     {
         if (SelectedWorkflow is null)
             return;
 
-        var nodeIndex = SelectedWorkflow.Nodes.Count + 1;
         var reference = SelectedNode;
 
         var node = new WorkflowDiagramNode
         {
-            Id = $"node-{nodeIndex}",
+            Id = Guid.NewGuid().ToString("N"),
             Kind = kind,
-            Title = $"{WorkflowDiagramNode.DefaultTitleForKind(kind)} {nodeIndex}",
+            Title = CreateUniqueNodeTitle(
+                SelectedWorkflow,
+                WorkflowDiagramNode.DefaultTitleForKind(kind)),
             Goal = DefaultGoalForKind(kind),
             Instructions = DefaultInstructionsForKind(kind),
-            ExpectedOutput = DefaultExpectedOutputForKind(kind),
-            X = reference?.X ?? 320,
-            Y = (reference?.Y ?? 120) + 110
+            ExpectedOutput = DefaultExpectedOutputForKind(kind)
         };
+
+        (node.X, node.Y) = FindAvailableNodePosition(
+            SelectedWorkflow,
+            node.Width,
+            node.Height,
+            reference);
 
         SelectedWorkflow.Nodes.Add(node);
         SelectedNode = node;
@@ -39,7 +46,7 @@ public sealed partial class WorkflowBuilderViewModel
         {
             Id = Guid.NewGuid().ToString("N"),
             Kind = SelectedNode.Kind,
-            Title = $"{SelectedNode.Title} Copy",
+            Title = CreateUniqueCopyTitle(SelectedWorkflow, SelectedNode.Title),
             Description = SelectedNode.Description,
             Goal = SelectedNode.Goal,
             Instructions = SelectedNode.Instructions,
@@ -50,12 +57,16 @@ public sealed partial class WorkflowBuilderViewModel
                     Text = item.Text,
                     IsDone = item.IsDone
                 })),
-            X = SelectedNode.X + 36,
-            Y = SelectedNode.Y + 36,
             Width = SelectedNode.Width,
             Height = SelectedNode.Height,
             Color = SelectedNode.Color
         };
+
+        (clone.X, clone.Y) = FindAvailableNodePosition(
+            SelectedWorkflow,
+            clone.Width,
+            clone.Height,
+            SelectedNode);
 
         SelectedWorkflow.Nodes.Add(clone);
         SelectedNode = clone;
@@ -128,35 +139,16 @@ public sealed partial class WorkflowBuilderViewModel
         {
             node.X = 80;
             node.Y = y;
-            y += 110;
+            y += node.Height + NodePlacementGap;
         }
 
         RefreshLinkPreviews();
-        StatusText = "Auto-layout applied.";
+        StatusText = "Positions tidied.";
         return true;
     }
 
     public bool AddLink()
-    {
-        if (SelectedWorkflow is null || SelectedWorkflow.Nodes.Count < 2)
-            return false;
-
-        var fromNode = SelectedNode ?? SelectedWorkflow.Nodes[0];
-        var toNode = SelectedWorkflow.Nodes.FirstOrDefault(node => !string.Equals(node.Id, fromNode.Id, StringComparison.Ordinal))
-                     ?? SelectedWorkflow.Nodes[0];
-
-        var link = new WorkflowDiagramLink
-        {
-            FromNodeId = fromNode.Id,
-            ToNodeId = toNode.Id
-        };
-
-        SelectedWorkflow.Links.Add(link);
-        SelectedLink = link;
-        RefreshLinkPreviews();
-        StatusText = "Connection added.";
-        return true;
-    }
+        => AddConnectionFromDraft();
 
     public bool RemoveSelectedLink()
     {
@@ -176,6 +168,82 @@ public sealed partial class WorkflowBuilderViewModel
         StatusText = "Connection removed.";
         return true;
     }
+
+    private static string CreateUniqueNodeTitle(WorkflowDefinition workflow, string baseTitle)
+    {
+        var existingTitles = workflow.Nodes
+            .Select(node => node.Title)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        if (!existingTitles.Contains(baseTitle))
+            return baseTitle;
+
+        for (var suffix = 2; ; suffix++)
+        {
+            var candidate = $"{baseTitle} {suffix}";
+            if (!existingTitles.Contains(candidate))
+                return candidate;
+        }
+    }
+
+    private static string CreateUniqueCopyTitle(WorkflowDefinition workflow, string sourceTitle)
+    {
+        const string copyMarker = " Copy";
+        var baseTitle = sourceTitle;
+        var markerIndex = sourceTitle.LastIndexOf(copyMarker, StringComparison.OrdinalIgnoreCase);
+
+        if (markerIndex > 0)
+        {
+            var suffix = sourceTitle[(markerIndex + copyMarker.Length)..];
+            if (suffix.Length == 0 ||
+                (suffix.StartsWith(' ') && int.TryParse(suffix.AsSpan(1), out var copyNumber) && copyNumber >= 2))
+            {
+                baseTitle = sourceTitle[..markerIndex];
+            }
+        }
+
+        return CreateUniqueNodeTitle(workflow, $"{baseTitle}{copyMarker}");
+    }
+
+    private static (double X, double Y) FindAvailableNodePosition(
+        WorkflowDefinition workflow,
+        double width,
+        double height,
+        WorkflowDiagramNode? reference)
+    {
+        var x = Math.Max(0, reference?.X ?? 80);
+        var y = Math.Max(0, reference is null
+            ? 80
+            : reference.Y + reference.Height + NodePlacementGap);
+
+        while (true)
+        {
+            var nextY = y;
+            foreach (var node in workflow.Nodes)
+            {
+                if (!NodeAreasConflict(x, y, width, height, node))
+                    continue;
+
+                nextY = Math.Max(nextY, node.Y + node.Height + NodePlacementGap);
+            }
+
+            if (nextY == y)
+                return (x, y);
+
+            y = nextY;
+        }
+    }
+
+    private static bool NodeAreasConflict(
+        double x,
+        double y,
+        double width,
+        double height,
+        WorkflowDiagramNode existing)
+        => x < existing.X + existing.Width + NodePlacementGap &&
+           x + width + NodePlacementGap > existing.X &&
+           y < existing.Y + existing.Height + NodePlacementGap &&
+           y + height + NodePlacementGap > existing.Y;
 
     private static string DefaultGoalForKind(WorkflowNodeKind kind)
         => kind switch

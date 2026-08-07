@@ -1,4 +1,5 @@
 using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Domain.Workspaces;
 using ColumnPadStudio.ViewModels;
 using ColumnPadStudio.Services;
 using ColumnPadStudio.Controls;
@@ -6,6 +7,8 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Net.Http;
 using System.Windows;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using ColumnPadStudio.Models;
@@ -15,17 +18,30 @@ using System.Windows.Threading;
 using ColumnPadStudio;
 using ColumnPadStudio.SmokeTests;
 
-var failures = new List<string>();
-var checks = 0;
+var tests = new SmokeTestContext();
 
-void Check(bool condition, string message)
-{
-    checks++;
-    if (!condition)
-        failures.Add(message);
-}
+void Check(bool condition, string message) => tests.Check(condition, message);
 
 var vm = new MainViewModel();
+var defaultWidthPreferences = new AppPreferences();
+
+Check(
+    !defaultWidthPreferences.FitColumnsToWindow
+        && defaultWidthPreferences.DefaultColumnWidthPx == AppPreferences.StandardColumnWidthPx
+        && defaultWidthPreferences.DefaultColumnWidthPx == 320,
+    "Column sizing should default to a fixed 320px strip, with Fit Columns to Window available only when selected.");
+
+Check(ColumnTextColorService.Normalize("blue") == ColumnTextColorService.Blue, "Text-colour presets should normalize case-insensitively.");
+Check(
+    ColumnTextColorService.TryNormalizeCustomHex("245a9a", out var normalizedTextColor)
+        && normalizedTextColor == "#245A9A",
+    "Custom text colours should normalize to a stable #RRGGBB value.");
+Check(
+    ColumnTextColorService.Normalize("not-a-colour") == ColumnTextColorService.ThemeDefault,
+    "Invalid text colours should fall back to the theme colour.");
+Check(
+    ColumnTextColorService.CreateCustomBrush("#245A9A")?.Color == Color.FromRgb(0x24, 0x5A, 0x9A),
+    "Custom text colours should create the expected editor brush.");
 
 Check(vm.ThemePreset == "Default Mode", "Default theme should be 'Default Mode'.");
 Check(vm.IsDefaultThemeSelected && !vm.IsLightThemeSelected && !vm.IsDarkThemeSelected, "Default theme menu state should match the default preset.");
@@ -36,79 +52,46 @@ Check(
     vm.EditorLanguages.Select(language => language.Tag).SequenceEqual(["en-US", "en-GB", "fr-FR", "de-DE", "es-ES", "it-IT", "pt-BR", "pt-PT", "nl-NL", "sv-SE", "da-DK", "nb-NO"]),
     "Proofing language list should keep the current supported app range.");
 Check(vm.Columns.Count == 3, "Default layout should start with 3 columns.");
+Check(vm.Columns.All(column => column.WidthPx is null), "New layouts should keep the normal display width implicit instead of saving redundant width values.");
+Check(
+    vm.GutterWidthPx == MainViewModel.MinimumGutterWidthPx
+        && vm.GutterWidthPx == MainViewModel.DefaultGutterWidthPx
+        && vm.Columns.All(column => column.LineNumberColumnWidth.IsAbsolute && Math.Abs(column.LineNumberColumnWidth.Value - MainViewModel.DefaultGutterWidthPx) < 0.001),
+    "New workspaces should start with the smallest shared gutter width.");
 Check(vm.StatusText.Contains("Selected:"), "Status text should identify the selected column.");
 Check(!vm.IsDirty, "New layout should start clean.");
+var paperSettingsVm = new MainViewModel();
+Check(paperSettingsVm.SelectedPaperStyle == PaperStyle.Ruled, "New workspaces should default to ruled paper.");
+Check(paperSettingsVm.IsPaperOffSelected, "Paper should start switched off.");
+Check(
+    Enum.GetValues<PaperStyle>().SequenceEqual([PaperStyle.Ruled, PaperStyle.SoftRuled, PaperStyle.StrongRuled]),
+    "Paper choices should be limited to aligned ruled-paper variants.");
+paperSettingsVm.UsePaperStyle(PaperStyle.SoftRuled);
+Check(paperSettingsVm.LinedPaperEnabled && paperSettingsVm.IsSoftRuledPaperSelected, "Choosing a ruled-paper variant should enable that style.");
+paperSettingsVm.SelectedPaperStyle = (PaperStyle)999;
+Check(paperSettingsVm.SelectedPaperStyle == PaperStyle.Ruled, "Unknown paper styles should fall back to ruled paper.");
+paperSettingsVm.LinedPaperEnabled = false;
+Check(paperSettingsVm.IsPaperOffSelected && !paperSettingsVm.IsRuledPaperSelected, "Switching paper off should clear the active style check.");
+vm.ActiveColumnId = vm.Columns[1].Id;
+Check(!vm.IsDirty, "Selecting another column should not mark otherwise unchanged content dirty.");
+vm.ActiveColumnId = vm.Columns[0].Id;
 vm.Columns[0].Title = "  Column\r\nOne\tName  ";
 Check(vm.Columns[0].Title == "Column One Name", "Column titles should be normalized to a clean single-line label.");
-var cleanedWorkspace = new WorkspaceSession("  Workspace\r\nAlpha\tDraft  ", vm);
+var cleanedWorkspace = new WorkspaceSession("  Workspace\r\nAlpha\tDraft  ", new MainViewModel());
 Check(cleanedWorkspace.Name == "Workspace Alpha Draft", "Workspace names should be normalized to a clean single-line label.");
+Check(!cleanedWorkspace.HasSessionChanges, "A newly created workspace should begin with clean session metadata.");
+cleanedWorkspace.Name = "Workspace Renamed";
+Check(cleanedWorkspace.HasSessionChanges && cleanedWorkspace.IsDirty, "Renaming a workspace should participate in the workspace dirty state.");
+cleanedWorkspace.MarkSessionClean();
+Check(!cleanedWorkspace.HasSessionChanges, "Saving a workspace session should establish a clean metadata state.");
+cleanedWorkspace.LastMultiColumnCount = 5;
+Check(cleanedWorkspace.HasSessionChanges, "Changing the remembered multi-column mode should mark session metadata dirty.");
 var cleanedWorkflow = new WorkflowDefinition { Name = "  Workflow\r\nAlpha  ", Category = "  Research\tPlan  " };
 Check(cleanedWorkflow.Name == "Workflow Alpha" && cleanedWorkflow.Category == "Research Plan", "Workflow names and categories should be normalized to clean single-line labels.");
 var cleanedWorkflowNode = new WorkflowDiagramNode { Kind = WorkflowNodeKind.Decision, Title = "  Choose\r\nPath  " };
 Check(cleanedWorkflowNode.Title == "Choose Path", "Workflow node titles should be normalized to clean single-line labels.");
 
-Exception? resourceLoadException = null;
-Thread resourceLoadThread = new(() =>
-{
-    try
-    {
-        _ = new Application();
-        var resources = new ResourceDictionary
-        {
-            Source = new Uri("pack://application:,,,/ColumnPadStudio;component/Resources/AppResources.xaml", UriKind.Absolute)
-        };
-
-        Check(resources.MergedDictionaries.Count == 3, "App resources should stay split into theme brushes, control styles, and menu styles.");
-        Check(resources["ControlPopupHighlightBrush"] is not null, "Theme brush resources should load from the app resource index.");
-        Check(resources[typeof(MenuItem)] is Style, "Shared menu item style should load from the app resource index.");
-        Check(resources["EmbeddedMenuPanelItemStyle"] is Style, "Embedded menu panel style should load from the app resource index.");
-        Check(resources[typeof(Button)] is Style, "Shared button style should load from the app resource index.");
-        Check(resources[typeof(TextBox)] is Style, "Shared textbox style should load from the app resource index.");
-
-        Application.Current.Resources.MergedDictionaries.Add(resources);
-
-        var styledButton = new Button { Content = "Template check" };
-        styledButton.Style = (Style)resources[typeof(Button)];
-        styledButton.ApplyTemplate();
-        Check(styledButton.Template is not null, "Shared button style should apply without missing resource errors.");
-
-        var styledTextBox = new TextBox { Text = "Template check" };
-        styledTextBox.Style = (Style)resources[typeof(TextBox)];
-        styledTextBox.ApplyTemplate();
-        Check(styledTextBox.Template is not null, "Shared textbox style should apply without missing resource errors.");
-
-        var workflowBuilderWindow = new WorkflowBuilderWindow();
-        workflowBuilderWindow.ApplyTemplate();
-        Check(workflowBuilderWindow.ViewModel is not null, "Workflow Builder window should initialize its view model.");
-        Check(workflowBuilderWindow.Owner is null, "Workflow Builder should stay independent from the main window so minimizing ColumnPad does not minimize it.");
-        Check(workflowBuilderWindow.ShowInTaskbar, "Workflow Builder should have its own taskbar entry.");
-        Check(workflowBuilderWindow.WindowStartupLocation == WindowStartupLocation.CenterScreen, "Workflow Builder should open as an independent window, not as an owned child.");
-        Check(workflowBuilderWindow.FindName("ExportWorkflowButton") is Button, "Workflow Builder should expose one grouped export action instead of separate export buttons.");
-        workflowBuilderWindow.Close();
-
-        var nestedMenu = new MenuItem { Header = "Column colour" };
-        nestedMenu.Style = (Style)resources[typeof(MenuItem)];
-        nestedMenu.Items.Add(new MenuItem { Header = "Blue" });
-        nestedMenu.Items.Add(new MenuItem { Header = "Green" });
-
-        var contextMenu = new ContextMenu();
-        contextMenu.Items.Add(nestedMenu);
-        contextMenu.ApplyTemplate();
-        nestedMenu.ApplyTemplate();
-        nestedMenu.IsSubmenuOpen = true;
-        contextMenu.Dispatcher.Invoke(() => { }, DispatcherPriority.ApplicationIdle);
-        Check(nestedMenu.Template is not null, "Nested context menu items should apply the shared app menu template.");
-        nestedMenu.IsSubmenuOpen = false;
-    }
-    catch (Exception ex)
-    {
-        resourceLoadException = ex;
-    }
-});
-resourceLoadThread.SetApartmentState(ApartmentState.STA);
-resourceLoadThread.Start();
-resourceLoadThread.Join();
-Check(resourceLoadException is null, $"App resource dictionaries should load without XAML errors: {resourceLoadException?.Message}");
+ThemeAndControlSmokeTests.Run(tests);
 
 vm.SetColumnCount(0);
 Check(vm.Columns.Count == 1, "SetColumnCount should clamp to a minimum of 1 column.");
@@ -140,6 +123,7 @@ Check(!vm.MoveActiveColumnLeft(), "MoveActiveColumnLeft should refuse to swap th
 Check(vm.StatusText.Contains("first column"), "MoveActiveColumnLeft should explain when the selected column is already first.");
 vm.Columns[0].LineMarkerMode = LineMarkerMode.Checklist;
 vm.Columns[0].SetCheckedChecklistLineIndexes([0]);
+vm.Columns[0].EditorTextColor = ColumnTextColorService.Blue;
 vm.Columns[0].Images.Add(new ColumnImageViewModel(
     "C:\\images\\diagram.png",
     "diagram.png",
@@ -156,6 +140,7 @@ Check(vm.Columns[^1].Images.Count == 1, "DuplicateActive should preserve duplica
 Check(Math.Abs(vm.Columns[^1].Images[0].Width - 420) < 0.001, "DuplicateActive should preserve duplicated image display width.");
 Check(Math.Abs(vm.Columns[^1].Images[0].Left - 18) < 0.001 && Math.Abs(vm.Columns[^1].Images[0].Top - 26) < 0.001, "DuplicateActive should preserve image position.");
 Check(vm.Columns[^1].Images[0].Layer == ColumnImageLayer.BehindText, "DuplicateActive should preserve image text layer.");
+Check(vm.Columns[^1].EditorTextColor == ColumnTextColorService.Blue, "DuplicateActive should preserve the column text colour.");
 
 vm.ThemePreset = "High Contrast";
 Check(vm.ThemePreset == "Dark Mode", "Legacy theme 'High Contrast' should normalize to 'Dark Mode'.");
@@ -174,14 +159,22 @@ vm.Columns[0].EditorFontSize = 17;
 vm.Columns[0].EditorFontStyle = FontStyles.Italic;
 vm.Columns[0].EditorFontWeight = FontWeights.Bold;
 vm.Columns[0].UseDefaultFont = false;
+vm.Columns[0].EditorTextColor = "#2A6F97";
 vm.SpellCheckEnabled = false;
 vm.EditorLanguageTag = "fr-FR";
 Check(vm.ProofingLanguageDisplayName.Contains("French", StringComparison.OrdinalIgnoreCase), "Proofing display name should describe the selected language.");
 Check(vm.StatusText.Contains("Proofing language:", StringComparison.Ordinal), "Changing proofing language should explain what changed.");
+vm.GutterWidthPx = 36;
+vm.UsePaperStyle(PaperStyle.StrongRuled);
 vm.ActiveColumnId = vm.Columns[1].Id;
 Check(vm.IsDirty, "Changing the layout should mark the workspace dirty.");
 
 var json = vm.ToLayoutJson();
+var savedLayoutRoot = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse saved layout JSON.");
+Check(savedLayoutRoot["FileType"]?.GetValue<string>() == "ColumnPadLayout", "Saved layouts should include an explicit ColumnPad file type.");
+Check(savedLayoutRoot["Version"]?.GetValue<int>() == 19, "Saved layouts should use the shared-gutter layout schema version.");
+Check(savedLayoutRoot["PaperStyle"]?.GetValue<string>() == "StrongRuled", "Saved layouts should store the selected ruled-paper style.");
+Check(savedLayoutRoot["GutterWidthPx"]?.GetValue<int>() == 36, "Saved layouts should store the shared gutter width once per workspace.");
 var loaded = new MainViewModel();
 loaded.LoadFromJson(json, "smoke");
 
@@ -202,11 +195,63 @@ Check(loaded.Columns[0].EditorFontFamily == "Consolas", "JSON round-trip should 
 Check(Math.Abs(loaded.Columns[0].EditorFontSize - 17) < 0.001, "JSON round-trip should preserve per-column font size.");
 Check(loaded.Columns[0].EditorFontStyle == FontStyles.Italic, "JSON round-trip should preserve per-column font style.");
 Check(loaded.Columns[0].EditorFontWeight == FontWeights.Bold, "JSON round-trip should preserve per-column font weight.");
+Check(loaded.Columns[0].EditorTextColor == "#2A6F97", "JSON round-trip should preserve a custom column text colour.");
+Check(loaded.Columns[0].HasCustomEditorTextColor, "A loaded custom text colour should restore its editor brush.");
 Check(loaded.ActiveColumnId == loaded.Columns[1].Id, "JSON round-trip should restore the active column.");
 Check(!loaded.SpellCheckEnabled, "JSON round-trip should preserve spellcheck setting.");
 Check(loaded.EditorLanguageTag == "fr-FR", "JSON round-trip should preserve editor language setting.");
+Check(loaded.LinedPaperEnabled && loaded.SelectedPaperStyle == PaperStyle.StrongRuled, "JSON round-trip should preserve the enabled ruled-paper style.");
+Check(loaded.GutterWidthPx == 36 && loaded.Columns.All(column => Math.Abs(column.LineNumberColumnWidth.Value - 36) < 0.001), "JSON round-trip should restore one shared gutter width for every column.");
 Check(loaded.GetActive()?.Title == vm.Columns[1].Title, "Restored active column should match the saved column.");
 Check(!loaded.IsDirty, "Loaded layout should start clean.");
+
+var legacyFontNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse legacy font layout.");
+legacyFontNode["Version"] = 13;
+legacyFontNode["EditorFontFamily"] = "Consolas";
+legacyFontNode["EditorFontStyle"] = "Bold Italic";
+var legacyFontColumns = legacyFontNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find legacy font columns.");
+var legacyFontFirstColumn = legacyFontColumns[0]?.AsObject() ?? throw new InvalidOperationException("Could not find the first legacy font column.");
+legacyFontFirstColumn.Remove("FontStyle");
+legacyFontFirstColumn.Remove("FontWeight");
+var legacyFontLoaded = new MainViewModel
+{
+    EditorFontFamily = "Consolas",
+    EditorFontStyleName = "Regular"
+};
+Check(legacyFontLoaded.LoadFromJson(legacyFontNode.ToJsonString(), "legacy-font"), "Older layouts without per-column font faces should still load.");
+Check(legacyFontLoaded.EditorFontStyleName == "Bold Italic", "A loaded layout should apply its saved global font face.");
+Check(
+    legacyFontLoaded.Columns[0].EditorFontStyle == FontStyles.Italic
+        && legacyFontLoaded.Columns[0].EditorFontWeight == FontWeights.Bold,
+    "A column without saved font-face fields should inherit the global font style and weight from that layout, not the pre-load app state.");
+
+var undefinedEnumNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse undefined-enum layout.");
+var undefinedEnumColumns = undefinedEnumNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find undefined-enum columns.");
+var undefinedEnumFirstColumn = undefinedEnumColumns[0]?.AsObject() ?? throw new InvalidOperationException("Could not find the first undefined-enum column.");
+var undefinedEnumImages = undefinedEnumFirstColumn["Images"]?.AsArray() ?? throw new InvalidOperationException("Could not find undefined-enum images.");
+var undefinedEnumFirstImage = undefinedEnumImages[0]?.AsObject() ?? throw new InvalidOperationException("Could not find the first undefined-enum image.");
+undefinedEnumFirstColumn["PastePreset"] = "999";
+undefinedEnumFirstColumn["LineMarkerMode"] = "999";
+undefinedEnumFirstImage["Layer"] = "999";
+var undefinedEnumLoaded = new MainViewModel();
+Check(undefinedEnumLoaded.LoadFromJson(undefinedEnumNode.ToJsonString(), "undefined-enums"), "Undefined numeric enum values should not invalidate an otherwise healthy layout.");
+Check(undefinedEnumLoaded.Columns[0].PastePreset == PasteListPreset.None, "An undefined numeric paste preset should safely fall back to none.");
+Check(undefinedEnumLoaded.Columns[0].LineMarkerMode == LineMarkerMode.Numbers, "An undefined numeric line-marker mode should safely fall back to numbers.");
+Check(undefinedEnumLoaded.Columns[0].Images[0].Layer == ColumnImageLayer.InFrontOfText, "An undefined numeric picture layer should safely fall back in front of text.");
+
+var legacyEnumNamesNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse legacy enum-name layout.");
+var legacyEnumNameColumns = legacyEnumNamesNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find legacy enum-name columns.");
+var legacyEnumNameFirstColumn = legacyEnumNameColumns[0]?.AsObject() ?? throw new InvalidOperationException("Could not find the first legacy enum-name column.");
+var legacyEnumNameImages = legacyEnumNameFirstColumn["Images"]?.AsArray() ?? throw new InvalidOperationException("Could not find legacy enum-name images.");
+var legacyEnumNameFirstImage = legacyEnumNameImages[0]?.AsObject() ?? throw new InvalidOperationException("Could not find the first legacy enum-name image.");
+legacyEnumNameFirstColumn["PastePreset"] = "checklist";
+legacyEnumNameFirstColumn["LineMarkerMode"] = "bullets";
+legacyEnumNameFirstImage["Layer"] = "behindtext";
+var legacyEnumNamesLoaded = new MainViewModel();
+Check(legacyEnumNamesLoaded.LoadFromJson(legacyEnumNamesNode.ToJsonString(), "legacy-enum-names"), "Valid legacy enum names should remain loadable case-insensitively.");
+Check(legacyEnumNamesLoaded.Columns[0].PastePreset == PasteListPreset.Checklist, "The legacy checklist paste-preset name should remain supported.");
+Check(legacyEnumNamesLoaded.Columns[0].LineMarkerMode == LineMarkerMode.Bullets, "The legacy bullets line-marker name should remain supported.");
+Check(legacyEnumNamesLoaded.Columns[0].Images[0].Layer == ColumnImageLayer.BehindText, "The legacy behind-text picture-layer name should remain supported.");
 
 var preserveTheme = new MainViewModel();
 preserveTheme.ThemePreset = "Dark Mode";
@@ -222,230 +267,24 @@ Check(
     "Recovery snapshots should still load when preserving the current theme.");
 Check(recoveredThemeVm.ThemePreset == "Dark Mode", "Recovery restore should preserve the current app theme.");
 
-var preferencesPath = Path.Combine(Path.GetTempPath(), $"columnpad-preferences-{Guid.NewGuid():N}.json");
-AppPreferencesService.Save(new AppPreferences("Dark Mode"), preferencesPath);
-var loadedPreferences = AppPreferencesService.Load(preferencesPath);
-Check(loadedPreferences.ThemePreset == "Dark Mode", "Saved app preferences should round-trip the selected theme.");
-File.WriteAllText(preferencesPath, "{not valid json");
-Check(AppPreferencesService.Load(preferencesPath).ThemePreset == "Default Mode", "Invalid app preferences should fall back to the default theme.");
-File.Delete(preferencesPath);
+await InfrastructureSmokeTests.RunAsync(tests);
 
-Check(
-    AppStoragePaths.CrashLogsDirectory == Path.Combine(AppStoragePaths.RootDirectory, "CrashLogs"),
-    "App storage paths should expose the crash-log directory as a single source of truth.");
-
-Check(
-    typeof(MainWindow).Assembly.GetName().Name == "ColumnPadStudio",
-    "The application assembly should publish with the stable ColumnPadStudio executable name.");
-
-const string latestReleaseJson = """
-    {
-      "tag_name": "v2.4.0",
-      "html_url": "https://github.com/example-owner/ColumnPadStudio/releases/tag/v2.4.0"
-    }
-    """;
-using (var updateHttpClient = new HttpClient(new StaticJsonResponseHandler(latestReleaseJson)))
-{
-    var updateService = new GitHubReleaseUpdateService(updateHttpClient);
-    var latestRelease = await updateService.GetLatestReleaseAsync();
-
-    Check(latestRelease?.Version == new Version(2, 4, 0, 0), "GitHub update checks should parse release tags into comparable versions.");
-    Check(latestRelease?.DisplayVersion == "v2.4.0", "GitHub update checks should keep a clean version label for the notification.");
-    Check(latestRelease?.ReleasePage.AbsoluteUri == "https://github.com/example-owner/ColumnPadStudio/releases/tag/v2.4.0", "GitHub update checks should preserve the official HTTPS release page.");
-    Check(
-        latestRelease is not null && GitHubReleaseUpdateService.IsNewerRelease(latestRelease.Version, new Version(2, 3, 0, 0)),
-        "GitHub update checks should detect a newer stable release.");
-    Check(
-        latestRelease is not null && !GitHubReleaseUpdateService.IsNewerRelease(latestRelease.Version, new Version(2, 4, 0, 0)),
-        "GitHub update checks should not notify for the installed release.");
-}
-
-const string untrustedReleasePageJson = """
-    {
-      "tag_name": "v2.4.0",
-      "html_url": "https://example.com/not-columnpad"
-    }
-    """;
-using (var updateHttpClient = new HttpClient(new StaticJsonResponseHandler(untrustedReleasePageJson)))
-{
-    var updateService = new GitHubReleaseUpdateService(updateHttpClient);
-    var latestRelease = await updateService.GetLatestReleaseAsync();
-    Check(
-        latestRelease?.ReleasePage == GitHubReleaseUpdateService.ReleasesPageUri,
-        "Update links should fall back to the trusted ColumnPadStudio GitHub releases page.");
-}
-
-using (var updateHttpClient = new HttpClient(
-           new StaticJsonResponseHandler("{}", System.Net.HttpStatusCode.NotFound)))
-{
-    var updateService = new GitHubReleaseUpdateService(updateHttpClient);
-    Check(
-        await updateService.GetLatestReleaseAsync() is null,
-        "Update checks should quietly handle a repository with no published release.");
-}
-
-Check(
-    GitHubReleaseUpdateService.TryParseReleaseVersion("v2.5.0-beta.1", out var parsedReleaseVersion) &&
-    parsedReleaseVersion == new Version(2, 5, 0, 0),
-    "Release version parsing should ignore semantic-version labels when comparing versions.");
-Check(
-    !GitHubReleaseUpdateService.TryParseReleaseVersion("latest", out _),
-    "Release version parsing should reject tags that do not contain a numeric version.");
-
-var atomicRoot = Path.Combine(Path.GetTempPath(), $"columnpad-atomic-{Guid.NewGuid():N}");
-try
-{
-    var atomicPath = Path.Combine(atomicRoot, "nested", "note.txt");
-    AtomicFileWriter.WriteText(atomicPath, "first");
-    Check(File.ReadAllText(atomicPath) == "first", "Atomic writer should create missing target directories.");
-    AtomicFileWriter.WriteText(atomicPath, "second");
-    Check(File.ReadAllText(atomicPath) == "second", "Atomic writer should replace existing files cleanly.");
-    Check(Directory.GetFiles(Path.GetDirectoryName(atomicPath)!, "*.tmp").Length == 0, "Atomic writer should clean up temporary files after a successful write.");
-}
-finally
-{
-    if (Directory.Exists(atomicRoot))
-        Directory.Delete(atomicRoot, recursive: true);
-}
-
-var workflowTemp = Path.Combine(Path.GetTempPath(), $"columnpad-workflows-{Guid.NewGuid():N}");
-var workflowService = new WorkflowService(workflowTemp);
-var emptyWorkflowVm = new WorkflowBuilderViewModel(workflowService);
-emptyWorkflowVm.Load();
-Check(emptyWorkflowVm.Workflows.Count == 1, "Workflow Builder should create one workflow when no saved workflows exist.");
-Check(WorkflowTemplateCatalog.Templates.Count >= 10, "Workflow starter catalog should provide multiple practical starters.");
-var workflowTemplateIds = WorkflowTemplateCatalog.Templates.Select(template => template.Id).ToList();
-Check(workflowTemplateIds.Count == workflowTemplateIds.Distinct(StringComparer.OrdinalIgnoreCase).Count(), "Workflow starter catalog should not contain duplicate IDs.");
-Check(WorkflowTemplateCatalog.Templates.All(template => template.Nodes.Count > 0), "Workflow starter catalog should not contain empty starter diagrams.");
-Check(WorkflowTemplateCatalog.Templates.All(template => template.Connections.Count > 0), "Workflow starter catalog should wire starter nodes together.");
-var essayStarter = WorkflowTemplateCatalog.Templates.FirstOrDefault(template => template.Id == "essay-plan");
-Check(essayStarter is not null, "Workflow starter catalog should include an essay planning starter.");
-if (essayStarter is not null)
-{
-    var essayWorkflow = essayStarter.CreateWorkflowInstance("Essay Plan Copy");
-    Check(essayWorkflow.Name == "Essay Plan Copy", "Workflow starter instances should allow a custom workflow name.");
-    Check(essayWorkflow.Nodes.Count >= 5, "Workflow starter instances should create a useful editable diagram.");
-    Check(essayWorkflow.Links.Count > 0, "Workflow starter instances should create connections between starter nodes.");
-    var thesisNode = essayWorkflow.Nodes.FirstOrDefault(node => node.Title == "Define thesis");
-    Check(!string.IsNullOrWhiteSpace(thesisNode?.Goal), "Workflow starter nodes should include a real goal, not just a box title.");
-    Check(thesisNode?.ChecklistItems.Count >= 2, "Workflow starter nodes should include useful checklist data.");
-}
-
-var workflowBuilderVm = new WorkflowBuilderViewModel(workflowService);
-workflowBuilderVm.AddWorkflow();
-workflowBuilderVm.AddNode(WorkflowNodeKind.Decision);
-Check(workflowBuilderVm.SelectedNode?.Kind == WorkflowNodeKind.Decision, "Workflow builder palette should add the requested node kind.");
-workflowBuilderVm.SelectedNode!.X = 1260;
-workflowBuilderVm.SelectedNode.Width = 220;
-Check(workflowBuilderVm.DiagramCanvasWidth >= 1576, "Workflow builder canvas should expand to include far-right nodes.");
-workflowBuilderVm.SelectedNode.Y = 780;
-workflowBuilderVm.SelectedNode.Height = 120;
-Check(workflowBuilderVm.DiagramCanvasHeight >= 996, "Workflow builder canvas should expand to include lower nodes.");
-
-var workflowDefinition = new WorkflowDefinition { Name = "Colour test" };
-workflowDefinition.Id = "  workflow id with spaces  ";
-Check(workflowDefinition.Id == "workflow id with spaces", "Workflow IDs should trim outer whitespace without applying display-label cleanup.");
-workflowDefinition.Nodes.Add(new WorkflowDiagramNode
-{
-    Id = " start ",
-    Kind = WorkflowNodeKind.Start,
-    Title = "Start",
-    Color = WorkflowNodeColor.Rose,
-    Goal = "Round-trip goal",
-    Instructions = "Round-trip instructions",
-    ExpectedOutput = "Round-trip output",
-    ChecklistItems = new ObservableCollection<WorkflowChecklistItem>
-    {
-        new() { Text = "First check" },
-        new() { Text = "Done check", IsDone = true }
-    }
-});
-workflowDefinition.Nodes.Add(new WorkflowDiagramNode { Id = "end", Kind = WorkflowNodeKind.End, Title = "End", Color = WorkflowNodeColor.Green });
-Check(workflowDefinition.Nodes[0].Id == "start", "Workflow node IDs should use identity cleanup, not display-label cleanup.");
-workflowDefinition.Links.Add(new WorkflowDiagramLink { FromNodeId = "start", ToNodeId = "end" });
-workflowService.Save(workflowDefinition);
-Check(!string.IsNullOrWhiteSpace(workflowDefinition.FilePath), "Workflow save should assign a file path.");
-Check(workflowService.TryLoad(workflowDefinition.FilePath!, out var loadedWorkflow), "Workflow service should reload saved workflow JSON.");
-Check(loadedWorkflow.SchemaVersion >= 3, "Workflow service should normalize saved workflows to the current schema.");
-Check(loadedWorkflow.Nodes[0].Color == WorkflowNodeColor.Rose, "Workflow node colour should persist through JSON save/load.");
-Check(loadedWorkflow.Nodes[0].Goal == "Round-trip goal", "Workflow node goal should persist through JSON save/load.");
-Check(loadedWorkflow.Nodes[0].Instructions == "Round-trip instructions", "Workflow node instructions should persist through JSON save/load.");
-Check(loadedWorkflow.Nodes[0].ExpectedOutput == "Round-trip output", "Workflow node expected output should persist through JSON save/load.");
-Check(loadedWorkflow.Nodes[0].ChecklistItems.Count == 2 && loadedWorkflow.Nodes[0].ChecklistItems[1].IsDone, "Workflow node checklist data should persist through JSON save/load.");
-var readableWorkflowText = workflowService.BuildTextExport(workflowDefinition);
-Check(readableWorkflowText.StartsWith(WorkflowService.TextExportMarker), "Workflow text export should include a clear ColumnPad marker.");
-Check(readableWorkflowText.Contains("Workflow: Colour test"), "Workflow text export should include the workflow name.");
-Check(readableWorkflowText.Contains("1. [Start] Start"), "Workflow text export should list readable node steps.");
-Check(readableWorkflowText.Contains("Round-trip goal"), "Workflow text export should include node goals.");
-Check(readableWorkflowText.Contains("- [x] Done check"), "Workflow text export should include checklist completion state.");
-Check(readableWorkflowText.Contains("1. Start -> 2. End"), "Workflow text export should show connections using node names.");
-var readableWorkflowMarkdown = workflowService.BuildMarkdownExport(workflowDefinition);
-Check(readableWorkflowMarkdown.StartsWith(WorkflowService.MarkdownExportMarker), "Workflow markdown export should include a clear ColumnPad marker.");
-Check(readableWorkflowMarkdown.Contains("# Colour test"), "Workflow markdown export should include the workflow name as a heading.");
-Check(readableWorkflowMarkdown.Contains("### 1. Start: Start"), "Workflow markdown export should list readable node steps.");
-Check(readableWorkflowMarkdown.Contains("Round-trip instructions"), "Workflow markdown export should include node instructions.");
-Check(readableWorkflowMarkdown.Contains("- [x] Done check"), "Workflow markdown export should include checklist completion state.");
-var readableWorkflowTextPath = Path.Combine(workflowTemp, "colour-test.workflow.txt");
-workflowService.ExportTextToPath(workflowDefinition, readableWorkflowTextPath);
-Check(File.Exists(readableWorkflowTextPath), "Workflow text export should write a text file.");
-var readableWorkflowMarkdownPath = Path.Combine(workflowTemp, "colour-test.workflow.md");
-workflowService.ExportMarkdownToPath(workflowDefinition, readableWorkflowMarkdownPath);
-Check(File.Exists(readableWorkflowMarkdownPath), "Workflow markdown export should write a markdown file.");
-var existingWorkflowVm = new WorkflowBuilderViewModel(workflowService);
-existingWorkflowVm.Load();
-var workflowCountBeforeAdd = existingWorkflowVm.Workflows.Count;
-existingWorkflowVm.AddWorkflow();
-Check(existingWorkflowVm.Workflows.Count == workflowCountBeforeAdd + 1, "Workflow Builder Add Workflow should add one workflow.");
-
-Check(!WorkflowService.IsWorkflowDefinitionJson("{}"), "Workflow detection should reject unrelated empty JSON objects.");
-Check(!WorkflowService.IsWorkflowDefinitionJson(json), "Workflow detection should reject ColumnPad layout JSON.");
-var camelCaseWorkflowPath = Path.Combine(workflowTemp, "camel-case.workflow.json");
-File.WriteAllText(camelCaseWorkflowPath, """
-{
-  "fileType": "ColumnPadWorkflow",
-  "schemaVersion": 3,
-  "id": "camel-case",
-  "name": "Camel Case Workflow",
-  "nodes": [
-    { "id": "start", "kind": "Start", "title": "Start" }
-  ],
-  "links": []
-}
-""");
-Check(workflowService.TryLoad(camelCaseWorkflowPath, out var camelCaseWorkflow), "Workflow import should accept case-insensitive property names and readable enum names.");
-Check(camelCaseWorkflow.Nodes.Count == 1 && camelCaseWorkflow.Nodes[0].Kind == WorkflowNodeKind.Start, "Case-insensitive workflow import should preserve node data.");
-
-var invalidWorkflowPath = Path.Combine(workflowTemp, "invalid.workflow.json");
-File.WriteAllText(invalidWorkflowPath, "{}");
-_ = workflowService.LoadAll();
-Check(workflowService.LastLoadWarnings.Contains("invalid.workflow.json"), "Workflow library loading should report unreadable workflow filenames instead of silently skipping them.");
-
-var dirtyWorkflowService = new WorkflowService(Path.Combine(workflowTemp, "dirty-state"));
-var dirtyWorkflowVm = new WorkflowBuilderViewModel(dirtyWorkflowService);
-dirtyWorkflowVm.Load();
-Check(!dirtyWorkflowVm.HasUnsavedChanges, "Opening an empty Workflow Builder should not treat its untouched blank draft as a user edit.");
-dirtyWorkflowVm.SelectedWorkflow!.Name = "My Workflow";
-Check(dirtyWorkflowVm.HasUnsavedChanges, "Editing the blank workflow draft should mark it unsaved.");
-dirtyWorkflowVm.SaveSelectedWorkflow();
-Check(!dirtyWorkflowVm.HasUnsavedChanges, "Saving a workflow should establish a clean state.");
-dirtyWorkflowVm.SelectedWorkflow!.Description = "Changed after save";
-Check(dirtyWorkflowVm.HasUnsavedChanges, "Editing workflow details should mark the Workflow Builder dirty.");
-Check(dirtyWorkflowVm.SaveAllChangedWorkflows() == 1, "Save-all should save each changed workflow once.");
-Check(!dirtyWorkflowVm.HasUnsavedChanges, "Save-all should clear the Workflow Builder dirty state.");
-Directory.Delete(workflowTemp, recursive: true);
+var workflowDefinition = WorkflowSmokeTests.Run(tests, json);
 
 
 var legacyNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse round-trip JSON for legacy normalization test.");
 legacyNode["Version"] = 11;
 var legacyColumns = legacyNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find columns array for legacy normalization test.");
 var legacyFirstColumn = legacyColumns[0]?.AsObject() ?? throw new InvalidOperationException("Could not find first column for legacy normalization test.");
+legacyFirstColumn.Remove("EditorTextColor");
 legacyFirstColumn["Text"] = "line one\\r\\nline two\\nline three";
 var legacyLoaded = new MainViewModel();
 Check(legacyLoaded.LoadFromJson(legacyNode.ToJsonString(), "legacy"), "Legacy-escaped layout JSON should still load.");
 Check(legacyLoaded.Columns[0].Text == "line one\nline two\nline three", "Legacy-escaped newline sequences should be decoded into real line breaks during load.");
+Check(legacyLoaded.Columns[0].EditorTextColor == ColumnTextColorService.ThemeDefault, "Older layouts without colour data should use the theme text colour.");
 legacyFirstColumn["Text"] = "pitch idea -> break it down -> lock it -> structure tree -> .sln -> build in sections";
 Check(legacyLoaded.LoadFromJson(legacyNode.ToJsonString(), "legacy"), "Legacy inline layout JSON should still load.");
-Check(legacyLoaded.Columns[0].Text.Contains("\n"), "Legacy inline text should be migrated into hard line breaks during load.");
+Check(legacyLoaded.Columns[0].Text == "pitch idea -> break it down -> lock it -> structure tree -> .sln -> build in sections", "Legacy inline text should remain byte-for-byte intact during load.");
 legacyFirstColumn["Text"] = "- [ ] first task\n- [x] done task";
 legacyFirstColumn["LineMarkerMode"] = null;
 legacyFirstColumn["CheckedChecklistLineIndexes"] = null;
@@ -453,6 +292,62 @@ Check(legacyLoaded.LoadFromJson(legacyNode.ToJsonString(), "legacy"), "Legacy in
 Check(legacyLoaded.Columns[0].LineMarkerMode == LineMarkerMode.Checklist, "Legacy checklist-marker text should migrate to checklist gutter mode.");
 Check(legacyLoaded.Columns[0].Text == "first task\ndone task", "Legacy checklist-marker text should decode to clean plain text.");
 Check(legacyLoaded.Columns[0].IsChecklistLineChecked(1), "Legacy checklist-marker migration should restore checked rows in gutter metadata.");
+var versionFourteenNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse version-14 compatibility layout.");
+versionFourteenNode["Version"] = 14;
+var versionFourteenColumns = versionFourteenNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find version-14 columns.");
+var versionFourteenFirstColumn = versionFourteenColumns[0]?.AsObject() ?? throw new InvalidOperationException("Could not find the version-14 first column.");
+var validSingleLineText = string.Join(' ', Enumerable.Repeat("structured", 12));
+versionFourteenFirstColumn["Text"] = validSingleLineText;
+versionFourteenFirstColumn.Remove("EditorTextColor");
+var versionFourteenLoaded = new MainViewModel();
+Check(versionFourteenLoaded.LoadFromJson(versionFourteenNode.ToJsonString(), "version-14"), "Version-14 layouts should remain loadable after adding text colour.");
+Check(versionFourteenLoaded.Columns[0].Text == validSingleLineText, "Version-14 text should not be passed through older inline-text migration again.");
+Check(versionFourteenLoaded.Columns[0].EditorTextColor == ColumnTextColorService.ThemeDefault, "Version-14 layouts should gain the theme text colour.");
+var currentLiteralEscapeNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse current layout for literal-escape preservation.");
+var currentLiteralEscapeColumns = currentLiteralEscapeNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find current layout columns.");
+currentLiteralEscapeColumns[0]!.AsObject()["Text"] = @"regex \r\n and code \n stay literal";
+var currentLiteralEscapeLoaded = new MainViewModel();
+Check(currentLiteralEscapeLoaded.LoadFromJson(currentLiteralEscapeNode.ToJsonString(), "current-literal"), "Current layouts containing literal escape text should load.");
+Check(currentLiteralEscapeLoaded.Columns[0].Text == @"regex \r\n and code \n stay literal", "Current layout text should never decode literal backslash escape sequences.");
+var futureLayoutNode = JsonNode.Parse(json)!.AsObject();
+futureLayoutNode["Version"] = 999;
+var futureLayoutTarget = new MainViewModel();
+var futureLayoutBefore = futureLayoutTarget.ToLayoutJson();
+Check(!futureLayoutTarget.LoadFromJson(futureLayoutNode.ToJsonString(), "future"), "Layouts from unsupported future schema versions should be rejected.");
+Check(futureLayoutTarget.ToLayoutJson() == futureLayoutBefore, "Rejecting a future layout should not alter the current workspace.");
+var versionFifteenNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse version-15 compatibility layout.");
+versionFifteenNode["Version"] = 15;
+versionFifteenNode.Remove("PaperStyle");
+var versionFifteenLoaded = new MainViewModel();
+Check(versionFifteenLoaded.LoadFromJson(versionFifteenNode.ToJsonString(), "version-15"), "Version-15 layouts should remain loadable after adding paper styles.");
+Check(versionFifteenLoaded.LinedPaperEnabled && versionFifteenLoaded.SelectedPaperStyle == PaperStyle.Ruled, "Older lined-paper layouts should open as ruled paper.");
+var versionEighteenNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse version-18 compatibility layout.");
+versionEighteenNode["Version"] = 18;
+versionEighteenNode.Remove("GutterWidthPx");
+var versionEighteenLoaded = new MainViewModel();
+Check(versionEighteenLoaded.LoadFromJson(versionEighteenNode.ToJsonString(), "version-18"), "Version-18 layouts should remain loadable after adding a shared gutter width.");
+Check(versionEighteenLoaded.GutterWidthPx == MainViewModel.MinimumGutterWidthPx, "Layouts without a saved gutter width should use the smallest default.");
+var legacyGutterNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse legacy shared-gutter layout.");
+legacyGutterNode["Version"] = 18;
+legacyGutterNode["GutterWidthPx"] = 64;
+var legacyGutterLoaded = new MainViewModel();
+Check(legacyGutterLoaded.LoadFromJson(legacyGutterNode.ToJsonString(), "legacy-gutter"), "Layouts with an earlier saved gutter width should still load.");
+Check(legacyGutterLoaded.GutterWidthPx == 64 && legacyGutterLoaded.Columns.All(column => Math.Abs(column.LineNumberColumnWidth.Value - 64) < 0.001), "A saved shared gutter width should restore across all columns.");
+var invalidPaperStyleNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse invalid paper-style layout.");
+invalidPaperStyleNode["PaperStyle"] = "Unknown";
+var invalidPaperStyleLoaded = new MainViewModel();
+Check(invalidPaperStyleLoaded.LoadFromJson(invalidPaperStyleNode.ToJsonString(), "invalid-paper-style"), "An unknown paper style should not invalidate an otherwise healthy layout.");
+Check(invalidPaperStyleLoaded.SelectedPaperStyle == PaperStyle.Ruled, "An unknown saved paper style should safely fall back to ruled paper.");
+foreach (var retiredPaperStyle in new[] { "Grid", "Dots" })
+{
+    var retiredPaperStyleNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException($"Could not parse the retired {retiredPaperStyle} paper-style layout.");
+    retiredPaperStyleNode["PaperStyle"] = retiredPaperStyle;
+    var retiredPaperStyleLoaded = new MainViewModel();
+    Check(
+        retiredPaperStyleLoaded.LoadFromJson(retiredPaperStyleNode.ToJsonString(), $"retired-{retiredPaperStyle}-paper-style")
+            && retiredPaperStyleLoaded.SelectedPaperStyle == PaperStyle.Ruled,
+        $"Saved {retiredPaperStyle} paper should open as the original ruled paper.");
+}
 var rawDocument = new MainViewModel();
 rawDocument.LoadTextDocument("alpha\n beta", "notes.txt", "C:\\temp\\notes.txt", SaveFileKind.TextDocument);
 Check(rawDocument.Columns.Count == 1, "Raw text open should create a single column.");
@@ -464,6 +359,30 @@ rawDocument.AddColumn();
 Check(rawDocument.CurrentFileKind == SaveFileKind.Layout, "Adding a column to a raw text document should promote it to a layout.");
 Check(string.IsNullOrWhiteSpace(rawDocument.CurrentFilePath), "Promoting a raw text document should detach it from the original file path.");
 Check(!rawDocument.RequiresSaveAsBeforeOverwrite, "Promoted layouts should no longer require Save As once detached.");
+
+var styledRawDocument = new MainViewModel();
+styledRawDocument.LoadTextDocument("styled text", "styled.txt", "C:\\temp\\styled.txt", SaveFileKind.TextDocument);
+styledRawDocument.PrepareForRichContent();
+styledRawDocument.Columns[0].EditorTextColor = ColumnTextColorService.Red;
+Check(styledRawDocument.CurrentFileKind == SaveFileKind.Layout, "Applying column formatting should promote a raw text document to a layout.");
+Check(string.IsNullOrWhiteSpace(styledRawDocument.CurrentFilePath), "Promoting formatted text should detach it from the original raw file.");
+
+var resizedRawDocument = new MainViewModel();
+resizedRawDocument.LoadTextDocument("width-sensitive text", "width.txt", "C:\\temp\\width.txt", SaveFileKind.TextDocument);
+resizedRawDocument.Columns[0].WidthPx = 420;
+Check(resizedRawDocument.CurrentFileKind == SaveFileKind.Layout && resizedRawDocument.CurrentFilePath is null, "Changing persistent per-column layout data should promote a raw document before it can be lost.");
+
+var gutterRawDocument = new MainViewModel();
+gutterRawDocument.LoadTextDocument("gutter-sensitive text", "gutter.txt", "C:\\temp\\gutter.txt", SaveFileKind.TextDocument);
+gutterRawDocument.GutterWidthPx = 64;
+Check(gutterRawDocument.CurrentFileKind == SaveFileKind.Layout && gutterRawDocument.CurrentFilePath is null, "Changing the gutter width should promote a raw document before its layout setting can be lost.");
+
+var styledExport = new MainViewModel();
+styledExport.LoadFromExportText("ColumnPad Export\nFormat: Text\n\n===== Notes =====\n\ntext\n", "notes.txt", "C:\\temp\\notes.txt");
+styledExport.PrepareForRichContent();
+styledExport.Columns[0].EditorTextColor = ColumnTextColorService.Blue;
+Check(styledExport.CurrentFileKind == SaveFileKind.Layout, "Applying rich formatting should promote a text export to a native layout.");
+Check(string.IsNullOrWhiteSpace(styledExport.CurrentFilePath), "Promoting a rich text export should detach it from the lossy export path.");
 
 var nativeLayoutPath = Path.Combine(Path.GetTempPath(), $"columnpad-native-{Guid.NewGuid():N}.columnpad.json");
 try
@@ -499,7 +418,6 @@ Check(metrics.ChecklistDone == 2, "ChecklistDone should count checked symbol and
 
 var carriageReturnMetrics = new ColumnViewModel { Text = "first\rsecond\r\nthird\nfourth" };
 Check(carriageReturnMetrics.LineCount == 4, "Column metrics should count LF, CRLF, and standalone CR line breaks consistently.");
-Check(ClipboardTextService.CountLineBreaks("first\rsecond\r\nthird\nfourth") == 3, "Clipboard line-break counting should handle LF, CRLF, and standalone CR consistently.");
 
 var indentedChecklistMetrics = new ColumnViewModel
 {
@@ -563,13 +481,66 @@ Check(richContentVm.CurrentFileKind == SaveFileKind.Layout && richContentVm.Curr
 Check(richContentVm.IsDirty, "Promoting a text document for a picture should mark it dirty.");
 
 var lineToggleVm = new MainViewModel();
-Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - ColumnViewModel.VisibleLineNumberColumnWidth) < 0.001), "Line-number gutter should default to visible width.");
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - MainViewModel.MinimumGutterWidthPx) < 0.001), "Line-number gutter should default to the smallest visible width.");
+lineToggleVm.GutterWidthPx = 36;
+Check(lineToggleVm.IsDirty, "Changing the gutter width should mark a layout dirty.");
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - 36) < 0.001), "Changing the shared gutter width should update every existing column.");
+lineToggleVm.GutterWidthPx = MainViewModel.MaximumGutterWidthPx + 1;
+Check(lineToggleVm.GutterWidthPx == MainViewModel.MaximumGutterWidthPx, "Gutter width should clamp to its maximum supported value.");
+lineToggleVm.GutterWidthPx = MainViewModel.MinimumGutterWidthPx - 1;
+Check(lineToggleVm.GutterWidthPx == MainViewModel.MinimumGutterWidthPx, "Gutter width should clamp to its minimum supported value.");
+lineToggleVm.GutterWidthPx = 36;
 lineToggleVm.ShowLineNumbers = false;
 Check(lineToggleVm.Columns.All(c => c.ShowLineNumbersVisibility == Visibility.Collapsed), "Turning line numbers off should collapse line-number visibility for all columns.");
 Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value) < 0.001), "Turning line numbers off should collapse gutter width for all columns.");
 lineToggleVm.ShowLineNumbers = true;
 Check(lineToggleVm.Columns.All(c => c.ShowLineNumbersVisibility == Visibility.Visible), "Turning line numbers back on should restore line-number visibility for all columns.");
-Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - ColumnViewModel.VisibleLineNumberColumnWidth) < 0.001), "Turning line numbers back on should restore gutter width for all columns.");
+Check(lineToggleVm.Columns.All(c => c.LineNumberColumnWidth.IsAbsolute && Math.Abs(c.LineNumberColumnWidth.Value - 36) < 0.001), "Turning line numbers back on should restore the chosen shared gutter width.");
+lineToggleVm.Columns[0].WidthPx = 410;
+lineToggleVm.Columns[1].WidthPx = 430;
+lineToggleVm.AddColumn();
+Check(
+    lineToggleVm.Columns[0].WidthPx == 410
+        && lineToggleVm.Columns[1].WidthPx == 430
+        && lineToggleVm.Columns[^1].WidthPx is null
+        && Math.Abs(lineToggleVm.Columns[^1].LineNumberColumnWidth.Value - 36) < 0.001,
+    "Adding a column should preserve existing widths while the new column inherits the preferred default and workspace gutter width.");
+
+var resetWidthVm = new MainViewModel();
+const int preferredColumnWidthPx = 438;
+var resetRebuildCount = 0;
+resetWidthVm.RequestRebuildColumns += (_, __) => resetRebuildCount++;
+resetWidthVm.Columns[0].WidthPx = 480;
+resetWidthVm.Columns[0].IsWidthLocked = true;
+resetWidthVm.ResetActiveColumnWidth(preferredColumnWidthPx);
+Check(
+    resetWidthVm.Columns[0].WidthPx is null
+        && !resetWidthVm.Columns[0].IsWidthLocked
+        && resetWidthVm.StatusText == $"Reset {resetWidthVm.Columns[0].Title} to the default {preferredColumnWidthPx}px width."
+        && resetRebuildCount == 1,
+    "Resetting one column should restore the preferred default width, unlock it, report that default, and rebuild the strip.");
+foreach (var column in resetWidthVm.Columns)
+{
+    column.WidthPx = 480;
+    column.IsWidthLocked = true;
+}
+resetWidthVm.ResetAllColumnWidths(preferredColumnWidthPx);
+Check(
+    resetWidthVm.Columns.All(column => column.WidthPx is null && !column.IsWidthLocked)
+        && resetWidthVm.StatusText == $"Reset all columns to the default {preferredColumnWidthPx}px width."
+        && resetRebuildCount == 2,
+    "Resetting all columns should restore the preferred default width, unlock every column, report that default, and rebuild the strip.");
+
+var malformedWidthNode = JsonNode.Parse(json)?.AsObject() ?? throw new InvalidOperationException("Could not parse layout for width validation.");
+var malformedWidthColumns = malformedWidthNode["Columns"]?.AsArray() ?? throw new InvalidOperationException("Could not find columns for width validation.");
+malformedWidthColumns[0]!.AsObject()["WidthPx"] = 999_999;
+var clampedWidthLoaded = new MainViewModel();
+Check(clampedWidthLoaded.LoadFromJson(malformedWidthNode.ToJsonString(), "oversized-width"), "Layouts with oversized stored widths should still load safely.");
+Check(clampedWidthLoaded.Columns[0].WidthPx == (int)WorkspaceConstraints.MaximumColumnWidth, "Oversized stored widths should clamp to the supported maximum.");
+malformedWidthColumns[0]!.AsObject()["WidthPx"] = 0;
+var flexibleWidthLoaded = new MainViewModel();
+Check(flexibleWidthLoaded.LoadFromJson(malformedWidthNode.ToJsonString(), "zero-width"), "Layouts with a zero stored width should still load safely.");
+Check(flexibleWidthLoaded.Columns[0].WidthPx is null, "A zero stored width should restore the normal display width instead of a broken fixed width.");
 
 var liveStatusVm = new MainViewModel();
 liveStatusVm.Columns[0].Title = "Inbox";
@@ -584,10 +555,38 @@ cleanExportVm.Columns[0].Text = "one\r\ntwo\n\n";
 cleanExportVm.Columns[1].Title = "Beta";
 cleanExportVm.Columns[1].Text = "three";
 var cleanTextExport = cleanExportVm.BuildExportText().Replace("\r\n", "\n", StringComparison.Ordinal);
-Check(cleanTextExport == "ColumnPad Export\nFormat: Text\n\n===== Alpha Plan =====\n\none\ntwo\n\n===== Beta =====\n\nthree\n", "Text export should use a clear marker and readable sections without trailing blank blocks.");
+Check(cleanTextExport == "ColumnPad Export\nFormat: Text\nVersion: 2\n\n===== Alpha Plan =====\n\none\ntwo\n\n===== Beta =====\n\nthree\n", "Text export should use a versioned marker and readable sections without trailing blank blocks.");
 Check(!cleanTextExport.Contains("\\n", StringComparison.Ordinal), "Text export should write real line breaks, not escaped JSON-style line breaks.");
-var cleanMarkdownExport = cleanExportVm.BuildExportMarkdown().Replace("\r\n", "\n", StringComparison.Ordinal);
-Check(cleanMarkdownExport == "<!-- ColumnPad Export: Markdown -->\n\n## Alpha Plan\n\none\ntwo\n\n## Beta\n\nthree\n", "Markdown export should stay available with a clear marker and readable sections.");
+var cleanJsonExport = cleanExportVm.BuildExportJson();
+var cleanJsonExportRoot = JsonNode.Parse(cleanJsonExport)?.AsObject() ?? throw new InvalidOperationException("Could not parse readable JSON export.");
+var cleanJsonExportColumns = cleanJsonExportRoot["Columns"]?.AsArray() ?? throw new InvalidOperationException("Readable JSON export should include columns.");
+Check(
+    cleanJsonExportRoot.Count == 3
+        && cleanJsonExportRoot["FileType"]?.GetValue<string>() == "ColumnPadTextExport"
+        && cleanJsonExportRoot["Version"]?.GetValue<int>() == 1
+        && cleanJsonExportColumns.Count == 2
+        && cleanJsonExportColumns[0]?.AsObject().Count == 2,
+    "JSON export should be a concise, readable title-and-text format without layout data.");
+Check(
+    cleanJsonExportColumns[0]?["Title"]?.GetValue<string>() == "Alpha Plan"
+        && cleanJsonExportColumns[0]?["Text"]?.GetValue<string>() == "one\r\ntwo\n\n"
+        && cleanJsonExportColumns[1]?["Title"]?.GetValue<string>() == "Beta",
+    "JSON export should preserve normalized titles and original text exactly.");
+
+var collisionExportVm = new MainViewModel();
+collisionExportVm.SetColumnCount(2);
+collisionExportVm.Columns[0].Title = "Text boundaries";
+collisionExportVm.Columns[0].Text = "before\n===== this is body text =====\n\\leading slash";
+collisionExportVm.Columns[1].Title = "JSON boundaries";
+collisionExportVm.Columns[1].Text = "before\n## this is a body heading\n\\## literal slash heading";
+var collisionTextRoundTrip = new MainViewModel();
+collisionTextRoundTrip.LoadFromExportText(collisionExportVm.BuildExportText(), "collision.txt");
+Check(collisionTextRoundTrip.Columns.Count == 2, "Versioned text export should not split body lines that resemble column headers.");
+Check(collisionTextRoundTrip.Columns[0].Text == collisionExportVm.Columns[0].Text, "Versioned text export should preserve header-like and backslash-prefixed body lines.");
+var collisionJsonRoundTrip = new MainViewModel();
+collisionJsonRoundTrip.LoadFromExportJson(collisionExportVm.BuildExportJson(), "collision.json");
+Check(collisionJsonRoundTrip.Columns.Count == 2, "JSON export should preserve separate columns without text markers.");
+Check(collisionJsonRoundTrip.Columns[1].Text == collisionExportVm.Columns[1].Text, "JSON export should preserve headings, backslashes, and multiline text exactly.");
 
 var exportedText = "ColumnPad Export\nFormat: Text\n\n===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
 var importedFromText = new MainViewModel();
@@ -599,10 +598,80 @@ Check(importedFromText.Columns[1].Title == "Beta", "Text import should preserve 
 Check(importedFromText.Columns[1].Text == ".", "Text import should preserve second column body.");
 Check(!importedFromText.IsDirty, "Imported text exports should start clean.");
 
+var oversizedExport = "ColumnPad Export\nFormat: Text\n\n" + string.Join(
+    "\n\n",
+    Enumerable.Range(1, WorkspaceConstraints.MaxColumns + 1).Select(index => $"===== Column {index} =====\n\nvalue"));
+var oversizedImport = new MainViewModel();
+var oversizedImportRejected = false;
+try
+{
+    oversizedImport.LoadFromExportText(oversizedExport, "oversized.txt");
+}
+catch (InvalidDataException)
+{
+    oversizedImportRejected = true;
+}
+Check(oversizedImportRejected, "Imports above the supported column limit should be rejected before changing the workspace.");
+Check(oversizedImport.Columns.Count == 3, "A rejected oversized import should leave the existing workspace intact.");
+
 var tempRoot = Path.Combine(Path.GetTempPath(), $"ColumnPadStudioSmoke-{Guid.NewGuid():N}");
 Directory.CreateDirectory(tempRoot);
 try
 {
+    var firstImageSource = Path.Combine(tempRoot, "first.png");
+    var secondImageSource = Path.Combine(tempRoot, "second.png");
+    var imageEncoder = new PngBitmapEncoder();
+    imageEncoder.Frames.Add(BitmapFrame.Create(BitmapSource.Create(
+        1,
+        1,
+        96,
+        96,
+        PixelFormats.Bgra32,
+        null,
+        new byte[] { 0x20, 0x60, 0xA0, 0xFF },
+        4)));
+    using (var imageStream = File.Create(firstImageSource))
+        imageEncoder.Save(imageStream);
+    File.Copy(firstImageSource, secondImageSource);
+
+    var firstImageImport = ColumnImageFileService.ImportImage(firstImageSource);
+    var secondImageImport = ColumnImageFileService.ImportImage(secondImageSource);
+    Check(firstImageImport.AssetId == secondImageImport.AssetId, "Identical picture content should receive one stable asset identity.");
+    Check(firstImageImport.Content.SequenceEqual(secondImageImport.Content), "Identical picture imports should preserve identical embedded content.");
+    Check(string.IsNullOrEmpty(firstImageImport.FilePath), "New picture imports should not create unmanaged permanent image copies.");
+    Check(firstImageImport.OriginalFileName == "first.png" && secondImageImport.OriginalFileName == "second.png", "Reused picture assets should preserve each imported display name.");
+
+    var portablePictureVm = new MainViewModel();
+    portablePictureVm.SetColumnCount(1);
+    portablePictureVm.Columns[0].Images.Add(new ColumnImageViewModel(
+        firstImageImport.FilePath,
+        firstImageImport.OriginalFileName,
+        firstImageImport.DisplayWidth,
+        firstImageImport.PixelWidth,
+        firstImageImport.PixelHeight,
+        imageContent: firstImageImport.Content));
+    var portablePictureJson = portablePictureVm.ToLayoutJson();
+    var portablePictureRoot = JsonNode.Parse(portablePictureJson)!.AsObject();
+    var portablePictureContent = portablePictureRoot["Columns"]![0]!["Images"]![0]!["Content"]?.GetValue<string>();
+    Check(!string.IsNullOrWhiteSpace(portablePictureContent), "Native layouts should embed bounded picture content for portability.");
+    var portablePictureLoaded = new MainViewModel();
+    Check(portablePictureLoaded.LoadFromJson(portablePictureJson, "portable-picture"), "A portable-picture layout should load after its original managed file is removed.");
+    Check(portablePictureLoaded.Columns[0].Images[0].CanDisplayImage, "Embedded picture content should display without the original local path.");
+
+    var oversizedImagePath = Path.Combine(tempRoot, "oversized.png");
+    using (var oversizedImageStream = File.Create(oversizedImagePath))
+        oversizedImageStream.SetLength(ColumnImageFileService.MaxImageFileBytes + 1L);
+    var oversizedImageRejected = false;
+    try
+    {
+        _ = ColumnImageFileService.ImportImage(oversizedImagePath);
+    }
+    catch (InvalidDataException)
+    {
+        oversizedImageRejected = true;
+    }
+    Check(oversizedImageRejected, "Picture import should reject files above the bounded image size before decoding them.");
+
     var tempTextPath = Path.Combine(tempRoot, "loaded.txt");
     File.WriteAllText(tempTextPath, exportedText);
 
@@ -624,7 +693,7 @@ try
     var recoveryRoot = Path.Combine(tempRoot, "recovery");
     var recoveryWorkspaces = new[]
     {
-        new WorkspaceRecoveryWorkspace("Workspace A", vm.ToLayoutJson(), tempTextPath, SaveFileKind.TextDocument, true, true),
+        new WorkspaceRecoveryWorkspace("Workspace A", vm.ToLayoutJson(), tempTextPath, SaveFileKind.TextDocument, true, true, 5, true),
         new WorkspaceRecoveryWorkspace("Workspace B", loaded.ToLayoutJson(), null, SaveFileKind.Layout, false, false)
     };
 
@@ -636,6 +705,8 @@ try
     Check(recoverySnapshot.Workspaces[0].CurrentFilePath == tempTextPath, "Recovery store should preserve file paths per workspace.");
     Check(recoverySnapshot.Workspaces[0].IsDirty, "Recovery store should preserve dirty state per workspace.");
     Check(recoverySnapshot.Workspaces[0].RequiresSaveAsBeforeOverwrite, "Recovery store should preserve Save As requirements per workspace.");
+    Check(recoverySnapshot.Workspaces[0].LastMultiColumnCount == 5, "Recovery store should preserve the remembered multi-column count.");
+    Check(recoverySnapshot.Workspaces[0].HasSessionChanges, "Recovery store should preserve unsaved workspace metadata.");
 
     var recoveredWorkspaceVm = new MainViewModel();
     Check(recoveredWorkspaceVm.LoadRecoverySnapshot(recoverySnapshot.Workspaces[0]), "Recovery load should accept a saved workspace snapshot.");
@@ -645,13 +716,37 @@ try
     Check(recoveredWorkspaceVm.IsDirty, "Recovered dirty workspace should still be dirty.");
     Check(recoveredWorkspaceVm.Columns.Count == vm.Columns.Count, "Recovered workspace should restore its layout content.");
 
+    var legacyMarkdownRecoveryRoot = Path.Combine(tempRoot, "legacy-markdown-recovery");
+    WorkspaceRecoveryStore.Save([recoveryWorkspaces[0]], 0, legacyMarkdownRecoveryRoot);
+    var legacyGenerationName = File.ReadAllText(Path.Combine(legacyMarkdownRecoveryRoot, "current-generation.txt")).Trim();
+    var legacyManifestPath = Path.Combine(legacyMarkdownRecoveryRoot, legacyGenerationName, "manifest.json");
+    var legacyManifest = JsonNode.Parse(File.ReadAllText(legacyManifestPath))?.AsObject() ?? throw new InvalidOperationException("Could not parse legacy recovery manifest.");
+    var legacyWorkspaceEntry = legacyManifest["Workspaces"]?[0]?.AsObject() ?? throw new InvalidOperationException("Could not find legacy recovery workspace.");
+    legacyWorkspaceEntry["CurrentFileKind"] = "MarkdownDocument";
+    legacyWorkspaceEntry["CurrentFilePath"] = "C:\\temp\\legacy.md";
+    legacyWorkspaceEntry["RequiresSaveAsBeforeOverwrite"] = true;
+    File.WriteAllText(legacyManifestPath, legacyManifest.ToJsonString());
+    Check(WorkspaceRecoveryStore.TryLoad(out var migratedMarkdownRecovery, legacyMarkdownRecoveryRoot), "Recovery should load workspaces created before Markdown file support was removed.");
+    Check(
+        migratedMarkdownRecovery.Workspaces[0].CurrentFileKind == SaveFileKind.Layout
+            && migratedMarkdownRecovery.Workspaces[0].CurrentFilePath is null
+            && !migratedMarkdownRecovery.Workspaces[0].RequiresSaveAsBeforeOverwrite,
+        "Recovered Markdown workspaces should detach from the retired file type and become native layouts.");
+
     WorkspaceRecoveryStore.Save([recoveryWorkspaces[0]], 0, recoveryRoot);
     Check(WorkspaceRecoveryStore.TryLoad(out var trimmedRecoverySnapshot, recoveryRoot), "Recovery store should still load after shrinking the workspace list.");
     Check(trimmedRecoverySnapshot.Workspaces.Count == 1, "Recovery store should drop stale workspaces when fewer tabs are saved.");
-    Check(!File.Exists(Path.Combine(recoveryRoot, "workspace-2.columnpad.json")), "Recovery store should delete stale per-workspace files.");
+    var recoveryGenerations = Directory.GetDirectories(recoveryRoot, "generation-*");
+    Check(recoveryGenerations.Length == 2, "Recovery store should retain the current and previous complete generations only.");
 
-    WorkspaceRecoveryStore.Clear(recoveryRoot);
+    var currentGenerationName = File.ReadAllText(Path.Combine(recoveryRoot, "current-generation.txt")).Trim();
+    File.WriteAllText(Path.Combine(recoveryRoot, currentGenerationName, "manifest.json"), "{ damaged");
+    Check(WorkspaceRecoveryStore.TryLoad(out var fallbackRecoverySnapshot, recoveryRoot), "Recovery store should fall back when the newest generation is damaged.");
+    Check(fallbackRecoverySnapshot.Workspaces.Count == 2, "Recovery fallback should restore the previous complete generation rather than a mixed snapshot.");
+
+    Check(WorkspaceRecoveryStore.TryClear(recoveryRoot), "Recovery cleanup should report a successful directory removal.");
     Check(!Directory.Exists(recoveryRoot), "Recovery clear should remove the recovery directory.");
+    Check(WorkspaceRecoveryStore.TryClear(recoveryRoot), "Recovery cleanup should be harmless when no recovery directory exists.");
 }
 finally
 {
@@ -659,15 +754,27 @@ finally
         Directory.Delete(tempRoot, true);
 }
 
-var exportedMarkdown = "<!-- ColumnPad Export: Markdown -->\n\n## Red\n\nleft\n\n## Blue\n\nright\n";
-var importedFromMarkdown = new MainViewModel();
-importedFromMarkdown.LoadFromExportMarkdown(exportedMarkdown, "export.md");
-Check(importedFromMarkdown.Columns.Count == 2, "Markdown import should create one column per heading.");
-Check(importedFromMarkdown.Columns[0].Title == "Red", "Markdown import should preserve first heading title.");
-Check(importedFromMarkdown.Columns[0].Text == "left", "Markdown import should preserve first heading body.");
-Check(importedFromMarkdown.Columns[1].Title == "Blue", "Markdown import should preserve second heading title.");
-Check(importedFromMarkdown.Columns[1].Text == "right", "Markdown import should preserve second heading body.");
-Check(!importedFromMarkdown.IsDirty, "Imported markdown exports should start clean.");
+var exportedJson = """
+{
+  "FileType": "ColumnPadTextExport",
+  "Version": 1,
+  "Columns": [
+    { "Title": "Red", "Text": "left" },
+    { "Title": "Blue", "Text": "right" }
+  ]
+}
+""";
+var importedFromJson = new MainViewModel();
+importedFromJson.LoadFromExportJson(exportedJson, "export.json", "C:\\temp\\export.json");
+Check(importedFromJson.Columns.Count == 2, "JSON import should create one column per exported entry.");
+Check(importedFromJson.Columns[0].Title == "Red", "JSON import should preserve first column title.");
+Check(importedFromJson.Columns[0].Text == "left", "JSON import should preserve first column body.");
+Check(importedFromJson.Columns[1].Title == "Blue", "JSON import should preserve second column title.");
+Check(importedFromJson.Columns[1].Text == "right", "JSON import should preserve second column body.");
+Check(importedFromJson.CurrentFileKind == SaveFileKind.JsonExport && importedFromJson.RequiresSaveAsBeforeOverwrite, "Imported JSON exports should require Save As before they can overwrite the source file.");
+Check(!importedFromJson.IsDirty, "Imported JSON exports should start clean.");
+importedFromJson.GutterWidthPx = 36;
+Check(importedFromJson.CurrentFileKind == SaveFileKind.Layout && importedFromJson.CurrentFilePath is null, "Adding settings that a concise JSON export cannot represent should promote the workspace to a native layout.");
 
 var singleLayoutJson = vm.ToLayoutJson();
 var workspaceSessionJson = JsonSerializer.Serialize(new
@@ -690,12 +797,12 @@ Check(!WorkspaceSessionFileService.IsWorkspaceSessionJson(singleLayoutJson), "Se
 Check(FileWorkflowService.ClassifyOpenFile(".txt", exportedText) == OpenFileLoadKind.TextExport, "File workflow service should classify exported text as text-export load kind.");
 Check(FileWorkflowService.ClassifyOpenFile(".txt", "plain note") == OpenFileLoadKind.TextDocument, "File workflow service should classify plain text as text-document load kind.");
 Check(FileWorkflowService.ClassifyOpenFile(".txt", "===== Alpha =====\n\nplain note") == OpenFileLoadKind.TextDocument, "File workflow service should not auto-split normal text files that contain divider-like lines.");
-Check(FileWorkflowService.ClassifyOpenFile(".md", exportedMarkdown) == OpenFileLoadKind.MarkdownExport, "File workflow service should classify exported markdown as markdown-export load kind.");
-Check(FileWorkflowService.ClassifyOpenFile(".md", "# note") == OpenFileLoadKind.MarkdownDocument, "File workflow service should classify plain markdown as markdown-document load kind.");
-Check(FileWorkflowService.ClassifyOpenFile(".md", "## Heading\n\nplain note") == OpenFileLoadKind.MarkdownDocument, "File workflow service should not auto-split normal markdown heading files.");
+Check(FileWorkflowService.ClassifyOpenFile(".json", exportedJson) == OpenFileLoadKind.JsonExport, "File workflow service should classify concise ColumnPad JSON exports before layout detection.");
+Check(FileWorkflowService.ClassifyOpenFile(".md", "# note") == OpenFileLoadKind.Unsupported, "File workflow service should reject retired Markdown file extensions.");
+Check(!FileWorkflowService.SupportedOpenFileFilter.Contains("*.md", StringComparison.OrdinalIgnoreCase), "The Open dialog should no longer advertise Markdown files.");
 Check(FileWorkflowService.ClassifyOpenFile(".json", workspaceSessionJson) == OpenFileLoadKind.WorkspaceSession, "File workflow service should classify workspace-session JSON correctly.");
 Check(FileWorkflowService.ClassifyOpenFile(".json", singleLayoutJson) == OpenFileLoadKind.LayoutJson, "File workflow service should classify single-layout JSON as layout load kind.");
-var workflowJson = JsonSerializer.Serialize(workflowDefinition, new JsonSerializerOptions { WriteIndented = true });
+var workflowJson = JsonSerializer.Serialize(workflowDefinition);
 Check(FileWorkflowService.ClassifyOpenFile(".workflow.json", workflowJson) == OpenFileLoadKind.WorkflowJson, "File workflow service should classify workflow JSON so File Open can route it to Workflow Builder.");
 
 var saveDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.TextDocument, "C:\\temp\\notes.txt", requiresSaveAsBeforeOverwrite: true);
@@ -708,8 +815,8 @@ Check(layoutDialogDefinition.FileName == "layout.columnpad.json", "File workflow
 var textExportDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.TextExport, currentFilePath: null, requiresSaveAsBeforeOverwrite: false);
 Check(textExportDialogDefinition.FileName == "ColumnPad_export.txt", "File workflow service should provide a standard text export filename.");
 
-var markdownExportDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.MarkdownExport, currentFilePath: null, requiresSaveAsBeforeOverwrite: false);
-Check(markdownExportDialogDefinition.FileName == "ColumnPad_export.md", "File workflow service should provide a standard markdown export filename.");
+var jsonExportDialogDefinition = FileWorkflowService.BuildSaveDialog(SaveFileKind.JsonExport, currentFilePath: null, requiresSaveAsBeforeOverwrite: false);
+Check(jsonExportDialogDefinition.FileName == "ColumnPad_export.json" && jsonExportDialogDefinition.DefaultExt == ".json", "File workflow service should provide a standard concise JSON export filename.");
 
 var workspaceSessionDialogDefinition = FileWorkflowService.BuildWorkspaceSessionSaveDialog("C:\\temp\\session.columnpad.json");
 Check(workspaceSessionDialogDefinition.FileName == "session.columnpad.json", "File workflow service should use preferred workspace-session filename when available.");
@@ -727,6 +834,10 @@ Check(roundTripSessionWorkspace["Layout"] is JsonObject, "Session service should
 Check(roundTripSessionWorkspace["LayoutJson"] is null, "Session service should not emit legacy escaped LayoutJson when saving.");
 Check(WorkspaceSessionFileService.TryParseSession(roundTripSessionJson, out var parsedCleanSession), "Session service should parse its cleaned session JSON.");
 Check(parsedCleanSession.Workspaces[0].LayoutJson.Contains("\"Columns\"", StringComparison.Ordinal), "Cleaned session JSON should preserve the nested layout content.");
+var futureSessionRoot = JsonNode.Parse(roundTripSessionJson)!.AsObject();
+futureSessionRoot["Version"] = 999;
+Check(!WorkspaceSessionFileService.IsWorkspaceSessionJson(futureSessionRoot.ToJsonString()), "Session detection should reject unsupported future versions.");
+Check(!WorkspaceSessionFileService.TryParseSession(futureSessionRoot.ToJsonString(), out _), "Session parsing should reject unsupported future versions without loading tabs.");
 
 var tempSessionPath = Path.Combine(Path.GetTempPath(), $"ColumnPadSession-{Guid.NewGuid():N}.columnpad.json");
 File.WriteAllText(tempSessionPath, workspaceSessionJson);
@@ -767,70 +878,8 @@ finally
 
 
 
-var searchColumns = new List<string?>
-{
-    "alpha beta",
-    "gamma\nalpha",
-    string.Empty
-};
-
-Check(TextSearchService.TryFindNext(searchColumns, "alpha", 0, 0, 0, SearchCursor.Empty, out var firstFind), "Text search service should find the first match from the active column.");
-Check(firstFind.ColumnIndex == 0 && firstFind.CharIndex == 0 && firstFind.LineNumber == 1, "Text search service should report first-column hit coordinates.");
-Check(TextSearchService.TryFindNext(searchColumns, "alpha", 0, 0, 0, new SearchCursor(firstFind.ColumnIndex, firstFind.CharIndex), out var secondFind), "Text search service should advance to the next match after the cursor.");
-Check(secondFind.ColumnIndex == 1 && secondFind.CharIndex == 6 && secondFind.LineNumber == 2, "Text search service should report line/char for cross-column next hit.");
-Check(TextSearchService.TryFindNext(searchColumns, "alpha", 0, 0, 0, new SearchCursor(secondFind.ColumnIndex, secondFind.CharIndex), out var wrappedFind), "Text search service should wrap when searching past the last match.");
-Check(wrappedFind.ColumnIndex == 0 && wrappedFind.CharIndex == 0, "Text search service wrap search should return to the first match.");
-Check(!TextSearchService.TryFindNext(searchColumns, "missing", 0, 0, 0, SearchCursor.Empty, out _), "Text search service should return no hit when the term is absent.");
-
-var (replacedTextByService, replacementCountByService) = TextSearchService.ReplaceAllWithCount("one One one", "one", "two", StringComparison.CurrentCultureIgnoreCase);
-Check(replacementCountByService == 3, "Text search service replace should count all case-insensitive hits.");
-Check(replacedTextByService == "two two two", "Text search service replace should substitute all hits in order.");
-Check(TextSearchService.ComputeLineNumber("a\nb\nc", 4) == 3, "Text search service should compute 1-based line numbers from character index.");
-Check(TextSearchService.ComputeLineNumber("a\rb\r\nc", 5) == 3, "Text search service should count LF, CRLF, and standalone CR line breaks consistently.");
-
-var listModeVm = new ColumnViewModel
-{
-    Text = "alpha\nbeta",
-    LineMarkerMode = LineMarkerMode.Bullets
-};
-Check(listModeVm.LineMarkerMode == LineMarkerMode.Bullets, "Line marker mode should support bullets without mutating text.");
-listModeVm.LineMarkerMode = LineMarkerMode.Checklist;
-listModeVm.ToggleChecklistLineChecked(0);
-Check(listModeVm.IsChecklistLineChecked(0), "Checklist gutter mode should toggle checks without inserting inline symbols.");
-Check(listModeVm.Text == "alpha\nbeta", "Checklist gutter mode should keep body text unchanged.");
-
-var expectedClipboardLines = string.Join(Environment.NewLine, "one", "two", "three");
-Check(
-    ClipboardTextService.NormalizeClipboardText("one\r\r\ntwo\u2028three") == expectedClipboardLines,
-    "Clipboard text normalization should collapse malformed CRCRLF and Unicode line separators.");
-
-var alternatingBlankPaste = "one\n\n two\n\nthree\n\nfour";
-Check(
-    ClipboardTextService.NormalizeClipboardText(alternatingBlankPaste) == string.Join(Environment.NewLine, "one", " two", "three", "four"),
-    "Clipboard text normalization should collapse alternating blank rows from malformed paste sources.");
-
-Check(
-    ClipboardTextService.ApplyPastePreset("alpha\n  beta", PasteListPreset.Bullets) == string.Join(Environment.NewLine, "- alpha", "  - beta"),
-    "Clipboard bullet preset should add markdown bullets while preserving indentation.");
-
-Check(
-    ClipboardTextService.ApplyPastePreset("- [x] done\nplain", PasteListPreset.Checklist) == string.Join(Environment.NewLine, "- [x] done", "- [ ] plain"),
-    "Clipboard checklist preset should preserve checked checklist rows and add unchecked markers to plain rows.");
-
-Check(
-    ClipboardTextService.ApplyPastePreset("1. ordered", PasteListPreset.Bullets) == "1. ordered",
-    "Clipboard paste presets should not rewrite ordered-list prefixes.");
-
-if (failures.Count > 0)
-{
-    Console.Error.WriteLine($"Smoke tests failed: {failures.Count} of {checks} checks.");
-    foreach (var failure in failures)
-        Console.Error.WriteLine($" - {failure}");
-    return 1;
-}
-
-Console.WriteLine($"Smoke tests passed ({checks} checks).");
-return 0;
+EditorServiceSmokeTests.Run(tests);
+return tests.Complete();
 
 
 

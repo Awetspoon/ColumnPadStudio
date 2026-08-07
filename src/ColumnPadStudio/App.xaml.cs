@@ -1,4 +1,5 @@
 using ColumnPadStudio.Services;
+using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -9,6 +10,8 @@ namespace ColumnPadStudio;
 
 public partial class App : Application
 {
+    private const long MaximumCrashLogBytes = 2 * 1024 * 1024;
+
     protected override void OnStartup(StartupEventArgs e)
     {
         DispatcherUnhandledException += OnDispatcherUnhandledException;
@@ -20,6 +23,7 @@ public partial class App : Application
 
     private static void OnDispatcherUnhandledException(object sender, DispatcherUnhandledExceptionEventArgs e)
     {
+        PreserveRecoveryForCrash();
         var logPath = WriteCrashLog(e.Exception);
         MessageBox.Show(
             "ColumnPad hit an unexpected error and needs to close.\n\nCrash details were saved here:\n" + logPath,
@@ -33,6 +37,7 @@ public partial class App : Application
 
     private static void OnUnhandledException(object sender, UnhandledExceptionEventArgs e)
     {
+        PreserveRecoveryForCrash();
         if (e.ExceptionObject is Exception exception)
         {
             WriteCrashLog(exception);
@@ -48,15 +53,21 @@ public partial class App : Application
         e.SetObserved();
     }
 
+    private static void PreserveRecoveryForCrash()
+    {
+        if (Current?.MainWindow is MainWindow mainWindow)
+            mainWindow.PreserveRecoveryForAbnormalShutdown();
+    }
+
     private static string WriteCrashLog(Exception exception)
     {
-        var details = new StringBuilder()
-            .AppendLine($"Timestamp: {DateTimeOffset.Now:O}")
-            .AppendLine($"App Version: {typeof(App).Assembly.GetName().Version}")
-            .AppendLine()
-            .AppendLine(exception.ToString())
-            .AppendLine(new string('-', 80))
-            .ToString();
+        var detailsBuilder = new StringBuilder();
+        detailsBuilder.AppendLine(CultureInfo.InvariantCulture, $"Timestamp: {DateTimeOffset.Now:O}");
+        detailsBuilder.AppendLine(CultureInfo.InvariantCulture, $"App Version: {typeof(App).Assembly.GetName().Version}");
+        detailsBuilder.AppendLine();
+        detailsBuilder.AppendLine(exception.ToString());
+        detailsBuilder.AppendLine(new string('-', 80));
+        var details = detailsBuilder.ToString();
 
         Exception? lastWriteError = null;
         foreach (var logPath in GetCrashLogCandidates())
@@ -67,7 +78,8 @@ public partial class App : Application
                 if (!string.IsNullOrWhiteSpace(directory))
                     Directory.CreateDirectory(directory);
 
-                File.AppendAllText(logPath, details);
+                RotateCrashLogIfNeeded(logPath, Encoding.UTF8.GetByteCount(details));
+                File.AppendAllText(logPath, details, Encoding.UTF8);
                 return logPath;
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
@@ -83,5 +95,16 @@ public partial class App : Application
     {
         yield return Path.Combine(AppStoragePaths.CrashLogsDirectory, "crash.log");
         yield return Path.Combine(Path.GetTempPath(), "ColumnPadStudio", "crash.log");
+    }
+
+    private static void RotateCrashLogIfNeeded(string logPath, int pendingBytes)
+    {
+        if (!File.Exists(logPath) || new FileInfo(logPath).Length + pendingBytes <= MaximumCrashLogBytes)
+            return;
+
+        var previousLogPath = Path.Combine(
+            Path.GetDirectoryName(logPath) ?? Path.GetTempPath(),
+            $"{Path.GetFileNameWithoutExtension(logPath)}.previous{Path.GetExtension(logPath)}");
+        File.Move(logPath, previousLogPath, overwrite: true);
     }
 }

@@ -7,14 +7,20 @@ namespace ColumnPadStudio;
 public partial class MainWindow
 {
     private bool TryConfirmSaveBeforeExit()
+        => TryConfirmSaveBeforeDiscardingWorkspaces("closing ColumnPad");
+
+    private bool TryConfirmSaveBeforeReplacingAllWorkspaces()
+        => TryConfirmSaveBeforeDiscardingWorkspaces("opening the workspace session");
+
+    private bool TryConfirmSaveBeforeDiscardingWorkspaces(string actionText)
     {
         PersistWidthsFromGrid();
 
-        var dirtyWorkspaces = Workspaces.Where(workspace => workspace.Vm.IsDirty).ToList();
+        var dirtyWorkspaces = Workspaces.Where(workspace => workspace.IsDirty).ToList();
         if (dirtyWorkspaces.Count == 0)
             return true;
 
-        var message = BuildSaveBeforeExitMessage(dirtyWorkspaces);
+        var message = BuildSaveBeforeActionMessage(dirtyWorkspaces, actionText);
         var result = MessageBox.Show(
             this,
             message,
@@ -53,17 +59,17 @@ public partial class MainWindow
         return true;
     }
 
-    private static string BuildSaveBeforeExitMessage(IReadOnlyList<WorkspaceSession> dirtyWorkspaces)
+    private static string BuildSaveBeforeActionMessage(IReadOnlyList<WorkspaceSession> dirtyWorkspaces, string actionText)
     {
         if (dirtyWorkspaces.Count == 1)
-            return $"Save changes to {dirtyWorkspaces[0].Name} before closing?";
+            return $"Save changes to {dirtyWorkspaces[0].Name} before {actionText}?";
 
         var names = dirtyWorkspaces.Take(3).Select(workspace => $"- {workspace.Name}");
         var remainder = dirtyWorkspaces.Count > 3
             ? $"\n- and {dirtyWorkspaces.Count - 3} more"
             : string.Empty;
 
-        return $"Save changes to {dirtyWorkspaces.Count} workspaces before closing?\n\n{string.Join("\n", names)}{remainder}";
+        return $"Save changes to {dirtyWorkspaces.Count} workspaces before {actionText}?\n\n{string.Join("\n", names)}{remainder}";
     }
 
     private bool TrySaveWorkspaceBeforeExit(WorkspaceSession workspace)

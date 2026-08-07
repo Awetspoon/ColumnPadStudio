@@ -46,6 +46,44 @@ Check(DisplayTextRules.CleanSingleLineLabel(" \r\n\t ", "Fallback") == "Fallback
 Check(WorkspaceConstraints.ClampColumnCount(-1) == WorkspaceConstraints.MinColumns, "WorkspaceConstraints should clamp low column counts.");
 Check(WorkspaceConstraints.ClampColumnCount(100000) == WorkspaceConstraints.MaxColumns, "WorkspaceConstraints should clamp high column counts.");
 Check(WorkspaceConstraints.ClampColumnCount(3) == 3, "WorkspaceConstraints should keep valid counts unchanged.");
+Check(WorkspaceConstraints.MaxColumns == 9999, "WorkspaceConstraints should retain the original high column ceiling.");
+Check(WorkspaceConstraints.ClampColumnWidth(120) == WorkspaceConstraints.MinimumColumnWidth, "WorkspaceConstraints should enforce the visual minimum column width.");
+Check(WorkspaceConstraints.ClampColumnWidth(9000) == WorkspaceConstraints.MaximumColumnWidth, "WorkspaceConstraints should enforce the maximum column width.");
+Check(WorkspaceConstraints.ClampColumnWidth(double.NaN) == WorkspaceConstraints.DefaultColumnWidth, "WorkspaceConstraints should replace invalid column widths with the default.");
+Check(!WorkspaceColumnLayout.UsesFixedColumnStrip(1, false), "A single column should always use the available viewport width.");
+Check(WorkspaceColumnLayout.UsesFixedColumnStrip(2, false), "Multiple columns should use fixed widths when Fit to window is off.");
+Check(!WorkspaceColumnLayout.UsesFixedColumnStrip(2, true), "Fit to window should give multiple columns equal flexible widths.");
+Check(WorkspaceColumnLayout.ResolveColumnWidth(null, 444) == 444, "An unsized column should resolve against the preferred default width.");
+Check(WorkspaceColumnLayout.ResolveColumnWidth(0, 444) == 444, "A legacy zero width should resolve against the preferred default width.");
+Check(WorkspaceColumnLayout.ResolveColumnWidth(null, 9000) == WorkspaceConstraints.MaximumColumnWidth, "An invalid preferred default width should be clamped safely.");
+Check(WorkspaceColumnLayout.ResolveColumnWidth(555, 444) == 555, "An explicit column width should override the preferred default.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([5000], 1200, 4, true, false, 444) == 1200,
+    "A single column should fill its viewport even when it has a stored custom width.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([null, null, null], 1200, 4, true, false, 320) == 1200,
+    "A fixed-width column strip should still fill unused viewport space.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([null, null, null, null], 1200, 4, true, false, 320) == 1292,
+    "Four default columns plus their gaps should overflow a 1200px viewport and enable horizontal scrolling.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([444, null], 700, 4, true, false, 320) == 768,
+    "Host width should preserve explicit widths while defaulting unsized neighbours.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([444, null], 700, 4, false, false, 320) == 764,
+    "Turning snapping off should remove the gap without changing fixed column widths.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([444, 555, 666], 1200, 4, true, true, 480) == 1200,
+    "Fit mode should ignore stored and preferred widths while there is enough viewport space.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([444, 555, 666, 777, 888, 999], 1200, 4, true, true, 480) == 1340,
+    "Fit mode should preserve every column's safe minimum width plus snapped gaps when space is tight.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([444, 555, 666, 777, 888, 999], 1200, 4, false, true, 480) == 1320,
+    "Unsnapped Fit mode should preserve safe minimum widths without adding gaps.");
+Check(
+    WorkspaceColumnLayout.CalculateHostWidth([null, null], 500, 4, true, false, 444) == 892,
+    "Fixed mode should apply the preferred custom width to every unsized column.");
 var textExport = $"{WorkspaceImportRules.TextExportMarker}\n{WorkspaceImportRules.TextExportFormatLine}\n\n===== Alpha =====\n\none\n\n===== Beta =====\n\n.\n";
 Check(WorkspaceImportRules.LooksLikeTextExport(textExport), "Text-export detection should recognize marked ColumnPad exports.");
 Check(!WorkspaceImportRules.LooksLikeTextExport("plain note\nline two"), "Text-export detection should reject plain text.");
@@ -56,15 +94,23 @@ Check(parsedTextExport.Count == 2, "Text-export parser should return one column 
 Check(parsedTextExport[0].Title == "Alpha" && parsedTextExport[0].Text == "one", "Text-export parser should preserve first section content.");
 Check(parsedTextExport[1].Title == "Beta" && parsedTextExport[1].Text == ".", "Text-export parser should preserve second section content.");
 
-var markdownExport = $"{WorkspaceImportRules.MarkdownExportMarker}\n\n## Red\n\nleft\n\n## Blue\n\nright\n";
-Check(WorkspaceImportRules.LooksLikeMarkdownExport(markdownExport), "Markdown-export detection should recognize marked ColumnPad markdown exports.");
-Check(!WorkspaceImportRules.LooksLikeMarkdownExport("intro paragraph\n## later heading"), "Markdown-export detection should reject inline heading text exports.");
-Check(!WorkspaceImportRules.LooksLikeMarkdownExport("## Red\n\nleft\n\n## Blue\n\nright\n"), "Markdown-export detection should reject unmarked ordinary markdown headings.");
+var jsonExport = """
+{
+  "FileType": "ColumnPadTextExport",
+  "Version": 1,
+  "Columns": [
+    { "Title": "Red", "Text": "left" },
+    { "Title": "Blue", "Text": "right" }
+  ]
+}
+""";
+Check(WorkspaceImportRules.IsJsonExport(jsonExport), "JSON-export detection should recognize marked ColumnPad text exports.");
+Check(!WorkspaceImportRules.IsJsonExport("{\"FileType\":\"Other\",\"Columns\":[]}"), "JSON-export detection should reject unrelated JSON.");
 
-var parsedMarkdownExport = WorkspaceImportRules.ParseMarkdownExportColumns(markdownExport);
-Check(parsedMarkdownExport.Count == 2, "Markdown-export parser should return one column per heading.");
-Check(parsedMarkdownExport[0].Title == "Red" && parsedMarkdownExport[0].Text == "left", "Markdown-export parser should preserve first heading section.");
-Check(parsedMarkdownExport[1].Title == "Blue" && parsedMarkdownExport[1].Text == "right", "Markdown-export parser should preserve second heading section.");
+var parsedJsonExport = WorkspaceImportRules.ParseJsonExportColumns(jsonExport);
+Check(parsedJsonExport.Count == 2, "JSON-export parser should return one column per JSON entry.");
+Check(parsedJsonExport[0].Title == "Red" && parsedJsonExport[0].Text == "left", "JSON-export parser should preserve first column content.");
+Check(parsedJsonExport[1].Title == "Blue" && parsedJsonExport[1].Text == "right", "JSON-export parser should preserve second column content.");
 
 var sessionJson = "{\"Version\":1,\"ActiveWorkspaceIndex\":0,\"Workspaces\":[{\"Name\":\"A\",\"LayoutJson\":\"{}\"}]}";
 Check(WorkspaceImportRules.IsWorkspaceSessionJson(sessionJson), "Workspace-session detection should recognize Workspaces arrays.");

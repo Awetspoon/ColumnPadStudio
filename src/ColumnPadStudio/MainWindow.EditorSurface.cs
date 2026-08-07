@@ -1,5 +1,7 @@
 using ColumnPadStudio.Controls;
+using ColumnPadStudio.Domain.Workspaces;
 using ColumnPadStudio.Domain.Lists;
+using ColumnPadStudio.Models;
 using ColumnPadStudio.Services;
 using ColumnPadStudio.ViewModels;
 using System.Globalization;
@@ -36,17 +38,125 @@ public partial class MainWindow
 
     private void ResetWidths_Click(object sender, RoutedEventArgs e)
     {
-        ActiveVm.ResetAllColumnWidths();
+        if (!CanManageColumnWidths)
+        {
+            ActiveVm.StatusText = GetWidthManagementUnavailableStatus(ActiveVm, "resetting column widths");
+            return;
+        }
+
+        ResetAllColumnsToDefault(ActiveVm);
     }
 
     private void ResetActiveWidth_Click(object sender, RoutedEventArgs e)
     {
-        ActiveVm.ResetActiveColumnWidth();
+        if (!CanManageColumnWidths)
+        {
+            ActiveVm.StatusText = GetWidthManagementUnavailableStatus(ActiveVm, "resetting a column width");
+            return;
+        }
+
+        ResetSelectedColumnToDefault(ActiveVm);
     }
 
     private void LockActiveWidth_Click(object sender, RoutedEventArgs e)
     {
-        ActiveVm.ToggleLockActiveWidth();
+        var vm = ActiveVm;
+        var active = vm.GetActive();
+        if (active is null)
+            return;
+
+        if (!CanManageColumnWidths)
+        {
+            vm.StatusText = GetWidthManagementUnavailableStatus(vm, "freezing a column width");
+            return;
+        }
+
+        if (_editorsById.TryGetValue(active.Id, out var editor))
+            ToggleColumnWidthLock(editor, vm, active);
+        else
+        {
+            if (!active.IsWidthLocked && !active.WidthPx.HasValue)
+                active.WidthPx = _appPreferences.DefaultColumnWidthPx;
+            vm.ToggleLockActiveWidth();
+        }
+    }
+
+    private void UseStandardColumnWidth_Click(object sender, RoutedEventArgs e)
+    {
+        UpdateDefaultColumnWidth((int)WorkspaceConstraints.DefaultColumnWidth);
+    }
+
+    private void SetDefaultColumnWidth_Click(object sender, RoutedEventArgs e)
+    {
+        var current = _appPreferences.DefaultColumnWidthPx.ToString(CultureInfo.InvariantCulture);
+        var prompt = PromptDialog.Show(
+            this,
+            "Default Column Width",
+            $"Default width ({WorkspaceConstraints.MinimumColumnWidth:0}-{WorkspaceConstraints.MaximumColumnWidth:0} px):",
+            current);
+        if (string.IsNullOrWhiteSpace(prompt))
+        {
+            RefreshColumnWidthPreferenceBindings();
+            return;
+        }
+
+        if (!int.TryParse(prompt, NumberStyles.Integer, CultureInfo.InvariantCulture, out var widthPx)
+            || widthPx < WorkspaceConstraints.MinimumColumnWidth
+            || widthPx > WorkspaceConstraints.MaximumColumnWidth)
+        {
+            ActiveVm.StatusText = $"Default column width must be between {WorkspaceConstraints.MinimumColumnWidth:0} and {WorkspaceConstraints.MaximumColumnWidth:0}px.";
+            RefreshColumnWidthPreferenceBindings();
+            return;
+        }
+
+        UpdateDefaultColumnWidth(widthPx);
+    }
+
+    private void SetColumnSpacing_Click(object sender, RoutedEventArgs e)
+    {
+        var current = _appPreferences.ColumnSpacingPx.ToString(CultureInfo.InvariantCulture);
+        var prompt = PromptDialog.Show(
+            this,
+            "Column Gap",
+            $"Gap between snapped columns ({AppPreferences.MinimumColumnSpacingPx}-{AppPreferences.MaximumColumnSpacingPx} px):",
+            current);
+        if (string.IsNullOrWhiteSpace(prompt))
+            return;
+
+        if (!int.TryParse(prompt, NumberStyles.Integer, CultureInfo.InvariantCulture, out var spacingPx)
+            || spacingPx < AppPreferences.MinimumColumnSpacingPx
+            || spacingPx > AppPreferences.MaximumColumnSpacingPx)
+        {
+            ActiveVm.StatusText = $"Column gap must be between {AppPreferences.MinimumColumnSpacingPx} and {AppPreferences.MaximumColumnSpacingPx}px.";
+            return;
+        }
+
+        UpdateColumnSpacing(spacingPx);
+    }
+
+    private void SetGutterWidth_Click(object sender, RoutedEventArgs e)
+    {
+        var vm = ActiveVm;
+        var current = vm.GutterWidthPx.ToString(CultureInfo.InvariantCulture);
+        var prompt = PromptDialog.Show(
+            this,
+            "Gutter Width",
+            $"Gutter width ({MainViewModel.MinimumGutterWidthPx}-{MainViewModel.MaximumGutterWidthPx} px):",
+            current);
+        if (string.IsNullOrWhiteSpace(prompt))
+            return;
+
+        if (!int.TryParse(prompt, NumberStyles.Integer, CultureInfo.InvariantCulture, out var gutterWidthPx)
+            || gutterWidthPx < MainViewModel.MinimumGutterWidthPx
+            || gutterWidthPx > MainViewModel.MaximumGutterWidthPx)
+        {
+            vm.StatusText = $"Gutter width must be between {MainViewModel.MinimumGutterWidthPx} and {MainViewModel.MaximumGutterWidthPx}px.";
+            return;
+        }
+
+        vm.GutterWidthPx = gutterWidthPx;
+        if (!vm.ShowLineNumbers)
+            vm.StatusText = $"Gutter width saved as {gutterWidthPx}px. Turn on line numbers to see it.";
     }
 
     private void RemoveActiveWithConfirmation()
@@ -113,6 +223,9 @@ public partial class MainWindow
         if (!column.UseDefaultFont)
             return true;
 
+        if (column.EditorTextColor != ColumnTextColorService.ThemeDefault)
+            return true;
+
         return false;
     }
 
@@ -122,7 +235,13 @@ public partial class MainWindow
         if (active is null)
             return;
 
-        var current = active.WidthPx ?? (int)DefaultColumnWidthPx;
+        if (!CanManageColumnWidths)
+        {
+            ActiveVm.StatusText = GetWidthManagementUnavailableStatus(ActiveVm, "resizing an individual column");
+            return;
+        }
+
+        var current = active.WidthPx ?? _appPreferences.DefaultColumnWidthPx;
         var prompt = PromptDialog.Show(this, "Resize Column", "Width (px):", current.ToString(CultureInfo.InvariantCulture));
         if (string.IsNullOrWhiteSpace(prompt))
             return;
@@ -134,77 +253,6 @@ public partial class MainWindow
         }
 
         ActiveVm.SetActiveColumnWidth(widthPx);
-    }
-
-    private void SetActiveColumnFontFamily()
-    {
-        var active = ActiveVm.GetActive();
-        if (active is null)
-            return;
-
-        var prompt = PromptDialog.ShowChoice(
-            this,
-            "Column Font Family",
-            "Font family:",
-            active.EditorFontFamily,
-            ActiveVm.EditorFontFamilies);
-        if (string.IsNullOrWhiteSpace(prompt))
-            return;
-
-        active.EditorFontFamily = prompt.Trim();
-        active.UseDefaultFont = false;
-        ActiveVm.RefreshStatus();
-    }
-
-    private void AdjustActiveColumnFontSize(double delta)
-    {
-        var active = ActiveVm.GetActive();
-        if (active is null)
-            return;
-
-        active.EditorFontSize = Math.Clamp(active.EditorFontSize + delta, 8.0, 40.0);
-        active.UseDefaultFont = false;
-        ActiveVm.RefreshStatus();
-    }
-
-    private void ToggleActiveColumnBold()
-    {
-        var active = ActiveVm.GetActive();
-        if (active is null)
-            return;
-
-        active.EditorFontWeight = active.EditorFontWeight == FontWeights.Bold
-            ? FontWeights.Normal
-            : FontWeights.Bold;
-        active.UseDefaultFont = false;
-        ActiveVm.RefreshStatus();
-    }
-
-    private void ToggleActiveColumnItalic()
-    {
-        var active = ActiveVm.GetActive();
-        if (active is null)
-            return;
-
-        active.EditorFontStyle = active.EditorFontStyle == FontStyles.Italic
-            ? FontStyles.Normal
-            : FontStyles.Italic;
-        active.UseDefaultFont = false;
-        ActiveVm.RefreshStatus();
-    }
-
-    private void ResetActiveColumnFont()
-    {
-        var active = ActiveVm.GetActive();
-        if (active is null)
-            return;
-
-        active.EditorFontFamily = ActiveVm.EditorFontFamily;
-        active.EditorFontSize = ActiveVm.EditorFontSize;
-        active.EditorFontStyle = ActiveVm.DefaultEditorFontStyle;
-        active.EditorFontWeight = ActiveVm.DefaultEditorFontWeight;
-        active.UseDefaultFont = true;
-        ActiveVm.RefreshStatus();
     }
 
     private void ClearAll_Click(object sender, RoutedEventArgs e)

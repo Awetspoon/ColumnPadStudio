@@ -21,8 +21,7 @@ public static class TextSearchService
     {
         result = default;
 
-        if (columnTexts is null)
-            throw new ArgumentNullException(nameof(columnTexts));
+        ArgumentNullException.ThrowIfNull(columnTexts);
 
         if (columnTexts.Count == 0 || string.IsNullOrWhiteSpace(findText))
             return false;

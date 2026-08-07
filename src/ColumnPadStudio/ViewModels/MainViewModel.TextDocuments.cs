@@ -1,7 +1,10 @@
 using System.Text;
+using System.IO;
+using System.Text.Json;
 using ColumnPadStudio.Domain.Lists;
 using ColumnPadStudio.Domain.Workspaces;
 using ColumnPadStudio.Models;
+using ColumnPadStudio.Services;
 
 namespace ColumnPadStudio.ViewModels;
 
@@ -12,32 +15,35 @@ public sealed partial class MainViewModel
         var builder = new StringBuilder();
         builder.AppendLine(WorkspaceImportRules.TextExportMarker);
         builder.AppendLine(WorkspaceImportRules.TextExportFormatLine);
+        builder.AppendLine(WorkspaceImportRules.TextExportVersionLine);
         builder.AppendLine();
 
         for (var i = 0; i < Columns.Count; i++)
         {
             var column = Columns[i];
             var title = BuildExportTitle(column.Title, i);
-            AppendExportSection(builder, $"===== {title} =====", column.Text, i < Columns.Count - 1);
+            AppendExportSection(
+                builder,
+                $"===== {title} =====",
+                WorkspaceImportRules.EscapeTextExportBody(column.Text),
+                i < Columns.Count - 1);
         }
 
         return builder.ToString();
     }
 
-    public string BuildExportMarkdown()
+    public string BuildExportJson()
     {
-        var builder = new StringBuilder();
-        builder.AppendLine(WorkspaceImportRules.MarkdownExportMarker);
-        builder.AppendLine();
+        var export = new TextExportFile(
+            FileType: WorkspaceImportRules.JsonExportFileType,
+            Version: WorkspaceImportRules.CurrentJsonExportVersion,
+            Columns: Columns
+                .Select((column, index) => new TextExportColumn(
+                    Title: BuildExportTitle(column.Title, index),
+                    Text: column.Text ?? string.Empty))
+                .ToList());
 
-        for (var i = 0; i < Columns.Count; i++)
-        {
-            var column = Columns[i];
-            var title = BuildExportTitle(column.Title, i);
-            AppendExportSection(builder, $"## {title}", column.Text, i < Columns.Count - 1);
-        }
-
-        return builder.ToString();
+        return JsonSerializer.Serialize(export, LayoutJsonOptions);
     }
 
     public string BuildSingleDocumentText()
@@ -61,6 +67,7 @@ public sealed partial class MainViewModel
         document.EditorFontStyle = _editorFontStyle;
         document.EditorFontWeight = _editorFontWeight;
         document.UseDefaultFont = true;
+        document.EditorTextColor = ColumnTextColorService.ThemeDefault;
         Columns.Add(document);
 
         ActiveColumnId = document.Id;
@@ -78,10 +85,10 @@ public sealed partial class MainViewModel
         ApplyImportedColumns(parsed, sourceLabel, sourcePath, SaveFileKind.TextExport, "Text imported.");
     }
 
-    public void LoadFromExportMarkdown(string markdown, string? sourceLabel = null, string? sourcePath = null)
+    public void LoadFromExportJson(string json, string? sourceLabel = null, string? sourcePath = null)
     {
-        var parsed = WorkspaceImportRules.ParseMarkdownExportColumns(markdown);
-        ApplyImportedColumns(parsed, sourceLabel, sourcePath, SaveFileKind.MarkdownExport, "Markdown imported.");
+        var parsed = WorkspaceImportRules.ParseJsonExportColumns(json);
+        ApplyImportedColumns(parsed, sourceLabel, sourcePath, SaveFileKind.JsonExport, "JSON imported.");
     }
 
     private static void AppendExportSection(StringBuilder builder, string header, string? body, bool appendSectionBreak)
@@ -121,6 +128,12 @@ public sealed partial class MainViewModel
         SaveFileKind kind,
         string fallbackStatus)
     {
+        if (parsed.Count > WorkspaceConstraints.MaxColumns)
+        {
+            throw new InvalidDataException(
+                $"This file contains {parsed.Count} columns. ColumnPad supports up to {WorkspaceConstraints.MaxColumns} columns in one workspace.");
+        }
+
         var imported = parsed.Count > 0
             ? parsed
             : [new ImportedColumn("Column 1", string.Empty)];
@@ -145,6 +158,7 @@ public sealed partial class MainViewModel
             column.EditorFontStyle = _editorFontStyle;
             column.EditorFontWeight = _editorFontWeight;
             column.UseDefaultFont = true;
+            column.EditorTextColor = ColumnTextColorService.ThemeDefault;
         }
 
         ActiveColumnId = Columns.First().Id;
@@ -154,4 +168,8 @@ public sealed partial class MainViewModel
         StatusText = sourceLabel is null ? fallbackStatus : $"Opened: {sourceLabel}";
         MarkClean();
     }
+
+    private sealed record TextExportFile(string FileType, int Version, List<TextExportColumn> Columns);
+
+    private sealed record TextExportColumn(string Title, string Text);
 }

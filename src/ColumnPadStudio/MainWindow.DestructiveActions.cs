@@ -11,12 +11,12 @@ public partial class MainWindow
         if (workspace is null)
             return true;
 
+        if (!workspace.IsDirty)
+            return true;
+
         var editedColumns = workspace.Vm.Columns.Where(HasEditedColumnData).ToList();
         if (editedColumns.Count == 0)
         {
-            if (!workspace.Vm.IsDirty)
-                return true;
-
             var genericMessage = $"{actionText} will permanently discard unsaved changes in {workspace.Name}.";
             return ConfirmDestructiveAction(dialogTitle, genericMessage + "\n\nAre you sure you want to continue?");
         }
@@ -46,7 +46,11 @@ public partial class MainWindow
             action();
             return true;
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or InvalidDataException)
+        catch (Exception ex) when (ex is IOException
+            or UnauthorizedAccessException
+            or NotSupportedException
+            or InvalidDataException
+            or ArgumentException)
         {
             MessageBox.Show(
                 this,

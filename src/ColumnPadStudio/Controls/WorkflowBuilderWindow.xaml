@@ -163,8 +163,8 @@
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
-                        <Button Content="Save" Margin="0,0,4,0" Click="SaveWorkflow_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
-                        <Button Grid.Column="1" Content="Import JSON" Margin="4,0,0,0" Click="ImportWorkflowJson_Click"/>
+                        <Button Content="Save to Library" Margin="0,0,4,0" Click="SaveWorkflow_Click" IsEnabled="{Binding HasSelectedWorkflow}"/>
+                        <Button Grid.Column="1" Content="Import Workflow" Margin="4,0,0,0" Click="ImportWorkflowJson_Click"/>
                         <Button x:Name="ExportWorkflowButton"
                                 Grid.Row="1"
                                 Content="Export..."
@@ -173,9 +173,8 @@
                                 IsEnabled="{Binding HasSelectedWorkflow}">
                             <Button.ContextMenu>
                                 <ContextMenu>
-                                    <MenuItem Header="JSON workflow file" Click="ExportWorkflowJson_Click"/>
-                                    <MenuItem Header="Readable text file" Click="ExportWorkflowText_Click"/>
-                                    <MenuItem Header="Readable markdown file" Click="ExportWorkflowMarkdown_Click"/>
+                                    <MenuItem Header="Reloadable workflow JSON" Click="ExportWorkflowJson_Click"/>
+                                    <MenuItem Header="Readable text copy" Click="ExportWorkflowText_Click"/>
                                 </ContextMenu>
                             </Button.ContextMenu>
                         </Button>
@@ -194,20 +193,10 @@
 
             <Border Style="{StaticResource WorkflowPanelBorderStyle}" Padding="8,6">
                 <DockPanel LastChildFill="True">
-                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                        <Button Content="Start" Tag="Start" Width="54" Margin="0,0,4,0" Click="AddNodeOfKind_Click"/>
-                        <Button Content="Step" Tag="Step" Width="50" Margin="0,0,4,0" Click="AddNodeOfKind_Click"/>
-                        <Button Content="Decision" Tag="Decision" Width="72" Margin="0,0,4,0" Click="AddNodeOfKind_Click"/>
-                        <Button Content="Note" Tag="Note" Width="50" Margin="0,0,4,0" Click="AddNodeOfKind_Click"/>
-                        <Button Content="End" Tag="End" Width="48" Click="AddNodeOfKind_Click"/>
-                    </StackPanel>
-
                     <StackPanel>
                         <TextBlock Text="{Binding SelectedWorkflow.Name}" FontWeight="SemiBold" TextWrapping="Wrap"/>
                         <TextBlock Style="{StaticResource WorkflowMutedTextStyle}" FontSize="11">
                             <Run Text="{Binding SelectedWorkflow.Category}"/>
-                            <Run Text=" / "/>
-                            <Run Text="{Binding SelectedWorkflow.Trigger}"/>
                         </TextBlock>
                     </StackPanel>
                 </DockPanel>
@@ -223,10 +212,25 @@
                     <DockPanel Margin="8,8,8,0" LastChildFill="False">
                         <TextBlock DockPanel.Dock="Left" Text="Canvas" FontWeight="SemiBold" VerticalAlignment="Center"/>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                            <Button x:Name="AddNodeButton"
+                                    Content="+ Add node"
+                                    Width="88"
+                                    Margin="0,0,4,0"
+                                    Click="AddNodeMenuButton_Click">
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="Step" Tag="Step" Click="AddNodeOfKind_Click"/>
+                                        <MenuItem Header="Decision" Tag="Decision" Click="AddNodeOfKind_Click"/>
+                                        <MenuItem Header="Note" Tag="Note" Click="AddNodeOfKind_Click"/>
+                                        <Separator/>
+                                        <MenuItem Header="Start" Tag="Start" Click="AddNodeOfKind_Click"/>
+                                        <MenuItem Header="End" Tag="End" Click="AddNodeOfKind_Click"/>
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
                             <Button Content="Duplicate" Width="74" Margin="0,0,4,0" Click="DuplicateNode_Click" IsEnabled="{Binding HasSelectedNode}"/>
-                            <Button Content="Remove Node" Width="102" Margin="0,0,4,0" Click="RemoveNode_Click" IsEnabled="{Binding HasSelectedNode}"/>
-                            <Button Content="+ Link" Width="60" Margin="0,0,4,0" Click="AddLink_Click" IsEnabled="{Binding CanCreateLink}"/>
-                            <Button Content="Auto Layout" Width="86" Click="AutoLayout_Click"/>
+                            <Button Content="Delete Node" Width="92" Margin="0,0,4,0" Click="RemoveNode_Click" IsEnabled="{Binding HasSelectedNode}"/>
+                            <Button Content="Tidy Positions" Width="98" Click="AutoLayout_Click"/>
                         </StackPanel>
                     </DockPanel>
 
@@ -338,35 +342,22 @@
         </Grid>
 
         <Border Grid.Column="4" Style="{StaticResource WorkflowPanelBorderStyle}" IsEnabled="{Binding HasSelectedWorkflow}">
-            <TabControl HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
+            <TabControl x:Name="InspectorTabs" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch">
                 <TabControl.Resources>
                     <Style TargetType="TabItem" BasedOn="{StaticResource {x:Type TabItem}}">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
                         <Setter Property="VerticalContentAlignment" Value="Stretch"/>
                     </Style>
                 </TabControl.Resources>
-                <TabItem Header="Workflow">
+                <TabItem x:Name="WorkflowInspectorTab" Header="Workflow">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="6">
                         <StackPanel>
                             <TextBlock Text="Workflow Details" Style="{StaticResource WorkflowSectionTitleStyle}"/>
                             <TextBlock Text="Name"/>
                             <TextBox Margin="0,3,0,8" Text="{Binding SelectedWorkflow.Name, UpdateSourceTrigger=PropertyChanged}"/>
 
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="8"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <StackPanel>
-                                    <TextBlock Text="Category"/>
-                                    <TextBox Margin="0,3,0,0" Text="{Binding SelectedWorkflow.Category, UpdateSourceTrigger=PropertyChanged}"/>
-                                </StackPanel>
-                                <StackPanel Grid.Column="2">
-                                    <TextBlock Text="Trigger"/>
-                                    <ComboBox Margin="0,3,0,0" ItemsSource="{Binding TriggerTypes}" SelectedItem="{Binding SelectedWorkflow.Trigger, Mode=TwoWay}"/>
-                                </StackPanel>
-                            </Grid>
+                            <TextBlock Text="Category"/>
+                            <TextBox Margin="0,3,0,0" Text="{Binding SelectedWorkflow.Category, UpdateSourceTrigger=PropertyChanged}"/>
 
                             <TextBlock Text="Description" Margin="0,8,0,0"/>
                             <TextBox Style="{StaticResource MultilineTextBoxStyle}"
@@ -377,10 +368,10 @@
                     </ScrollViewer>
                 </TabItem>
 
-                <TabItem Header="Node">
+                <TabItem x:Name="NodeInspectorTab" Header="Selected node">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="6">
                         <StackPanel>
-                            <TextBlock Text="Nodes" Style="{StaticResource WorkflowSectionTitleStyle}"/>
+                            <TextBlock Text="All nodes" Style="{StaticResource WorkflowSectionTitleStyle}"/>
                             <ListBox Height="120"
                                      ItemsSource="{Binding SelectedWorkflow.Nodes}"
                                      SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
@@ -477,15 +468,55 @@
                     </ScrollViewer>
                 </TabItem>
 
-                <TabItem Header="Connection">
+                <TabItem x:Name="ConnectionsInspectorTab" Header="Connections">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="6">
                         <StackPanel>
-                            <DockPanel>
-                                <TextBlock DockPanel.Dock="Left" Text="Connections" Style="{StaticResource WorkflowSectionTitleStyle}"/>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
-                                    <Button Content="Add" Width="50" Margin="0,0,4,0" Click="AddLink_Click" IsEnabled="{Binding CanCreateLink}"/>
-                                    <Button Content="Remove" Width="68" Click="RemoveLink_Click" IsEnabled="{Binding HasSelectedLink}"/>
-                                </StackPanel>
+                            <TextBlock Text="Create connection" Style="{StaticResource WorkflowSectionTitleStyle}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Margin="0,0,8,0" VerticalAlignment="Center" Text="From"/>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding SelectedWorkflow.Nodes}"
+                                          DisplayMemberPath="Summary"
+                                          SelectedItem="{Binding ConnectionFromNode, Mode=TwoWay}"/>
+
+                                <TextBlock Grid.Row="1" Margin="0,7,8,0" VerticalAlignment="Center" Text="To"/>
+                                <ComboBox Grid.Row="1"
+                                          Grid.Column="1"
+                                          Margin="0,7,0,0"
+                                          ItemsSource="{Binding SelectedWorkflow.Nodes}"
+                                          DisplayMemberPath="Summary"
+                                          SelectedItem="{Binding ConnectionToNode, Mode=TwoWay}"/>
+
+                                <TextBlock Grid.Row="2" Margin="0,7,8,0" VerticalAlignment="Center" Text="Label (optional)"/>
+                                <TextBox Grid.Row="2"
+                                         Grid.Column="1"
+                                         Margin="0,7,0,0"
+                                         Text="{Binding ConnectionLabel, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                            </Grid>
+                            <Button Content="Add connection"
+                                    HorizontalAlignment="Right"
+                                    Margin="0,8,0,0"
+                                    Padding="12,3"
+                                    Click="AddLink_Click"
+                                    IsEnabled="{Binding CanCreateLink}"/>
+
+                            <DockPanel Margin="0,14,0,5" LastChildFill="False">
+                                <TextBlock DockPanel.Dock="Left" Text="Existing connections" Style="{StaticResource WorkflowSectionTitleStyle}"/>
+                                <Button DockPanel.Dock="Right"
+                                        Content="Delete selected"
+                                        Padding="9,2"
+                                        Click="RemoveLink_Click"
+                                        IsEnabled="{Binding HasSelectedLink}"/>
                             </DockPanel>
 
                             <ListBox Height="138"
@@ -493,6 +524,9 @@
                                      SelectedItem="{Binding SelectedLink, Mode=TwoWay}"
                                      DisplayMemberPath="Summary"/>
 
+                            <TextBlock Text="Selected connection details"
+                                       Style="{StaticResource WorkflowSectionTitleStyle}"
+                                       Margin="0,10,0,0"/>
                             <Grid Margin="0,8,0,0" IsEnabled="{Binding HasSelectedLink}">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto"/>

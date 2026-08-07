@@ -2,25 +2,29 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using ColumnPadStudio.Domain.Lists;
 using ColumnPadStudio.Domain.Text;
+using ColumnPadStudio.Domain.Workspaces;
+using ColumnPadStudio.Services;
 
 namespace ColumnPadStudio.ViewModels;
 
 public sealed partial class ColumnViewModel : NotifyBase
 {
-    public const double VisibleLineNumberColumnWidth = 46.0;
-
     private string _title = "Column";
     private string _text = "";
     private int? _widthPx;
 
     private bool _showLineNumbers = true;
+    private int _sharedGutterWidthPx = MainViewModel.DefaultGutterWidthPx;
     private bool _wordWrap;
     private string _editorFontFamily = "Consolas";
     private double _editorFontSize = 13;
     private FontStyle _editorFontStyle = FontStyles.Normal;
     private FontWeight _editorFontWeight = FontWeights.Normal;
+    private string _editorTextColor = ColumnTextColorService.ThemeDefault;
+    private SolidColorBrush? _customEditorTextColorBrush;
 
     private bool _isWidthLocked;
     private bool _canMoveLeft;
@@ -28,6 +32,7 @@ public sealed partial class ColumnViewModel : NotifyBase
     private bool _isActive;
     private bool _isRenaming;
     private bool _isStandaloneDocument;
+    private bool _isWidthManagementEnabled = true;
     private PasteListPreset _pastePreset = PasteListPreset.None;
     private LineMarkerMode _lineMarkerMode = LineMarkerMode.Numbers;
     private bool _useDefaultFont = true;
@@ -36,6 +41,7 @@ public sealed partial class ColumnViewModel : NotifyBase
     private int _wordCount;
     private int _checklistTotal;
     private int _checklistDone;
+    private int _gutterStateVersion;
     private string _metricsText = "0 words | 1 line";
     private HashSet<int> _checkedChecklistLineIndexes = [];
 
@@ -72,7 +78,7 @@ public sealed partial class ColumnViewModel : NotifyBase
     public int? WidthPx
     {
         get => _widthPx;
-        set => Set(ref _widthPx, value);
+        set => Set(ref _widthPx, NormalizeWidth(value));
     }
 
     public bool IsWidthLocked
@@ -120,6 +126,7 @@ public sealed partial class ColumnViewModel : NotifyBase
 
             _lineMarkerMode = value;
             OnPropertyChanged();
+            InvalidateGutterState();
             RecomputeDerivedMetrics();
         }
     }
@@ -133,7 +140,29 @@ public sealed partial class ColumnViewModel : NotifyBase
     public bool IsStandaloneDocument
     {
         get => _isStandaloneDocument;
-        set => Set(ref _isStandaloneDocument, value);
+        set
+        {
+            if (_isStandaloneDocument == value)
+                return;
+
+            _isStandaloneDocument = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(WidthLockActionToolTip));
+        }
+    }
+
+    public bool IsWidthManagementEnabled
+    {
+        get => _isWidthManagementEnabled;
+        set
+        {
+            if (_isWidthManagementEnabled == value)
+                return;
+
+            _isWidthManagementEnabled = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(WidthLockActionToolTip));
+        }
     }
 
     public bool UseDefaultFont
@@ -193,15 +222,39 @@ public sealed partial class ColumnViewModel : NotifyBase
         set => Set(ref _editorFontWeight, value);
     }
 
+    public string EditorTextColor
+    {
+        get => _editorTextColor;
+        set
+        {
+            var normalized = ColumnTextColorService.Normalize(value);
+            if (string.Equals(_editorTextColor, normalized, StringComparison.Ordinal))
+                return;
+
+            _editorTextColor = normalized;
+            _customEditorTextColorBrush = ColumnTextColorService.CreateCustomBrush(normalized);
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CustomEditorTextColorBrush));
+            OnPropertyChanged(nameof(HasCustomEditorTextColor));
+        }
+    }
+
+    public SolidColorBrush? CustomEditorTextColorBrush => _customEditorTextColorBrush;
+    public bool HasCustomEditorTextColor => _customEditorTextColorBrush is not null;
+
     public Visibility ShowLineNumbersVisibility => ShowLineNumbers ? Visibility.Visible : Visibility.Collapsed;
-    public GridLength LineNumberColumnWidth => ShowLineNumbers ? new GridLength(VisibleLineNumberColumnWidth) : new GridLength(0);
+    public GridLength LineNumberColumnWidth => ShowLineNumbers ? new GridLength(_sharedGutterWidthPx) : new GridLength(0);
     public TextWrapping TextWrappingMode => WordWrap ? TextWrapping.Wrap : TextWrapping.NoWrap;
     public ScrollBarVisibility HorizontalScrollBarMode => WordWrap ? ScrollBarVisibility.Disabled : ScrollBarVisibility.Auto;
 
     public string WidthLockActionLabel => IsWidthLocked ? "Allow Resize" : "Freeze Width";
-    public string WidthLockActionToolTip => IsWidthLocked
-        ? "This column width is frozen. Click to allow drag resizing again."
-        : "Freeze this column width so the splitter cannot resize it.";
+    public string WidthLockActionToolTip => !IsWidthManagementEnabled
+        ? IsStandaloneDocument
+            ? "Single Text Mode fills the window. Switch to Column Mode to resize or freeze columns."
+            : "Choose Standard or Custom column width to resize and freeze columns."
+        : IsWidthLocked
+            ? "This column width is frozen. Click to allow drag resizing again."
+            : "Freeze this column width so the splitter cannot resize it.";
 
     public double LineNumberFontSize => Math.Max(8.0, EditorFontSize);
     public double EditorLineHeight => Math.Max(15.0, Math.Round((EditorFontSize / 13.0) * 23.0, 2));
@@ -230,6 +283,8 @@ public sealed partial class ColumnViewModel : NotifyBase
         private set => Set(ref _checklistDone, value);
     }
 
+    public int GutterStateVersion => _gutterStateVersion;
+
     public string MetricsText
     {
         get => _metricsText;
@@ -244,6 +299,37 @@ public sealed partial class ColumnViewModel : NotifyBase
 
         _visibleLineCount = normalized;
         UpdateMetricsText();
+    }
+
+    internal void SetSharedGutterWidth(int widthPx)
+    {
+        var normalized = Math.Clamp(
+            widthPx,
+            MainViewModel.MinimumGutterWidthPx,
+            MainViewModel.MaximumGutterWidthPx);
+        if (_sharedGutterWidthPx == normalized)
+            return;
+
+        _sharedGutterWidthPx = normalized;
+        OnPropertyChanged(nameof(LineNumberColumnWidth));
+    }
+
+    private static int? NormalizeWidth(int? widthPx)
+    {
+        if (widthPx is null or <= 0)
+            return null;
+
+        return WorkspaceConstraints.ClampColumnWidth(widthPx.Value);
+    }
+
+    private void InvalidateGutterState()
+    {
+        unchecked
+        {
+            _gutterStateVersion++;
+        }
+
+        OnPropertyChanged(nameof(GutterStateVersion));
     }
 
 }

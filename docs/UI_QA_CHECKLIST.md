@@ -14,6 +14,8 @@ Use this before calling a build visually ready. The goal is to catch the rough e
 - Open right-click menus on column headers, editor text, line gutters, workspace tabs, and workflow nodes.
 - Hover every nested menu item and confirm the text remains readable, including submenu headers while the submenu is open.
 - Check that menu hover states use the app theme colour rather than a mismatched Windows-default highlight.
+- Select text, move focus to a menu, and confirm both active and inactive selections remain readable.
+- Use `Tab` to move through buttons, drop-downs, tabs, checkboxes, lists, and text fields; confirm each focused control uses the same neutral theme border.
 - Close and reopen the app and confirm the last selected theme is restored.
 
 ## Editing
@@ -22,18 +24,34 @@ Use this before calling a build visually ready. The goal is to catch the rough e
 - Check that line numbers stay aligned after paste, delete, undo, and resize.
 - Switch gutter modes between numbers, bullets, and checklist.
 - Toggle checklist rows from the gutter and from the context menu.
+- Apply preset and custom text colours to separate columns, then switch themes and reopen the saved layout.
+- Try Ruled, Soft Ruled, and Strong Ruled paper at several font sizes; confirm the editor and number gutter stay on the same row spacing.
 - Use `Esc` to clear selected text without disturbing other columns.
 
 ## Columns
 - Add, remove, duplicate, and swap columns.
 - Try deleting a column with text and confirm the warning is clear.
 - Try clearing all columns and confirm the destructive warning appears.
+- Confirm Standard opens new columns at 320 px without shrinking existing columns.
+- Set a Custom default between 220 and 5000 px, add columns, and confirm new columns use it while individually resized columns keep their widths.
+- Add enough Standard or Custom columns to exceed the window and confirm the bottom scrollbar moves the main workspace left and right.
+- Select Fit Columns to Window and confirm columns share the available width equally; restore Standard or Custom and confirm saved pixel widths return.
 - Drag column right edges and confirm locked columns cannot be resized.
+- Reset a locked selected column and then reset all columns; confirm they return to the current default width and unlock.
+- Turn Snap All Columns Together on and off; confirm only the global gap changes, widths stay unchanged, and no individual snap setting exists.
+- Change the column gap and confirm existing, newly added, and loaded snapped columns follow it without shrinking.
+- Paste enough text to overflow one column and confirm only that column gets its own vertical scrollbar.
 - Switch between Single Text Mode and Column Mode.
+
+## Pictures
+- Drop the same picture into more than one column and confirm every copy renders inside its own column.
+- Move and resize pictures at different column widths; confirm resizing stays proportional and does not jitter.
+- Switch a picture between in-front-of-text and behind-text placement.
+- Save, close, and reopen the layout; confirm picture source, size, position, and layer are preserved.
 
 ## Files
 - Open a `.txt` file and confirm it opens as a single text document.
-- Confirm first save of an opened `.txt` or `.md` asks for Save As.
+- Confirm first save of an opened `.txt` document or JSON text export asks for Save As.
 - Open a native `.columnpad.json` layout and confirm direct Save is available.
 - Save, close, and reopen a layout.
 - Open multiple workspace tabs, save a session, close, and reopen it.

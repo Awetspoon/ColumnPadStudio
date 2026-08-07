@@ -1,8 +1,10 @@
 using ColumnPadStudio.Controls;
+using ColumnPadStudio.Domain.Workspaces;
 using ColumnPadStudio.Models;
 using ColumnPadStudio.Services;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Windows;
 using System.Windows.Threading;
@@ -10,9 +12,15 @@ using ColumnPadStudio.ViewModels;
 
 namespace ColumnPadStudio;
 
+[SuppressMessage(
+    "Design",
+    "CA1001:Types that own disposable fields should be disposable",
+    Justification = "WPF owns the window lifetime; recovery cancellation resources are disposed by its verified clean-close path.")]
 public partial class MainWindow : Window, INotifyPropertyChanged
 {
     private readonly DispatcherTimer _autoSaveTimer = new() { Interval = TimeSpan.FromSeconds(25) };
+    private readonly object _recoveryLifecycleGate = new();
+    private readonly LatestWriteCoordinator<CapturedRecoverySnapshot> _autoRecoveryWriter;
 
     private WorkspaceSession? _activeWorkspace;
     private string _lastFindText = string.Empty;
@@ -22,10 +30,43 @@ public partial class MainWindow : Window, INotifyPropertyChanged
     private WorkflowBuilderWindow? _workflowBuilderWindow;
     private AppPreferences _appPreferences;
     private bool _autoRecoveryWarningShown;
+    private RecoveryLifecycleState _recoveryLifecycleState;
+    private CancellationTokenSource? _recoveryClearCancellation;
+    private bool _closeAttemptInProgress;
+    private bool _allowCloseAfterRecoveryShutdown;
 
     public event PropertyChangedEventHandler? PropertyChanged;
 
     public ObservableCollection<WorkspaceSession> Workspaces { get; } = new();
+
+    public bool SnapAllColumnsEnabled
+    {
+        get => _appPreferences.SnapAllColumnsEnabled;
+        set => UpdateSnapAllColumns(value);
+    }
+
+    public bool FitColumnsToWindow
+    {
+        get => _appPreferences.FitColumnsToWindow;
+        set => UpdateFitColumnsToWindow(value);
+    }
+
+    public bool IsStandardColumnWidthSelected =>
+        !FitColumnsToWindow &&
+        _appPreferences.DefaultColumnWidthPx == (int)WorkspaceConstraints.DefaultColumnWidth;
+
+    public bool IsCustomColumnWidthSelected =>
+        !FitColumnsToWindow && !IsStandardColumnWidthSelected;
+
+    public bool CanManageColumnWidths =>
+        !FitColumnsToWindow && (_activeWorkspace?.Vm.Columns.Count ?? 0) > 1;
+
+    public string CustomColumnWidthMenuHeader =>
+        _appPreferences.DefaultColumnWidthPx == (int)WorkspaceConstraints.DefaultColumnWidth
+            ? "_Custom..."
+            : $"_Custom... ({_appPreferences.DefaultColumnWidthPx} px)";
+
+    public string ColumnSpacingMenuHeader => $"Column Gap... ({_appPreferences.ColumnSpacingPx} px)";
 
     public WorkspaceSession? ActiveWorkspace
     {
@@ -83,8 +124,11 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
     public MainWindow()
     {
+        _autoRecoveryWriter = new LatestWriteCoordinator<CapturedRecoverySnapshot>(
+            WriteCapturedRecoveryAsync,
+            ReportAutoRecoveryWriteResult);
         InitializeComponent();
-        _appPreferences = AppPreferencesService.Load();
+        _appPreferences = AppPreferencesService.Load(out var preferencesWarning);
         ApplyTheme(_appPreferences.ThemePreset);
         WorkspaceRenameMenuItem.Click += WorkspaceRename_Click;
         WorkspaceAddMenuItem.Click += WorkspaceAdd_Click;
@@ -95,6 +139,8 @@ public partial class MainWindow : Window, INotifyPropertyChanged
             InitializeDefaultWorkspace();
 
         DataContext = this;
+        if (!string.IsNullOrWhiteSpace(preferencesWarning))
+            ActiveVm.StatusText = preferencesWarning;
 
         _autoSaveTimer.Tick += AutoSaveTimer_Tick;
         _autoSaveTimer.Start();
@@ -143,14 +189,7 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         if (!string.Equals(_appPreferences.ThemePreset, normalized, StringComparison.Ordinal))
         {
             _appPreferences = _appPreferences with { ThemePreset = normalized };
-            try
-            {
-                AppPreferencesService.Save(_appPreferences);
-            }
-            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-            {
-                // Keep the current session theme even if preferences cannot be persisted right now.
-            }
+            PersistAppPreferences();
         }
 
         foreach (var workspace in Workspaces)
@@ -160,6 +199,19 @@ public partial class MainWindow : Window, INotifyPropertyChanged
 
             if (!string.Equals(workspace.Vm.ThemePreset, normalized, StringComparison.Ordinal))
                 workspace.Vm.ThemePreset = normalized;
+        }
+    }
+
+    private void PersistAppPreferences()
+    {
+        try
+        {
+            AppPreferencesService.Save(_appPreferences);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            if (Workspaces.Count > 0)
+                ActiveVm.StatusText = "Settings changed for this session, but could not be saved for the next launch.";
         }
     }
 

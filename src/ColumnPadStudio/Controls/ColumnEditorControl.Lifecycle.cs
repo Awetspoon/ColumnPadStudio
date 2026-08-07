@@ -13,22 +13,19 @@ public partial class ColumnEditorControl
 {
     private void ColumnEditorControl_DataContextChanged(object sender, DependencyPropertyChangedEventArgs e)
     {
-        if (_observedVm is not null)
-            _observedVm.PropertyChanged -= ObservedVm_PropertyChanged;
-
-        _observedVm = e.NewValue as ColumnViewModel;
-        if (_observedVm is not null)
-            _observedVm.PropertyChanged += ObservedVm_PropertyChanged;
+        SetObservedViewModel(e.NewValue as ColumnViewModel);
 
         _lastRenderedLineNumberCount = -1;
+        _lastRenderedLineMarkerMode = null;
+        _lastRenderedGutterStateVersion = -1;
+        _lastRenderedChecklistLayoutVersion = -1;
         QueueLineNumberRefresh();
         SyncLineNumberScrollWithEditor();
     }
 
     private void ObservedVm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName is nameof(ColumnViewModel.LineMarkerMode)
-            or nameof(ColumnViewModel.ChecklistDone)
+        if (e.PropertyName is nameof(ColumnViewModel.GutterStateVersion)
             or nameof(ColumnViewModel.ShowLineNumbers)
             or nameof(ColumnViewModel.WordWrap)
             or nameof(ColumnViewModel.EditorFontFamily)
@@ -36,7 +33,7 @@ public partial class ColumnEditorControl
             or nameof(ColumnViewModel.EditorFontStyle)
             or nameof(ColumnViewModel.EditorFontWeight))
         {
-            _lastRenderedLineNumberCount = -1;
+            _checklistLayoutVersion++;
             QueueLineNumberRefresh();
         }
     }
@@ -49,7 +46,9 @@ public partial class ColumnEditorControl
 
     private void ColumnEditorControl_Loaded(object sender, RoutedEventArgs e)
     {
+        SetObservedViewModel(VM);
         AttachEditorScrollViewer();
+        QueueEditorScrollRestore();
         QueueLineNumberRefresh();
         SyncLineNumberScrollWithEditor();
     }
@@ -57,20 +56,42 @@ public partial class ColumnEditorControl
     private void ColumnEditorControl_Unloaded(object sender, RoutedEventArgs e)
     {
         DetachEditorScrollViewer();
+        DetachObservedViewModel();
+    }
 
-        if (_observedVm is not null)
+    private void SetObservedViewModel(ColumnViewModel? viewModel)
+    {
+        if (!ReferenceEquals(_observedVm, viewModel))
+        {
+            DetachObservedViewModel();
+            _observedVm = viewModel;
+        }
+
+        if (!IsLoaded || _observedVm is null || _isObservedVmSubscribed)
+            return;
+
+        _observedVm.PropertyChanged += ObservedVm_PropertyChanged;
+        _isObservedVmSubscribed = true;
+    }
+
+    private void DetachObservedViewModel()
+    {
+        if (_isObservedVmSubscribed && _observedVm is not null)
             _observedVm.PropertyChanged -= ObservedVm_PropertyChanged;
+
+        _isObservedVmSubscribed = false;
     }
 
     private void Editor_TextChanged(object sender, TextChangedEventArgs e)
     {
+        _checklistLayoutVersion++;
         QueueLineNumberRefresh();
         SyncLineNumberScrollWithEditor();
     }
 
     private void Editor_SizeChanged(object sender, SizeChangedEventArgs e)
     {
-        ClampImagesToSurface();
+        _checklistLayoutVersion++;
         QueueLineNumberRefresh();
         SyncLineNumberScrollWithEditor();
     }
@@ -85,6 +106,7 @@ public partial class ColumnEditorControl
             return;
 
         _editorScrollViewer.ScrollChanged += EditorScrollViewer_ScrollChanged;
+        QueueEditorScrollRestore();
     }
 
     private void DetachEditorScrollViewer()
@@ -92,8 +114,39 @@ public partial class ColumnEditorControl
         if (_editorScrollViewer is null)
             return;
 
+        if (!_hasSavedEditorScrollOffsets)
+        {
+            _savedEditorHorizontalOffset = _editorScrollViewer.HorizontalOffset;
+            _savedEditorVerticalOffset = _editorScrollViewer.VerticalOffset;
+            _hasSavedEditorScrollOffsets = true;
+        }
+
         _editorScrollViewer.ScrollChanged -= EditorScrollViewer_ScrollChanged;
         _editorScrollViewer = null;
+    }
+
+    private void QueueEditorScrollRestore()
+    {
+        if (!_hasSavedEditorScrollOffsets
+            || _editorScrollRestorePending
+            || _editorScrollViewer is null)
+        {
+            return;
+        }
+
+        _editorScrollRestorePending = true;
+        var scrollViewer = _editorScrollViewer;
+        Dispatcher.BeginInvoke(new Action(() =>
+        {
+            _editorScrollRestorePending = false;
+            if (!IsLoaded || !ReferenceEquals(scrollViewer, _editorScrollViewer))
+                return;
+
+            scrollViewer.ScrollToHorizontalOffset(_savedEditorHorizontalOffset);
+            scrollViewer.ScrollToVerticalOffset(_savedEditorVerticalOffset);
+            _hasSavedEditorScrollOffsets = false;
+            SyncLineNumberScroll(scrollViewer.VerticalOffset);
+        }), DispatcherPriority.Loaded);
     }
 
     private void EditorScrollViewer_ScrollChanged(object sender, ScrollChangedEventArgs e)
@@ -115,7 +168,10 @@ public partial class ColumnEditorControl
 
     private void SyncLineNumberScroll(double verticalOffset)
     {
-        LineNumbersTransform.Y = -Math.Max(0, verticalOffset);
+        var safeVerticalOffset = double.IsFinite(verticalOffset) ? Math.Max(0, verticalOffset) : 0;
+        LineNumbersTransform.Y = -safeVerticalOffset;
+        EditorPaperBackground.VerticalOffset = safeVerticalOffset;
+        LineNumberPaperBackground.VerticalOffset = safeVerticalOffset;
     }
 
     private static T? FindDescendant<T>(DependencyObject parent) where T : DependencyObject
@@ -152,40 +208,60 @@ public partial class ColumnEditorControl
     {
         var lineCount = Math.Max(1, Editor.LineCount);
         var markerMode = VM?.LineMarkerMode ?? LineMarkerMode.Numbers;
-
-        var lineBreak = Environment.NewLine;
-        var sb = new StringBuilder(lineCount * (lineBreak.Length + 3));
-        for (var lineIndex = 0; lineIndex < lineCount; lineIndex++)
-        {
-            if (lineIndex > 0)
-                sb.Append(lineBreak);
-
-            sb.Append(GetLineNumberLabel(markerMode, lineIndex));
-        }
-
-        var renderedLineNumbers = sb.ToString();
+        var gutterStateVersion = VM?.GutterStateVersion ?? 0;
         VM?.SetVisibleLineCount(lineCount);
 
-        if (lineCount == _lastRenderedLineNumberCount &&
-            string.Equals(LineNumbers.Text, renderedLineNumbers, StringComparison.Ordinal))
+        if (lineCount == _lastRenderedLineNumberCount
+            && markerMode == _lastRenderedLineMarkerMode
+            && gutterStateVersion == _lastRenderedGutterStateVersion
+            && (markerMode != LineMarkerMode.Checklist
+                || _checklistLayoutVersion == _lastRenderedChecklistLayoutVersion))
         {
             SyncLineNumberScrollWithEditor();
             return;
         }
 
+        var lineBreak = Environment.NewLine;
+        var sb = new StringBuilder(lineCount * (lineBreak.Length + 3));
+        var visualToLogicalLines = markerMode == LineMarkerMode.Checklist
+            ? BuildVisualToLogicalLineMap(lineCount)
+            : null;
+        for (var lineIndex = 0; lineIndex < lineCount; lineIndex++)
+        {
+            if (lineIndex > 0)
+                sb.Append(lineBreak);
+
+            sb.Append(GetLineNumberLabel(markerMode, lineIndex, visualToLogicalLines));
+        }
+
+        var renderedLineNumbers = sb.ToString();
         LineNumbers.Text = renderedLineNumbers;
         _lastRenderedLineNumberCount = lineCount;
+        _lastRenderedLineMarkerMode = markerMode;
+        _lastRenderedGutterStateVersion = gutterStateVersion;
+        _lastRenderedChecklistLayoutVersion = _checklistLayoutVersion;
         SyncLineNumberScrollWithEditor();
     }
 
-    private string GetLineNumberLabel(LineMarkerMode markerMode, int lineIndex)
+    private string GetLineNumberLabel(
+        LineMarkerMode markerMode,
+        int visualLineIndex,
+        IReadOnlyList<int>? visualToLogicalLines)
     {
         if (markerMode == LineMarkerMode.Bullets)
             return "\u2022";
 
         if (markerMode == LineMarkerMode.Checklist)
-            return VM?.IsChecklistLineChecked(lineIndex) == true ? "\u2611" : "\u2610";
+        {
+            var logicalLineIndex = visualToLogicalLines?[visualLineIndex] ?? visualLineIndex;
+            var isContinuationRow = visualLineIndex > 0
+                                    && visualToLogicalLines?[visualLineIndex - 1] == logicalLineIndex;
+            if (isContinuationRow)
+                return string.Empty;
 
-        return (lineIndex + 1).ToString(CultureInfo.InvariantCulture);
+            return VM?.IsChecklistLineChecked(logicalLineIndex) == true ? "\u2611" : "\u2610";
+        }
+
+        return (visualLineIndex + 1).ToString(CultureInfo.InvariantCulture);
     }
 }

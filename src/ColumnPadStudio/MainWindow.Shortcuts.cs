@@ -140,7 +140,7 @@ public partial class MainWindow
 
             if (e.Key == Key.E)
             {
-                ExportMarkdown_Click(this, new RoutedEventArgs());
+                ExportJson_Click(this, new RoutedEventArgs());
                 e.Handled = true;
                 return;
             }

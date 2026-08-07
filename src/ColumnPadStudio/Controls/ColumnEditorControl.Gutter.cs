@@ -10,20 +10,19 @@ public partial class ColumnEditorControl
     {
         EditorFocused?.Invoke(this, EventArgs.Empty);
 
-        var lineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumberGutter));
-        if (lineIndex < 0)
+        var visualLineIndex = GetLineIndexFromGutterPoint(e.GetPosition(LineNumberGutter));
+        if (visualLineIndex < 0)
             return;
 
-        _gutterContextLineIndex = lineIndex;
+        _gutterContextLineIndex = visualLineIndex;
         if (VM?.LineMarkerMode == LineMarkerMode.Checklist)
         {
-            VM.ToggleChecklistLineChecked(lineIndex);
-            QueueLineNumberRefresh();
+            ToggleChecklistCheckAtVisualLine(visualLineIndex);
             e.Handled = true;
             return;
         }
 
-        MoveCaretToLineStart(lineIndex);
+        MoveCaretToLineStart(visualLineIndex);
         e.Handled = true;
     }
 
@@ -83,12 +82,114 @@ public partial class ColumnEditorControl
         if (VM.LineMarkerMode != LineMarkerMode.Checklist)
             VM.LineMarkerMode = LineMarkerMode.Checklist;
 
-        var targetLine = _gutterContextLineIndex >= 0
-            ? _gutterContextLineIndex
-            : Editor.GetLineIndexFromCharacterIndex(Editor.CaretIndex);
+        if (_gutterContextLineIndex >= 0)
+        {
+            ToggleChecklistCheckAtVisualLine(_gutterContextLineIndex);
+            return;
+        }
 
-        VM.ToggleChecklistLineChecked(targetLine);
+        VM.ToggleChecklistLineChecked(GetLogicalLineIndexFromCharacterIndex(Editor.CaretIndex));
         QueueLineNumberRefresh();
+    }
+
+    private void ToggleChecklistCheckAtVisualLine(int visualLineIndex)
+    {
+        if (VM is null || visualLineIndex < 0)
+            return;
+
+        VM.ToggleChecklistLineChecked(GetLogicalLineIndexFromVisualLineIndex(visualLineIndex));
+        QueueLineNumberRefresh();
+    }
+
+    private int GetLogicalLineIndexFromVisualLineIndex(int visualLineIndex)
+    {
+        if (Editor.LineCount <= 0)
+            return 0;
+
+        var safeVisualLine = Math.Clamp(visualLineIndex, 0, Editor.LineCount - 1);
+        return BuildVisualToLogicalLineMap(Editor.LineCount)[safeVisualLine];
+    }
+
+    private int GetLogicalLineIndexFromCharacterIndex(int characterIndex)
+    {
+        var text = Editor.Text ?? string.Empty;
+        var safeCharacterIndex = Math.Clamp(characterIndex, 0, text.Length);
+        var logicalLineIndex = 0;
+
+        for (var index = 0; index < safeCharacterIndex; index++)
+        {
+            if (text[index] == '\r')
+            {
+                logicalLineIndex++;
+                if (index + 1 < safeCharacterIndex && text[index + 1] == '\n')
+                    index++;
+            }
+            else if (text[index] == '\n')
+            {
+                logicalLineIndex++;
+            }
+        }
+
+        return logicalLineIndex;
+    }
+
+    private int[] BuildVisualToLogicalLineMap(int visualLineCount)
+    {
+        var safeVisualLineCount = Math.Max(1, visualLineCount);
+        if (Editor.LineCount <= 0)
+            return new int[safeVisualLineCount];
+
+        var logicalLineStarts = new List<int> { 0 };
+        var text = Editor.Text ?? string.Empty;
+
+        for (var index = 0; index < text.Length; index++)
+        {
+            if (text[index] == '\r')
+            {
+                if (index + 1 < text.Length && text[index + 1] == '\n')
+                    index++;
+
+                logicalLineStarts.Add(index + 1);
+            }
+            else if (text[index] == '\n')
+            {
+                logicalLineStarts.Add(index + 1);
+            }
+        }
+
+        var logicalVisualLineStarts = logicalLineStarts
+            .Select(characterIndex => Editor.GetLineIndexFromCharacterIndex(characterIndex))
+            .Select(visualLineIndex => Math.Clamp(visualLineIndex, 0, safeVisualLineCount - 1))
+            .ToArray();
+
+        var visualToLogical = new int[safeVisualLineCount];
+        var logicalLineIndex = 0;
+        for (var visualLineIndex = 0; visualLineIndex < safeVisualLineCount; visualLineIndex++)
+        {
+            while (logicalLineIndex + 1 < logicalVisualLineStarts.Length
+                   && logicalVisualLineStarts[logicalLineIndex + 1] <= visualLineIndex)
+            {
+                logicalLineIndex++;
+            }
+
+            visualToLogical[visualLineIndex] = logicalLineIndex;
+        }
+
+        return visualToLogical;
+    }
+
+    private static bool IsLogicalLineStart(string text, int characterIndex)
+    {
+        var safeCharacterIndex = Math.Clamp(characterIndex, 0, text.Length);
+        if (safeCharacterIndex == 0)
+            return true;
+
+        var previous = text[safeCharacterIndex - 1];
+        if (previous == '\n')
+            return true;
+
+        return previous == '\r'
+               && (safeCharacterIndex >= text.Length || text[safeCharacterIndex] != '\n');
     }
 
     private void SetLineMarkerMode(LineMarkerMode markerMode)

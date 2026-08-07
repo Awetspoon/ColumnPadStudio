@@ -18,17 +18,37 @@ public sealed partial class WorkflowService
                 return false;
 
             var root = document.RootElement;
-            if (TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.FileType), out var fileType) &&
+            var schemaVersion = TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.SchemaVersion), out var schemaVersionNode) &&
+                                schemaVersionNode.ValueKind == JsonValueKind.Number &&
+                                schemaVersionNode.TryGetInt32(out var parsedSchemaVersion)
+                ? parsedSchemaVersion
+                : 1;
+
+            if (schemaVersion < 1 || schemaVersion > WorkflowDefinition.CurrentSchemaVersion)
+                return false;
+
+            var hasFileType = TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.FileType), out var fileType);
+            if (hasFileType &&
                 fileType.ValueKind == JsonValueKind.String &&
                 !string.Equals(fileType.GetString(), WorkflowDefinition.WorkflowFileType, StringComparison.OrdinalIgnoreCase))
             {
                 return false;
             }
 
-            return TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.Nodes), out var nodes) &&
-                   nodes.ValueKind == JsonValueKind.Array &&
-                   TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.Links), out var links) &&
-                   links.ValueKind == JsonValueKind.Array;
+            if (hasFileType && fileType.ValueKind != JsonValueKind.String)
+                return false;
+
+            if (schemaVersion >= WorkflowDefinition.CurrentSchemaVersion && !hasFileType)
+                return false;
+
+            var hasCurrentDiagram = TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.Nodes), out var nodes) &&
+                                    nodes.ValueKind == JsonValueKind.Array &&
+                                    TryGetPropertyIgnoreCase(root, nameof(WorkflowDefinition.Links), out var links) &&
+                                    links.ValueKind == JsonValueKind.Array;
+            var hasLegacySteps = TryGetPropertyIgnoreCase(root, "Steps", out var steps) &&
+                                 steps.ValueKind == JsonValueKind.Array;
+
+            return hasCurrentDiagram || hasLegacySteps;
         }
         catch (JsonException)
         {
@@ -45,7 +65,6 @@ public sealed partial class WorkflowService
             Name = source.Name,
             Category = source.Category,
             Description = source.Description,
-            Trigger = source.Trigger,
             Nodes = new ObservableCollection<WorkflowDiagramNode>(
                 source.Nodes.Select(node => new WorkflowDiagramNode
                 {
@@ -76,7 +95,7 @@ public sealed partial class WorkflowService
 
     private static void Normalize(WorkflowDefinition workflow, string? fallbackName)
     {
-        workflow.SchemaVersion = Math.Max(3, workflow.SchemaVersion);
+        workflow.SchemaVersion = WorkflowDefinition.CurrentSchemaVersion;
         workflow.Id = string.IsNullOrWhiteSpace(workflow.Id)
             ? Guid.NewGuid().ToString("N")
             : workflow.Id.Trim();

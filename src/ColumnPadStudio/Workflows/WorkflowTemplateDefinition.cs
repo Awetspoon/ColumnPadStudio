@@ -28,7 +28,6 @@ public sealed class WorkflowTemplateDefinition
     public required string Name { get; init; }
     public required string Category { get; init; }
     public required string Description { get; init; }
-    public WorkflowTriggerType Trigger { get; init; } = WorkflowTriggerType.Manual;
     public IReadOnlyList<WorkflowTemplateNode> Nodes { get; init; } = Array.Empty<WorkflowTemplateNode>();
     public IReadOnlyList<WorkflowTemplateConnection> Connections { get; init; } = Array.Empty<WorkflowTemplateConnection>();
 
@@ -87,7 +86,6 @@ public sealed class WorkflowTemplateDefinition
             Name = string.IsNullOrWhiteSpace(customName) ? Name : customName.Trim(),
             Category = Category,
             Description = Description,
-            Trigger = Trigger,
             Nodes = new ObservableCollection<WorkflowDiagramNode>(instanceNodes),
             Links = new ObservableCollection<WorkflowDiagramLink>(instanceLinks),
         };

@@ -12,6 +12,21 @@ public partial class WorkflowBuilderWindow
     private double _dragStartX;
     private double _dragStartY;
 
+    private void AddNodeMenuButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is Button button)
+            OpenButtonContextMenu(button);
+    }
+
+    private static void OpenButtonContextMenu(Button button)
+    {
+        if (button.ContextMenu is not { } menu)
+            return;
+
+        menu.PlacementTarget = button;
+        menu.IsOpen = true;
+    }
+
     private void AddNodeOfKind_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement { Tag: string kindName } ||
@@ -21,10 +36,14 @@ public partial class WorkflowBuilderWindow
         }
 
         ViewModel.AddNode(kind);
+        ShowNodeInspector();
     }
 
     private void DuplicateNode_Click(object sender, RoutedEventArgs e)
-        => ViewModel.DuplicateSelectedNode();
+    {
+        if (ViewModel.DuplicateSelectedNode())
+            ShowNodeInspector();
+    }
 
     private void RemoveNode_Click(object sender, RoutedEventArgs e)
         => ViewModel.RemoveSelectedNode();
@@ -33,7 +52,10 @@ public partial class WorkflowBuilderWindow
         => ViewModel.AutoLayoutSelectedWorkflow();
 
     private void AddLink_Click(object sender, RoutedEventArgs e)
-        => ViewModel.AddLink();
+    {
+        if (ViewModel.AddLink())
+            InspectorTabs.SelectedItem = ConnectionsInspectorTab;
+    }
 
     private void RemoveLink_Click(object sender, RoutedEventArgs e)
         => ViewModel.RemoveSelectedLink();
@@ -65,6 +87,7 @@ public partial class WorkflowBuilderWindow
             return;
 
         ViewModel.SelectedNode = node;
+        ShowNodeInspector();
         _draggedNode = node;
         _dragStartPoint = e.GetPosition(WorkflowDiagramSurface);
         _dragStartX = node.X;
@@ -105,6 +128,10 @@ public partial class WorkflowBuilderWindow
 
         node.Color = color;
         ViewModel.SelectedNode = node;
+        ShowNodeInspector();
         e.Handled = true;
     }
+
+    private void ShowNodeInspector()
+        => InspectorTabs.SelectedItem = NodeInspectorTab;
 }
