@@ -25,7 +25,7 @@ ColumnPad is not code-signed yet, so Windows SmartScreen may warn the first time
 
 ![ColumnPad desktop interface](docs/columnpad-screenshot.png)
 
-The screenshot shows the current three-column writing surface with clean sample content and no personal data.
+The screenshot shows the current three-column writing surface.
 
 ## Main Features
 
